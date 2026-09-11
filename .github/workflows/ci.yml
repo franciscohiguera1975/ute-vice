@@ -77,8 +77,27 @@ jobs:
         run: mypy src
 
       - name: Pruebas
+        id: pruebas
         working-directory: backend
-        run: pytest -q
+        # `pipefail` es imprescindible: sin el, el codigo de salida de la
+        # tuberia seria el de `tee` —siempre cero— y CI daria verde con las
+        # pruebas en rojo.
+        run: |
+          set -o pipefail
+          pytest -q --color=no | tee ../pytest.log
+
+      # Sin esto, un fallo en CI solo se ve entrando a los registros del
+      # trabajo. Con el resumen basta abrir la ejecucion.
+      - name: Resumen del fallo
+        if: failure() && steps.pruebas.outcome == 'failure'
+        run: |
+          {
+            echo "## Pruebas del backend en rojo"
+            echo
+            echo '```'
+            tail -n 60 pytest.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # -------------------------------------------------------------------
   frontend:

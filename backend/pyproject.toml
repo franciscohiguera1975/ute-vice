@@ -106,7 +106,12 @@ ignore_missing_imports = true
 
 # ---------------------------------------------------------------------
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+# La raiz del proyecto va en la ruta ademas de `src` porque varias pruebas
+# importan utilidades compartidas con `from tests.conftest import ...`. Sin
+# ella eso solo funciona al invocar `python -m pytest`, que agrega el
+# directorio actual por su cuenta; con `pytest` a secas —como lo llaman el
+# Makefile y la integracion continua— la coleccion falla entera.
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-q --strict-markers"

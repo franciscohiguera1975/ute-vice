@@ -209,6 +209,9 @@ No los reintroduzcas. Estan documentados en el changelog de su fase:
     `angular.json` no reemplazaba el archivo de entorno (Fase 10)
 17. El volumen de PostgreSQL 18 montado en `/var/lib/postgresql/data`, como en
     la 16: el contenedor se niega a arrancar (Fase 10)
+18. La bateria de pruebas solo coleccionaba con `python -m pytest`, que agrega
+    el directorio actual a la ruta. Con `pytest` a secas —como la llaman el
+    Makefile y CI— fallaban cinco modulos (Fase 10)
 
 El octavo es el mas ilustrativo: un fallo en la ruta feliz de la configuracion
 de ejemplo, que solo aparecio al arrancar con un `.env` realista. Los dos

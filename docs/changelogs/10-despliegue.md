@@ -44,7 +44,7 @@ El script respalda la base antes de migrar, espera a `/health` y vuelca los
 registros si no responde. Limpia imagenes huerfanas **solo de este proyecto**: un
 `prune` general se llevaria lo de las otras aplicaciones del servidor.
 
-## Tres fallos encontrados al desplegar
+## Cuatro fallos encontrados al desplegar
 
 ### El frontend de produccion apuntaba a `localhost:8000`
 
@@ -68,6 +68,24 @@ Estaba igual en el compose de desarrollo: **los dos quedaron corregidos**.
 
 El generador producia solo alfanumericos y la siembra exige un caracter
 especial. Se corrigio la generacion.
+
+### La bateria de pruebas solo corria con `python -m pytest`
+
+La primera ejecucion de CI fallo con codigo 2 —coleccion interrumpida— y sin
+mensaje util en las anotaciones. Reproducido en local: cinco modulos hacen
+`from tests.conftest import ...`, y eso exige que la raiz del proyecto este en
+la ruta de importacion. `python -m pytest` la agrega por su cuenta; `pytest` a
+secas, no.
+
+Es decir: **`make test` tambien estaba roto**, y llevaba estandolo. La bateria
+pasaba porque siempre se invocaba de la otra forma.
+
+Corregido en la configuracion, no en el flujo: `pythonpath = ["src", "."]` en
+`pyproject.toml`. Verificado con `pytest` a secas en un entorno limpio.
+
+De paso, CI vuelca ahora las ultimas sesenta lineas del fallo al resumen del
+trabajo. Diagnosticar el primer fallo exigio reproducir el entorno entero en
+local porque los registros de un trabajo no son legibles sin autenticacion.
 
 ## Pendiente
 
