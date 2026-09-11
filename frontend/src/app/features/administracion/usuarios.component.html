@@ -229,86 +229,84 @@
 <!-- ------------------------------------------------ restablecer contrasena --- -->
 <!-- ------------------------------------------------- alcance academico --- -->
 @if (usuarioEnAlcance(); as usuario) {
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-alcance">
-    <div class="modal__panel modal__panel--ancho">
-      <header class="modal__cabecera">
-        <h2 id="titulo-alcance" class="modal__titulo">Alcance de {{ usuario.nombreCompleto }}</h2>
-        <button type="button" class="btn btn--icono" aria-label="Cerrar"
-                (click)="usuarioEnAlcance.set(null)">✕</button>
-      </header>
+  <div class="velo" (click)="usuarioEnAlcance.set(null)">
+    <div
+      class="dialogo dialogo--ancho"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 class="dialogo__titulo">Alcance de {{ usuario.nombreCompleto }}</h2>
+      <p class="texto-sm texto-suave">
+        Acota que parte del distributivo puede consultar esta cuenta. Las facultades
+        y las carreras <span class="negrita">se suman</span>: con la facultad FCID y
+        la carrera Medicina ve todo FCID y además Medicina.
+      </p>
 
-      <div class="modal__cuerpo">
-        <p class="texto-sm texto-suave">
-          Acota que parte del distributivo puede consultar esta cuenta. Las
-          facultades y las carreras <span class="negrita">se suman</span>: con la
-          facultad FCID y la carrera Medicina ve todo FCID y además Medicina.
+      @if (alcanceFacultades().length === 0 && alcanceCarreras().length === 0) {
+        <p class="aviso-alcance" role="status">
+          Sin nada marcado, la cuenta ve <span class="negrita">todo</span> el
+          distributivo. Es lo que corresponde a quien no debe estar acotado.
         </p>
+      }
 
-        @if (alcanceFacultades().length === 0 && alcanceCarreras().length === 0) {
-          <p class="aviso-alcance" role="status">
-            Sin nada marcado, la cuenta ve <span class="negrita">todo</span> el
-            distributivo. Es lo que corresponde a quien no debe estar acotado.
+      <div class="rejilla--alcance">
+        <fieldset class="grupo">
+          <legend class="campo__etiqueta">
+            Facultades
+            <span class="texto-xs texto-tenue">({{ alcanceFacultades().length }})</span>
+          </legend>
+          <div class="lista-alcance">
+            @for (f of catalogos.de(TipoCatalogo.FACULTAD); track f.id) {
+              <label class="opcion-alcance">
+                <input
+                  type="checkbox"
+                  [checked]="alcanceFacultades().includes(f.id)"
+                  (change)="alternarFacultad(f.id, $any($event.target).checked)"
+                />
+                <span>{{ f.codigo }} — {{ f.nombre }}</span>
+              </label>
+            } @empty {
+              <p class="texto-sm texto-tenue">Cargando facultades…</p>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="grupo">
+          <legend class="campo__etiqueta">
+            Carreras
+            <span class="texto-xs texto-tenue">({{ alcanceCarreras().length }})</span>
+          </legend>
+          <input
+            type="search"
+            class="filtro-alcance"
+            placeholder="Filtrar carreras…"
+            [ngModel]="filtroCarreraAlcance()"
+            (ngModelChange)="filtroCarreraAlcance.set($event)"
+            aria-label="Filtrar la lista de carreras"
+          />
+          <p class="campo__ayuda">
+            Solo hace falta marcar carreras sueltas de otras facultades: las de una
+            facultad ya marcada arriba entran solas.
           </p>
-        }
-
-        <div class="rejilla rejilla--alcance">
-          <fieldset class="grupo">
-            <legend class="campo__etiqueta">
-              Facultades
-              <span class="texto-xs texto-tenue">({{ alcanceFacultades().length }})</span>
-            </legend>
-            <div class="lista-alcance">
-              @for (f of catalogos.de(TipoCatalogo.FACULTAD); track f.id) {
-                <label class="opcion-alcance">
-                  <input
-                    type="checkbox"
-                    [checked]="alcanceFacultades().includes(f.id)"
-                    (change)="alternarFacultad(f.id, $any($event.target).checked)"
-                  />
-                  <span>{{ f.codigo }} — {{ f.nombre }}</span>
-                </label>
-              } @empty {
-                <p class="texto-sm texto-tenue">Cargando facultades…</p>
-              }
-            </div>
-          </fieldset>
-
-          <fieldset class="grupo">
-            <legend class="campo__etiqueta">
-              Carreras
-              <span class="texto-xs texto-tenue">({{ alcanceCarreras().length }})</span>
-            </legend>
-            <input
-              type="search"
-              class="filtro-alcance"
-              placeholder="Filtrar carreras…"
-              [ngModel]="filtroCarreraAlcance()"
-              (ngModelChange)="filtroCarreraAlcance.set($event)"
-              aria-label="Filtrar la lista de carreras"
-            />
-            <p class="campo__ayuda">
-              Solo hace falta marcar carreras sueltas de otras facultades: las de
-              una facultad ya marcada arriba entran solas.
-            </p>
-            <div class="lista-alcance">
-              @for (c of carrerasDelAlcance(); track c.id) {
-                <label class="opcion-alcance">
-                  <input
-                    type="checkbox"
-                    [checked]="alcanceCarreras().includes(c.id)"
-                    (change)="alternarCarreraAlcance(c.id, $any($event.target).checked)"
-                  />
-                  <span>{{ c.nombre }}</span>
-                </label>
-              } @empty {
-                <p class="texto-sm texto-tenue">Ninguna carrera coincide con el filtro.</p>
-              }
-            </div>
-          </fieldset>
-        </div>
+          <div class="lista-alcance">
+            @for (c of carrerasDelAlcance(); track c.id) {
+              <label class="opcion-alcance">
+                <input
+                  type="checkbox"
+                  [checked]="alcanceCarreras().includes(c.id)"
+                  (change)="alternarCarreraAlcance(c.id, $any($event.target).checked)"
+                />
+                <span>{{ c.nombre }}</span>
+              </label>
+            } @empty {
+              <p class="texto-sm texto-tenue">Ninguna carrera coincide con el filtro.</p>
+            }
+          </div>
+        </fieldset>
       </div>
 
-      <footer class="modal__pie">
+      <div class="dialogo__acciones dialogo__acciones--alcance">
         <button type="button" class="btn btn--fantasma" (click)="limpiarAlcance()">
           Quitar restricción
         </button>
@@ -324,7 +322,7 @@
         >
           {{ guardandoAlcance() ? 'Guardando…' : 'Guardar' }}
         </button>
-      </footer>
+      </div>
     </div>
   </div>
 }

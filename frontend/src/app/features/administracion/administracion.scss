@@ -103,7 +103,11 @@
 
 
 /* --------------------------------------------------- alcance academico --- */
-.modal__panel--ancho { max-width: 54rem; }
+/* El dialogo del alcance necesita mas ancho que los demas: son dos listas de
+   casillas una al lado de la otra. */
+.dialogo--ancho { max-width: 54rem; width: min(54rem, 92vw); }
+
+.dialogo__acciones--alcance { align-items: center; }
 
 .rejilla--alcance {
   display: grid;
