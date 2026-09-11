@@ -248,6 +248,29 @@ parte**: si se pierde ese archivo, se pierden.
    deliberado: la inicial la genero un script y quedo escrita en un archivo del
    servidor.
 
+### Crear cuentas para otras personas
+
+Desde la interfaz, en *Administración › Usuarios › Nuevo usuario*. La contrasena
+que se fije ahi es provisional: el sistema obliga a cambiarla en el primer
+acceso, para que la que conocio quien creo la cuenta deje de servir.
+
+La politica exige **minimo 10 caracteres con mayuscula, minuscula, digito y un
+caracter especial**, y rechaza secuencias obvias (`123456`, `qwerty`, `admin`,
+`ute2026`…). Conviene tenerlo presente al pensar un patron de claves iniciales:
+uno que parezca razonable —el usuario mas unos digitos— se rechaza si no lleva
+mayuscula.
+
+Para crear varias de una vez, o sin obligar al cambio de clave, se puede hacer
+desde el contenedor con el modelo de dominio. Para levantar la obligacion de
+cambiarla en una cuenta ya creada:
+
+```bash
+cd /opt/vice-gestion
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U ute_vice -d ute_vice -c \
+  "UPDATE usuarios SET debe_cambiar_contrasena = false WHERE email = 'alguien@ute.edu.ec';"
+```
+
 ### Si se pierde la contrasena
 
 La del `.env` solo sirve para el alta inicial: una vez cambiada, ese valor ya no
