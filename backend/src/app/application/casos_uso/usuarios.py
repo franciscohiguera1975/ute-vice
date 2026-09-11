@@ -7,6 +7,7 @@ from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
 from app.domain.entities.auth import Rol, Usuario
+from app.domain.entities.catalogo import TipoCatalogo
 from app.domain.enums import AuthProvider, Permiso
 from app.domain.errors import (
     ErrorValidacion,
@@ -35,6 +36,10 @@ class EntradaCrearUsuario:
     activo: bool = True
     debe_cambiar_contrasena: bool = True
 
+    #: Alcance academico. Vacios no restringen: ver `domain/alcance.py`.
+    facultades_ids: tuple[UUID, ...] = ()
+    carreras_ids: tuple[UUID, ...] = ()
+
 
 @dataclass(frozen=True, slots=True)
 class EntradaActualizarUsuario:
@@ -43,6 +48,11 @@ class EntradaActualizarUsuario:
     email: str | None = None
     activo: bool | None = None
     roles: list[str] | None = None
+
+    #: `None` deja el alcance como estaba; una lista vacia lo borra, que es
+    #: como se le quita la restriccion a una cuenta.
+    facultades_ids: list[UUID] | None = None
+    carreras_ids: list[UUID] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,7 +135,10 @@ class CrearUsuario(CasoDeUso[EntradaCrearUsuario, Usuario]):
                 debe_cambiar_contrasena=(
                     entrada.debe_cambiar_contrasena and entrada.proveedor is AuthProvider.LOCAL
                 ),
+                facultades_ids=set(entrada.facultades_ids),
+                carreras_ids=set(entrada.carreras_ids),
             )
+            await _validar_alcance(self._uow, usuario)
             creado = await self._uow.usuarios.agregar(usuario)
             await self._uow.commit()
             return creado
@@ -163,6 +176,10 @@ class ActualizarUsuario(CasoDeUso[EntradaActualizarUsuario, Usuario]):
 
             if entrada.roles is not None:
                 usuario.reemplazar_roles(await _resolver_roles(self._uow, entrada.roles))
+
+            if entrada.facultades_ids is not None or entrada.carreras_ids is not None:
+                usuario.definir_alcance(entrada.facultades_ids, entrada.carreras_ids)
+                await _validar_alcance(self._uow, usuario)
 
             actualizado = await self._uow.usuarios.actualizar(usuario)
             await self._uow.commit()
@@ -360,6 +377,21 @@ class ListarPermisos(CasoDeUso[None, list[dict[str, str]]]):
 # ---------------------------------------------------------------------------
 # Auxiliares
 # ---------------------------------------------------------------------------
+
+
+async def _validar_alcance(uow: UnidadDeTrabajo, usuario: Usuario) -> None:
+    """Comprueba que las facultades y carreras del alcance existen.
+
+    Sin esto, un identificador mal escrito dejaria a la cuenta con un alcance
+    que no corresponde a nada: veria una pantalla vacia y nadie sabria por que.
+    """
+    for tipo, ids in (
+        (TipoCatalogo.FACULTAD, usuario.facultades_ids),
+        (TipoCatalogo.CARRERA, usuario.carreras_ids),
+    ):
+        for elemento_id in sorted(ids):
+            if await uow.catalogos.obtener(tipo, elemento_id) is None:
+                raise NoEncontrado(tipo.singular, elemento_id)
 
 
 async def _resolver_roles(uow: UnidadDeTrabajo, codigos: list[str]) -> set[Rol]:

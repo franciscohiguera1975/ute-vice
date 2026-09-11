@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
 from app.domain.entities.catalogo import TipoCatalogo
 from app.domain.entities.distributivo import FilaDistributivo
 from app.domain.enums import Permiso
-from app.domain.errors import ErrorValidacion, NoEncontrado, YaExiste
+from app.domain.errors import ErrorValidacion, FueraDeAlcance, NoEncontrado, YaExiste
 from app.domain.ports.distributivo import (
     FilaDistributivoResuelta,
     FiltroDistributivo,
@@ -124,6 +124,23 @@ def _construir_horas(plano: dict[str, float]) -> DistribucionHoras:
 # ---------------------------------------------------------------------------
 
 
+def _asegurar_en_alcance(
+    contexto: ContextoEjecucion,
+    *,
+    facultad_id: UUID | None,
+    carrera_id: UUID | None,
+    recurso: str = "registro",
+) -> None:
+    """Corta si la fila cae fuera de lo que el actor puede consultar.
+
+    Los listados ya vienen recortados por la consulta, pero llegar por el
+    identificador los esquiva: sin esta comprobacion, quien tuviera un `id`
+    podria leer o modificar una fila de otra facultad.
+    """
+    if not contexto.alcance.permite(facultad_id=facultad_id, carrera_id=carrera_id):
+        raise FueraDeAlcance(recurso)
+
+
 class ListarDistributivo(CasoDeUso[EntradaListarDistributivo, Pagina[FilaDistributivoResuelta]]):
     """Lista filas del distributivo con sus catalogos ya resueltos a texto."""
 
@@ -137,8 +154,11 @@ class ListarDistributivo(CasoDeUso[EntradaListarDistributivo, Pagina[FilaDistrib
     async def _ejecutar(
         self, entrada: EntradaListarDistributivo, contexto: ContextoEjecucion
     ) -> Pagina[FilaDistributivoResuelta]:
+        # El alcance se impone aqui, sobre lo que haya pedido la peticion: es
+        # un recorte de seguridad y no un filtro que el cliente pueda relajar.
+        filtro = replace(entrada.filtro, alcance=contexto.alcance)
         async with self._uow:
-            return await self._uow.distributivo.listar(entrada.filtro, entrada.paginacion)
+            return await self._uow.distributivo.listar(filtro, entrada.paginacion)
 
 
 class ObtenerFilaDistributivo(CasoDeUso[UUID, FilaDistributivoResuelta]):
@@ -156,6 +176,12 @@ class ObtenerFilaDistributivo(CasoDeUso[UUID, FilaDistributivoResuelta]):
             fila = await self._uow.distributivo.obtener_resuelta(entrada)
             if fila is None:
                 raise NoEncontrado("Fila de distributivo", entrada)
+            _asegurar_en_alcance(
+                contexto,
+                facultad_id=fila.fila.facultad_id,
+                carrera_id=fila.fila.carrera_id,
+                recurso="registro del distributivo",
+            )
             return fila
 
 
@@ -173,7 +199,7 @@ class ResumenDelDistributivo(CasoDeUso[FiltroDistributivo, ResumenDistributivo])
         self, entrada: FiltroDistributivo, contexto: ContextoEjecucion
     ) -> ResumenDistributivo:
         async with self._uow:
-            return await self._uow.distributivo.resumen(entrada)
+            return await self._uow.distributivo.resumen(replace(entrada, alcance=contexto.alcance))
 
 
 class CrearFilaDistributivo(CasoDeUso[EntradaCrearFila, FilaDistributivo]):
@@ -190,6 +216,13 @@ class CrearFilaDistributivo(CasoDeUso[EntradaCrearFila, FilaDistributivo]):
         self, entrada: EntradaCrearFila, contexto: ContextoEjecucion
     ) -> FilaDistributivo:
         horas = _construir_horas(entrada.horas)
+
+        _asegurar_en_alcance(
+            contexto,
+            facultad_id=entrada.facultad_id,
+            carrera_id=entrada.carrera_id,
+            recurso="registro del distributivo",
+        )
 
         async with self._uow:
             if (await self._uow.docentes.obtener(entrada.docente_id)) is None:
@@ -257,6 +290,21 @@ class ActualizarFilaDistributivo(CasoDeUso[EntradaActualizarFila, FilaDistributi
             if fila is None:
                 raise NoEncontrado("Fila de distributivo", entrada.fila_id)
 
+            # Antes y despues: mover una fila fuera del propio alcance seria
+            # perderla de vista, y traerla desde fuera, apropiarsela.
+            _asegurar_en_alcance(
+                contexto,
+                facultad_id=fila.facultad_id,
+                carrera_id=fila.carrera_id,
+                recurso="registro del distributivo",
+            )
+            _asegurar_en_alcance(
+                contexto,
+                facultad_id=entrada.facultad_id or fila.facultad_id,
+                carrera_id=entrada.carrera_id or fila.carrera_id,
+                recurso="registro del distributivo",
+            )
+
             await _ValidadorReferencias(self._uow).validar(entrada, obligatorias=False)
             if entrada.carrera_id is not None:
                 await self._validar_carrera(entrada, fila)
@@ -317,8 +365,15 @@ class EliminarFilaDistributivo(CasoDeUso[UUID, None]):
 
     async def _ejecutar(self, entrada: UUID, contexto: ContextoEjecucion) -> None:
         async with self._uow:
-            if (await self._uow.distributivo.obtener(entrada)) is None:
+            fila = await self._uow.distributivo.obtener(entrada)
+            if fila is None:
                 raise NoEncontrado("Fila de distributivo", entrada)
+            _asegurar_en_alcance(
+                contexto,
+                facultad_id=fila.facultad_id,
+                carrera_id=fila.carrera_id,
+                recurso="registro del distributivo",
+            )
             await self._uow.distributivo.eliminar(entrada)
             await self._uow.commit()
 
@@ -383,6 +438,13 @@ class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsig
         async with self._uow:
             for item in entrada:
                 fila = await self._uow.distributivo.obtener(item.fila_id)
+                if fila is not None:
+                    _asegurar_en_alcance(
+                        contexto,
+                        facultad_id=fila.facultad_id,
+                        carrera_id=fila.carrera_id,
+                        recurso="registro del distributivo",
+                    )
                 if fila is None:
                     # Una fila inexistente aborta la tanda entera: significa que
                     # la pantalla trabaja sobre datos que ya cambiaron, y guardar

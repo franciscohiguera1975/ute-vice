@@ -42,6 +42,14 @@ export interface Usuario {
   readonly roles: readonly RolResumen[];
   /** Permisos efectivos: la union de los de todos sus roles. */
   readonly permisos: readonly Permiso[];
+
+  /** Facultades que puede consultar. Vacia no restringe nada. */
+  readonly facultadesIds: readonly string[];
+  /** Carreras que puede consultar. Vacia no restringe nada. */
+  readonly carrerasIds: readonly string[];
+  /** `true` si la cuenta ve el distributivo completo. */
+  readonly alcanceTotal: boolean;
+
   readonly ultimoAcceso: string | null;
   readonly creadoEn: string;
 }
@@ -420,6 +428,8 @@ export interface DatosUsuario {
   readonly roles: readonly string[];
   readonly activo?: boolean;
   readonly debeCambiarContrasena?: boolean;
+  readonly facultadesIds?: readonly string[];
+  readonly carrerasIds?: readonly string[];
 }
 
 export interface CambiosUsuario {
@@ -427,4 +437,7 @@ export interface CambiosUsuario {
   readonly email?: string;
   readonly activo?: boolean;
   readonly roles?: readonly string[];
+  /** Omitido deja el alcance como estaba; vacio lo borra. */
+  readonly facultadesIds?: readonly string[];
+  readonly carrerasIds?: readonly string[];
 }

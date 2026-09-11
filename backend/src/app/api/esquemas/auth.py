@@ -63,6 +63,19 @@ class UsuarioSalida(EsquemaBase):
     permisos: list[str] = Field(
         description="Permisos efectivos: la union de los de todos sus roles"
     )
+    facultades_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Facultades que puede consultar. Vacia no restringe nada.",
+    )
+    carreras_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Carreras que puede consultar. Vacia no restringe nada.",
+    )
+    alcance_total: bool = Field(
+        default=True,
+        description="True si la cuenta ve el distributivo completo",
+    )
+
     ultimo_acceso: datetime | None = None
     creado_en: datetime
 
@@ -78,6 +91,9 @@ class UsuarioSalida(EsquemaBase):
             debe_cambiar_contrasena=usuario.debe_cambiar_contrasena,
             roles=sorted((RolResumen.desde(r) for r in usuario.roles), key=lambda r: r.codigo),
             permisos=sorted(p.value for p in usuario.permisos),
+            facultades_ids=sorted(usuario.facultades_ids),
+            carreras_ids=sorted(usuario.carreras_ids),
+            alcance_total=usuario.alcance.es_total,
             ultimo_acceso=usuario.ultimo_acceso,
             creado_en=usuario.creado_en,
         )

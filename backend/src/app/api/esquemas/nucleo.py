@@ -560,12 +560,26 @@ class UsuarioCrear(EsquemaBase):
     activo: bool = True
     debe_cambiar_contrasena: bool = True
 
+    facultades_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Facultades que podra consultar. Vacia no restringe nada.",
+    )
+    carreras_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Carreras que podra consultar. Vacia no restringe nada.",
+    )
+
 
 class UsuarioActualizar(EsquemaBase):
     nombre_completo: str | None = Field(default=None, max_length=200)
     email: str | None = Field(default=None, max_length=254)
     activo: bool | None = None
     roles: list[str] | None = None
+
+    # `None` deja el alcance como estaba; una lista vacia lo borra, que es como
+    # se le quita la restriccion a una cuenta.
+    facultades_ids: list[UUID] | None = None
+    carreras_ids: list[UUID] | None = None
 
 
 class RestablecerContrasenaEntrada(EsquemaBase):

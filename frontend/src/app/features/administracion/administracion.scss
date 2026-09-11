@@ -100,3 +100,50 @@
 @media (width <= 640px) {
   .rol { grid-template-columns: 1fr; gap: 0.15rem; }
 }
+
+
+/* --------------------------------------------------- alcance academico --- */
+.modal__panel--ancho { max-width: 54rem; }
+
+.rejilla--alcance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.aviso-alcance {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--aviso);
+  background: var(--aviso-suave);
+  border-radius: var(--radio);
+}
+
+.filtro-alcance {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+
+.lista-alcance {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.opcion-alcance {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.82rem;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+.opcion-alcance:hover { background: var(--superficie-2); }
+.opcion-alcance input { width: auto; margin-top: 0.15rem; flex-shrink: 0; }

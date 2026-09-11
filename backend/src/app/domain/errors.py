@@ -139,6 +139,25 @@ class UsuarioBloqueado(ErrorAutenticacion):
         )
 
 
+class FueraDeAlcance(ErrorDominio):
+    """El registro existe, pero no dentro de lo que esta cuenta puede consultar.
+
+    Se distingue de `ErrorAutorizacion` a proposito: el permiso esta, lo que
+    falta es la facultad o la carrera. Decirlo asi evita que alguien crea que le
+    falta un rol cuando lo que le falta es alcance.
+    """
+
+    codigo = "fuera_de_alcance"
+    mensaje_por_defecto = "El registro esta fuera de las facultades y carreras que puede consultar"
+
+    def __init__(self, recurso: str = "registro") -> None:
+        super().__init__(
+            f"Este {recurso} pertenece a una facultad o carrera que no tiene asignada. "
+            "Solicite que amplien su alcance si necesita consultarlo.",
+            detalles={"recurso": recurso},
+        )
+
+
 class ErrorAutorizacion(ErrorDominio):
     """Autenticado, pero sin permiso para esta operacion."""
 

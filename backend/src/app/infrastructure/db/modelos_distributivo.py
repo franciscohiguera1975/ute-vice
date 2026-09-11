@@ -168,6 +168,39 @@ MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
 # Docentes
 # ===========================================================================
 
+# ---------------------------------------------------------------------------
+# Alcance academico de un usuario
+# ---------------------------------------------------------------------------
+# Viven aqui y no junto a `usuarios` porque apuntan a los catalogos: es este
+# modulo el que los define. Se leen con consultas explicitas en lugar de con
+# una relacion del ORM, para no arrastrar carga diferida hasta la resolucion
+# de permisos, que ocurre en cada peticion.
+
+
+def _tabla_alcance(nombre: str, columna: str, catalogo: str) -> Table:
+    """Las dos tablas de alcance son identicas salvo a que catalogo apuntan."""
+    return Table(
+        nombre,
+        Base.metadata,
+        Column(
+            "usuario_id",
+            PgUUID(as_uuid=True),
+            ForeignKey("usuarios.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        Column(
+            columna,
+            PgUUID(as_uuid=True),
+            ForeignKey(f"{catalogo}.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+    )
+
+
+usuario_facultades = _tabla_alcance("usuario_facultades", "facultad_id", "cat_facultades")
+usuario_carreras = _tabla_alcance("usuario_carreras", "carrera_id", "cat_carreras")
+
+
 docente_titulos = Table(
     "docente_titulos",
     Base.metadata,

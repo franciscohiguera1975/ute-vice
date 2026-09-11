@@ -28,3 +28,4 @@ pendiente.
 | [08](08-calidad-ci.md) | Pruebas y calidad | 🚧 |
 | [09](09-distributivo.md) | Distributivo docente, catalogos y exportacion | ✅ |
 | [10](10-despliegue.md) | Despliegue en VPS y entrega continua | ✅ |
+| [11](11-alcance-academico.md) | Alcance academico por usuario | ✅ |

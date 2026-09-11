@@ -487,14 +487,30 @@ class RepoDistributivo:
         # directamente porque derivarlas exigiria replicar las subconsultas.
         self.reporte: list[Any] = []
         self.resueltas: list[Any] = []
+        # Las pruebas de alcance comprueban con que filtro se consulto: es la
+        # unica forma de verificar que el recorte lo impone el caso de uso.
+        self.ultimo_filtro: Any = None
 
     async def obtener(self, fila_id: UUID):  # type: ignore[no-untyped-def]
         return self.datos.get(fila_id)
 
     async def obtener_resuelta(self, fila_id: UUID):  # type: ignore[no-untyped-def]
-        return None
+        from app.domain.ports.distributivo import FilaDistributivoResuelta
+
+        fila = self.datos.get(fila_id)
+        if fila is None:
+            return None
+        return FilaDistributivoResuelta(
+            fila=fila,
+            docente_identificacion="1710034065",
+            docente_nombre="PEREZ LUIS",
+            pao="2026-1",
+            facultad="FCID",
+            carrera="SOFTWARE",
+        )
 
     async def listar(self, filtro, paginacion):  # type: ignore[no-untyped-def]
+        self.ultimo_filtro = filtro
         return _paginar([], paginacion)
 
     async def agregar(self, fila):  # type: ignore[no-untyped-def]
@@ -528,6 +544,7 @@ class RepoDistributivo:
     async def resumen(self, filtro):  # type: ignore[no-untyped-def]
         from app.domain.ports.distributivo import ResumenDistributivo
 
+        self.ultimo_filtro = filtro
         return ResumenDistributivo(total_filas=len(self.datos))
 
     async def filas_para_reporte(self, filtro):  # type: ignore[no-untyped-def]

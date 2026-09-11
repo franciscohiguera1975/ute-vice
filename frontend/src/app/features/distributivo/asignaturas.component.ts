@@ -13,7 +13,7 @@ import {
 import { RepositorioDistributivo } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
 
-import { CatalogosStore } from './catalogos.store';
+import { CatalogosStore } from '@core/catalogos.store';
 
 /** Cuántas filas se capturan de una vez. El backend admite hasta 500. */
 const TAMANO_TANDA = 100;

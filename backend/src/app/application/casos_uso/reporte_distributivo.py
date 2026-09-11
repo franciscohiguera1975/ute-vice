@@ -124,7 +124,11 @@ class _BaseReporteDistributivo:
         self._plantillas = plantillas
 
     async def _resolver(
-        self, entrada: EntradaReporteDistributivo, *, limite: int | None
+        self,
+        entrada: EntradaReporteDistributivo,
+        contexto: ContextoEjecucion,
+        *,
+        limite: int | None,
     ) -> tuple[PlantillaDistributivo, ContenidoPlantilla, str, str | None, list[str]]:
         plantilla = self._plantillas.obtener(entrada.plantilla)
 
@@ -155,6 +159,9 @@ class _BaseReporteDistributivo:
                     pao_id=entrada.pao_id,
                     facultad_id=entrada.facultad_id,
                     carrera_ids=entrada.carrera_ids,
+                    # Quien coordina una facultad exporta su facultad, no el
+                    # padron entero, aunque pida «todas».
+                    alcance=contexto.alcance,
                 ),
                 incluir_auditoria=entrada.incluir_columnas_auditoria,
                 limite=limite,
@@ -180,7 +187,7 @@ class VistaPreviaReporteDistributivo(
         self, entrada: EntradaReporteDistributivo, contexto: ContextoEjecucion
     ) -> VistaPreviaReporte:
         plantilla, contenido, periodo, facultad, carreras = await self._resolver(
-            entrada, limite=_FILAS_VISTA_PREVIA
+            entrada, contexto, limite=_FILAS_VISTA_PREVIA
         )
         return VistaPreviaReporte(
             plantilla=plantilla.codigo,
@@ -222,7 +229,7 @@ class GenerarReporteDistributivo(
         self, entrada: EntradaReporteDistributivo, contexto: ContextoEjecucion
     ) -> ArchivoReporte:
         plantilla, contenido, periodo, facultad, carreras = await self._resolver(
-            entrada, limite=None
+            entrada, contexto, limite=None
         )
 
         if not contenido.filas:

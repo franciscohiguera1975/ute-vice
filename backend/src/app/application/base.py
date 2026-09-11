@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, Generic, TypeVar
 from uuid import UUID
 
+from app.domain.alcance import AlcanceAcademico
 from app.domain.entities.auth import Usuario
 from app.domain.enums import Permiso
 from app.domain.errors import ErrorAutorizacion
@@ -51,6 +52,17 @@ class ContextoEjecucion:
     @property
     def es_anonimo(self) -> bool:
         return self.actor is None
+
+    @property
+    def alcance(self) -> AlcanceAcademico:
+        """Que facultades y carreras puede consultar quien ejecuta.
+
+        Sin actor —las tareas automaticas— no hay restriccion: ya vienen
+        autorizadas por la politica que las dispara, y acotarlas dejaria al
+        planificador cubriendo solo una parte del padron sin que nadie lo
+        hubiera pedido.
+        """
+        return self.actor.alcance if self.actor else AlcanceAcademico.total()
 
     @classmethod
     def sistema(cls) -> ContextoEjecucion:

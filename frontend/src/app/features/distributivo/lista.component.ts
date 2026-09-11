@@ -27,7 +27,7 @@ import { PaginadorComponent } from '@shared/componentes/paginador.component';
 import { VacioComponent } from '@shared/componentes/vacio.component';
 import { PermisoDirective } from '@shared/directivas/permiso.directive';
 
-import { CatalogosStore } from './catalogos.store';
+import { CatalogosStore } from '@core/catalogos.store';
 
 @Component({
   selector: 'ute-lista-distributivo',

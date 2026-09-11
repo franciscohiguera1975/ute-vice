@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
+from app.domain.alcance import AlcanceAcademico
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import Docente, FilaDistributivo
 from app.domain.ports.repositorios import Pagina, Paginacion
@@ -54,6 +55,13 @@ class FiltroDistributivo:
     sin_asignatura: bool | None = None
     """`True` aisla las filas con docencia pero sin asignatura registrada."""
     con_carga: bool | None = None
+
+    alcance: AlcanceAcademico | None = None
+    """Recorte por lo que el usuario puede consultar.
+
+    Lo pone el caso de uso a partir del actor, **nunca la peticion**: si
+    viniera de fuera, cualquiera podria ampliarlo pidiendo mas de la cuenta.
+    """
 
 
 # ---------------------------------------------------------------------------

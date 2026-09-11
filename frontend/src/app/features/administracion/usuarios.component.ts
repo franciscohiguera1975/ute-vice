@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
 import {
   Permiso,
   RolCodigo,
+  TipoCatalogo,
   type ErrorApi,
   type Pagina,
   type Rol,
@@ -45,8 +47,10 @@ export class UsuariosComponent {
   private readonly repositorio = inject(RepositorioAdministracion);
   private readonly notificaciones = inject(NotificacionesService);
   protected readonly sesion = inject(SesionStore);
+  protected readonly catalogos = inject(CatalogosStore);
 
   protected readonly Permiso = Permiso;
+  protected readonly TipoCatalogo = TipoCatalogo;
 
   protected readonly datos = signal<Pagina<Usuario>>(paginaVacia<Usuario>());
   protected readonly roles = signal<readonly Rol[]>([]);
@@ -72,7 +76,15 @@ export class UsuariosComponent {
   // --- Eliminar ---
   protected readonly usuarioAEliminar = signal<Usuario | null>(null);
 
+  // --- Alcance academico ---
+  protected readonly usuarioEnAlcance = signal<Usuario | null>(null);
+  protected readonly alcanceFacultades = signal<readonly string[]>([]);
+  protected readonly alcanceCarreras = signal<readonly string[]>([]);
+  protected readonly filtroCarreraAlcance = signal('');
+  protected readonly guardandoAlcance = signal(false);
+
   constructor() {
+    this.catalogos.cargar();
     this.repositorio.listarRoles().subscribe({
       next: (roles) => this.roles.set(roles),
       error: () => this.notificaciones.aviso('No fue posible cargar el catalogo de roles'),
@@ -194,6 +206,75 @@ export class UsuariosComponent {
         this.cargar();
       },
     });
+  }
+
+  // ------------------------------------------------------------- alcance
+  /**
+   * Resumen del alcance de una cuenta, para el listado.
+   *
+   * «Todo» no es una licencia especial: es lo que tiene quien no lleva ninguna
+   * facultad ni carrera asignada.
+   */
+  protected resumenAlcance(usuario: Usuario): string {
+    if (usuario.alcanceTotal) return 'Todo';
+    const partes: string[] = [];
+    if (usuario.facultadesIds.length) partes.push(`${usuario.facultadesIds.length} fac.`);
+    if (usuario.carrerasIds.length) partes.push(`${usuario.carrerasIds.length} carr.`);
+    return partes.join(' · ');
+  }
+
+  protected abrirAlcance(usuario: Usuario): void {
+    this.usuarioEnAlcance.set(usuario);
+    this.alcanceFacultades.set([...usuario.facultadesIds]);
+    this.alcanceCarreras.set([...usuario.carrerasIds]);
+    this.filtroCarreraAlcance.set('');
+  }
+
+  protected carrerasDelAlcance(): readonly { id: string; nombre: string }[] {
+    const patron = this.filtroCarreraAlcance().trim().toLowerCase();
+    const todas = this.catalogos.de(TipoCatalogo.CARRERA);
+    return patron ? todas.filter((c) => c.nombre.toLowerCase().includes(patron)) : todas;
+  }
+
+  protected alternarFacultad(id: string, marcada: boolean): void {
+    this.alcanceFacultades.update((lista) =>
+      marcada ? [...new Set([...lista, id])] : lista.filter((f) => f !== id),
+    );
+  }
+
+  protected alternarCarreraAlcance(id: string, marcada: boolean): void {
+    this.alcanceCarreras.update((lista) =>
+      marcada ? [...new Set([...lista, id])] : lista.filter((c) => c !== id),
+    );
+  }
+
+  protected limpiarAlcance(): void {
+    this.alcanceFacultades.set([]);
+    this.alcanceCarreras.set([]);
+  }
+
+  protected guardarAlcance(): void {
+    const usuario = this.usuarioEnAlcance();
+    if (!usuario) return;
+
+    this.guardandoAlcance.set(true);
+    this.repositorio
+      .actualizarUsuario(usuario.id, {
+        facultadesIds: this.alcanceFacultades(),
+        carrerasIds: this.alcanceCarreras(),
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoAlcance.set(false);
+          this.usuarioEnAlcance.set(null);
+          this.notificaciones.exito('Alcance actualizado');
+          this.cargar();
+        },
+        error: (error: ErrorApi) => {
+          this.guardandoAlcance.set(false);
+          this.notificaciones.error('No fue posible cambiar el alcance', error.mensaje);
+        },
+      });
   }
 
   protected restablecer(): void {

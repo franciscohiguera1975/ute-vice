@@ -92,6 +92,8 @@ async def crear_usuario(
             roles=tuple(datos.roles),
             activo=datos.activo,
             debe_cambiar_contrasena=datos.debe_cambiar_contrasena,
+            facultades_ids=tuple(datos.facultades_ids),
+            carreras_ids=tuple(datos.carreras_ids),
         ),
         contexto,
     )
@@ -135,6 +137,8 @@ async def actualizar_usuario(
             email=datos.email,
             activo=datos.activo,
             roles=datos.roles,
+            facultades_ids=datos.facultades_ids,
+            carreras_ids=datos.carreras_ids,
         ),
         contexto,
     )

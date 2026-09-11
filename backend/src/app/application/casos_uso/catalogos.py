@@ -102,9 +102,22 @@ class ObtenerCatalogoCompleto(CasoDeUso[EntradaCatalogoCompleto, list[ElementoCa
         self, entrada: EntradaCatalogoCompleto, contexto: ContextoEjecucion
     ) -> list[ElementoCatalogo]:
         async with self._uow:
-            return await self._uow.catalogos.listar_todos(
+            elementos = await self._uow.catalogos.listar_todos(
                 entrada.tipo, solo_activos=entrada.solo_activos
             )
+
+        # Los selectores de facultad y carrera se recortan al alcance del
+        # usuario: ofrecer opciones que luego no devuelven nada seria un
+        # desplegable lleno de callejones sin salida. Los otros diez catalogos
+        # —sede, dedicacion, genero…— no acotan a nadie y van completos.
+        alcance = contexto.alcance
+        if alcance.es_total:
+            return elementos
+        if entrada.tipo is TipoCatalogo.FACULTAD and alcance.facultades:
+            return [e for e in elementos if e.id in alcance.facultades]
+        if entrada.tipo is TipoCatalogo.CARRERA and alcance.carreras:
+            return [e for e in elementos if e.id in alcance.carreras]
+        return elementos
 
 
 class ObtenerElementoCatalogo(CasoDeUso[EntradaObtenerElemento, ElementoCatalogo]):

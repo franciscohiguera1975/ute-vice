@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Integer, Select, cast, delete, func, select
+from sqlalchemy import Integer, Select, cast, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -474,6 +474,17 @@ class RepositorioDistributivoSQL:
             consulta = consulta.where(f.total_docencia > 0, f.asignatura.is_(None))
         if filtro.con_carga is not None:
             consulta = consulta.where(f.total_horas > 0 if filtro.con_carga else f.total_horas == 0)
+
+        # El alcance va al final y siempre: es un recorte de seguridad, no un
+        # filtro mas. Se suman facultades y carreras en lugar de cruzarlas —ver
+        # `domain/alcance.py`—, de ahi el `or_`.
+        if filtro.alcance is not None and not filtro.alcance.es_total:
+            permitido = []
+            if filtro.alcance.facultades:
+                permitido.append(f.facultad_id.in_(filtro.alcance.facultades))
+            if filtro.alcance.carreras:
+                permitido.append(f.carrera_id.in_(filtro.alcance.carreras))
+            consulta = consulta.where(or_(*permitido))
         return consulta
 
     @staticmethod

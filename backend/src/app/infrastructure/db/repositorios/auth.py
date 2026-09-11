@@ -21,6 +21,7 @@ from app.infrastructure.db.modelos import (
     UsuarioModel,
     usuario_roles,
 )
+from app.infrastructure.db.modelos_distributivo import usuario_carreras, usuario_facultades
 
 
 class RepositorioUsuariosSQL:
@@ -36,13 +37,57 @@ class RepositorioUsuariosSQL:
             selectinload(UsuarioModel.roles).selectinload(RolModel.permisos)
         )
 
+    async def _alcances(self, ids: list[UUID]) -> dict[UUID, tuple[set[UUID], set[UUID]]]:
+        """Facultades y carreras de cada usuario, en dos consultas.
+
+        Se resuelve para la pagina entera y no por usuario: el listado de
+        administracion pinta veinte cuentas y no va a disparar cuarenta
+        consultas por ello.
+        """
+        alcances: dict[UUID, tuple[set[UUID], set[UUID]]] = {i: (set(), set()) for i in ids}
+        if not ids:
+            return alcances
+
+        for tabla, columna, posicion in (
+            (usuario_facultades, usuario_facultades.c.facultad_id, 0),
+            (usuario_carreras, usuario_carreras.c.carrera_id, 1),
+        ):
+            filas = await self._s.execute(
+                select(tabla.c.usuario_id, columna).where(tabla.c.usuario_id.in_(ids))
+            )
+            for usuario_id, elemento_id in filas:
+                alcances[usuario_id][posicion].add(elemento_id)
+        return alcances
+
+    async def _con_alcance(self, fila: UsuarioModel | None) -> Usuario | None:
+        if fila is None:
+            return None
+        usuario = m.usuario_a_dominio(fila)
+        facultades, carreras = (await self._alcances([fila.id]))[fila.id]
+        usuario.facultades_ids = facultades
+        usuario.carreras_ids = carreras
+        return usuario
+
+    async def _guardar_alcance(self, usuario: Usuario) -> None:
+        """Reemplaza el alcance guardado por el de la entidad."""
+        for tabla, columna, ids in (
+            (usuario_facultades, "facultad_id", usuario.facultades_ids),
+            (usuario_carreras, "carrera_id", usuario.carreras_ids),
+        ):
+            await self._s.execute(delete(tabla).where(tabla.c.usuario_id == usuario.id))
+            if ids:
+                await self._s.execute(
+                    tabla.insert(),
+                    [{"usuario_id": usuario.id, columna: i} for i in ids],
+                )
+
     async def obtener(self, usuario_id: UUID) -> Usuario | None:
         fila = await self._s.scalar(self._base().where(UsuarioModel.id == usuario_id))
-        return m.usuario_a_dominio(fila) if fila else None
+        return await self._con_alcance(fila)
 
     async def obtener_por_email(self, email: Email) -> Usuario | None:
         fila = await self._s.scalar(self._base().where(UsuarioModel.email == email.valor))
-        return m.usuario_a_dominio(fila) if fila else None
+        return await self._con_alcance(fila)
 
     async def obtener_por_externo(self, proveedor: str, identificador: str) -> Usuario | None:
         fila = await self._s.scalar(
@@ -51,7 +96,7 @@ class RepositorioUsuariosSQL:
                 UsuarioModel.identificador_externo == identificador,
             )
         )
-        return m.usuario_a_dominio(fila) if fila else None
+        return await self._con_alcance(fila)
 
     async def listar(
         self,
@@ -84,13 +129,22 @@ class RepositorioUsuariosSQL:
             conteo = conteo.where(UsuarioModel.id.in_(sub))
 
         total = await self._s.scalar(conteo) or 0
-        filas = await self._s.scalars(
-            consulta.order_by(UsuarioModel.nombre_completo)
-            .offset(paginacion.offset)
-            .limit(paginacion.limite)
+        filas = list(
+            await self._s.scalars(
+                consulta.order_by(UsuarioModel.nombre_completo)
+                .offset(paginacion.offset)
+                .limit(paginacion.limite)
+            )
         )
+        alcances = await self._alcances([f.id for f in filas])
+        usuarios: list[Usuario] = []
+        for fila in filas:
+            usuario = m.usuario_a_dominio(fila)
+            usuario.facultades_ids, usuario.carreras_ids = alcances[fila.id]
+            usuarios.append(usuario)
+
         return Pagina(
-            items=[m.usuario_a_dominio(f) for f in filas],
+            items=usuarios,
             total=total,
             pagina=paginacion.pagina,
             tamano=paginacion.tamano,
@@ -101,6 +155,7 @@ class RepositorioUsuariosSQL:
         modelo.roles = await self._modelos_de_roles(usuario.roles)
         self._s.add(modelo)
         await self._s.flush()
+        await self._guardar_alcance(usuario)
         return usuario
 
     async def actualizar(self, usuario: Usuario) -> Usuario:
@@ -114,6 +169,7 @@ class RepositorioUsuariosSQL:
         m.usuario_a_modelo(usuario, modelo)
         modelo.roles = await self._modelos_de_roles(usuario.roles)
         await self._s.flush()
+        await self._guardar_alcance(usuario)
         return usuario
 
     async def eliminar(self, usuario_id: UUID) -> None:

@@ -51,7 +51,8 @@ Detalle en [`docs/manual/instalacion.md`](docs/manual/instalacion.md).
   distributivo se exporta con **plantillas intercambiables**: la institucional y
   la que reproduce el archivo de origen para contrastar.
 - **Control de acceso por permisos**, con acceso local, Google OAuth y
-  directorio activo.
+  directorio activo, y **alcance academico** por cuenta: cada usuario ve las
+  facultades y carreras que tiene asignadas.
 
 ---
 
@@ -126,7 +127,7 @@ Para agregar una tabla nueva:
 
 ## Estado
 
-Fases 00 a 07, 09 y 10 cerradas; fase 08 (calidad) en curso. **357 pruebas en
+Fases 00 a 07 y 09 a 11 cerradas; fase 08 (calidad) en curso. **376 pruebas en
 verde** y la aplicacion publicada.
 
 Backend y frontend funcionales, verificados de extremo a extremo contra

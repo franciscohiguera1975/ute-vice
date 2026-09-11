@@ -385,6 +385,60 @@ async def vaciar_distributivo() -> None:
 # ---------------------------------------------------------------------------
 
 
+async def restablecer_contrasena() -> None:
+    """Devuelve el acceso a una cuenta que perdio su contrasena.
+
+        python -m app.cli reset-password --email admin@ute.edu.ec [--contrasena X]
+
+    Existe porque la contrasena del `.env` solo sirve para el alta inicial: una
+    vez cambiada, ese valor ya no abre nada, y sin esta salida recuperar el
+    acceso obligaria a escribir SQL contra la tabla de usuarios.
+
+    Sin `--contrasena` genera una y la imprime. La cuenta queda obligada a
+    cambiarla en el proximo acceso: una clave que paso por una terminal y por un
+    registro de shell no deberia seguir siendo valida manana.
+    """
+    import secrets
+    import string
+
+    from app.domain.value_objects import ContrasenaEnClaro, Email
+
+    argumentos = dict(zip(sys.argv[2::2], sys.argv[3::2], strict=False))
+    correo = argumentos.get("--email")
+    if not correo:
+        print("  Uso: python -m app.cli reset-password --email <correo> [--contrasena <clave>]")
+        sys.exit(1)
+
+    # Con mayusculas, minusculas, digito y simbolo: la politica los exige.
+    alfabeto = string.ascii_letters + string.digits
+    nueva = argumentos.get("--contrasena") or (
+        "".join(secrets.choice(alfabeto) for _ in range(18)) + "#7z"
+    )
+
+    contenedor = Contenedor(get_settings())
+    uow = contenedor.unidad_de_trabajo()
+
+    async with uow:
+        usuario = await uow.usuarios.obtener_por_email(Email(correo))
+        if usuario is None:
+            print(f"  ERROR: no existe ninguna cuenta con el correo {correo}")
+            sys.exit(1)
+
+        clara = ContrasenaEnClaro(
+            nueva, longitud_minima=contenedor.settings.security.password_min_length
+        )
+        usuario.hash_contrasena = contenedor.hasher.hashear(clara.valor)
+        usuario.debe_cambiar_contrasena = True
+        usuario.intentos_fallidos = 0
+        usuario.bloqueado_hasta = None
+        await uow.usuarios.actualizar(usuario)
+        await uow.commit()
+
+    print(f"  cuenta      : {correo}")
+    print(f"  contrasena  : {nueva}")
+    print("  la cuenta debera cambiarla en el proximo acceso")
+
+
 async def limpiar() -> None:
     """Purga tokens de refresco vencidos."""
     from app.application.base import ContextoEjecucion
@@ -436,6 +490,10 @@ _COMANDOS = {
     "vaciar-distributivo": (
         vaciar_distributivo,
         "Borra las filas del distributivo (conserva catalogos y docentes)",
+    ),
+    "reset-password": (
+        restablecer_contrasena,
+        "Devuelve el acceso a una cuenta que perdio su contrasena",
     ),
     "limpiar": (limpiar, "Elimina tokens de refresco vencidos"),
     "info": (info, "Muestra la configuracion efectiva"),

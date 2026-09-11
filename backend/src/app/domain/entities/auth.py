@@ -8,10 +8,12 @@ sitio.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
+from app.domain.alcance import AlcanceAcademico
 from app.domain.enums import AuthProvider, Permiso, RolCodigo
 from app.domain.errors import ConflictoDeEstado, ReglaDeNegocioViolada
 from app.domain.value_objects import Email, ahora_utc
@@ -108,6 +110,11 @@ class Usuario:
     es_superusuario: bool = False
     """Puertas abiertas. Reservado a la cuenta de rescate inicial."""
 
+    #: Facultades y carreras que esta cuenta puede consultar. Vacias no
+    #: restringen nada: ver `domain/alcance.py`.
+    facultades_ids: set[UUID] = field(default_factory=set)
+    carreras_ids: set[UUID] = field(default_factory=set)
+
     intentos_fallidos: int = 0
     bloqueado_hasta: datetime | None = None
     ultimo_acceso: datetime | None = None
@@ -141,6 +148,30 @@ class Usuario:
     def tiene_rol(self, codigo: str | RolCodigo) -> bool:
         buscado = codigo.value if isinstance(codigo, RolCodigo) else codigo
         return any(r.codigo == buscado for r in self.roles)
+
+    # --------------------------------------------------------------- alcance
+    @property
+    def alcance(self) -> AlcanceAcademico:
+        """Que parte del distributivo ve esta cuenta.
+
+        El superusuario no se acota nunca: es la cuenta de rescate, y dejarla
+        sin ver algo podria impedir arreglar justamente eso.
+        """
+        if self.es_superusuario:
+            return AlcanceAcademico.total()
+        return AlcanceAcademico.de(self.facultades_ids, self.carreras_ids)
+
+    def definir_alcance(
+        self,
+        facultades_ids: Iterable[UUID] | None = None,
+        carreras_ids: Iterable[UUID] | None = None,
+    ) -> None:
+        """Reemplaza el alcance. Dos listas vacias lo dejan sin restriccion."""
+        if facultades_ids is not None:
+            self.facultades_ids = set(facultades_ids)
+        if carreras_ids is not None:
+            self.carreras_ids = set(carreras_ids)
+        self.actualizado_en = ahora_utc()
 
     # ----------------------------------------------------------------- roles
     def asignar_rol(self, rol: Rol) -> None:

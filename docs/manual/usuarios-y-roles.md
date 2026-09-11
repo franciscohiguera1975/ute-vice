@@ -140,3 +140,67 @@ recuperar el control. El backend tambien lo impide.
 
 Los cambios afectan a todos los usuarios con ese rol la proxima vez que el
 sistema recargue su perfil, que ocurre en cada peticion.
+
+
+---
+
+## Alcance academico
+
+Los roles dicen **que** puede hacer una cuenta. El alcance dice **sobre que
+parte del distributivo** puede hacerlo.
+
+Quien coordina una facultad tiene el mismo rol `COORDINADOR` que quien coordina
+otra; lo que los distingue es la facultad asignada.
+
+### Como funciona
+
+En *Administracion › Usuarios*, la columna **Alcance** abre la asignacion. Se
+marcan facultades, carreras, o ambas.
+
+**Facultades y carreras se suman, no se cruzan.** Con la facultad `FCID` y la
+carrera `Medicina`, la cuenta ve **todo FCID** y **ademas Medicina**, aunque
+Medicina pertenezca a otra facultad. Solo hace falta marcar carreras sueltas
+para conceder acceso a programas de facultades que no estan marcadas.
+
+### Sin nada marcado, ve todo
+
+Es lo mas importante de entender, y es deliberado: **un alcance vacio no
+restringe nada**.
+
+Si vaciarlo significara «no ve nada», cualquier cuenta a la que se olvidara
+asignarle facultades quedaria mirando una pantalla en blanco sin explicacion, y
+todas las cuentas que existian antes de esta funcion habrian dejado de
+funcionar de golpe.
+
+El boton **«Quitar restriccion»** hace exactamente eso: vacia las dos listas.
+
+El **superusuario** nunca se acota, aunque se le marquen facultades: es la
+cuenta de rescate, y dejarla sin ver algo podria impedir arreglar justamente
+eso.
+
+### Que acota, en concreto
+
+| Se acota | No se acota |
+|---|---|
+| El listado del distributivo | Personas y titulos |
+| Los contadores del resumen | Las consultas al SENESCYT |
+| Los reportes del distributivo, en las dos plantillas | Los catalogos de sede, dedicacion, categoria, genero… |
+| Los selectores de facultad y carrera | La administracion de usuarios y roles |
+| La captura de asignaturas | |
+
+El recorte lo impone el **servidor** a partir de quien pide, nunca la peticion.
+Pedir mas de la cuenta no amplia nada: entrar por el identificador de un
+registro de otra facultad devuelve un `403 fuera_de_alcance`, no el registro.
+
+### Ejemplo
+
+Un coordinador acotado a una facultad, sobre el historico completo:
+
+| | Administrador | Coordinador acotado |
+|---|---|---|
+| Filas del distributivo | 15.219 | 1.989 |
+| Facultades en el selector | 13 | 1 |
+| Sedes en el selector | 4 | 4 |
+| Reporte de 2026-1 | 1.523 filas | 214 filas |
+
+No hace falta que el coordinador filtre por su facultad: ya viene recortado.

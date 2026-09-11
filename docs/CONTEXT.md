@@ -5,7 +5,7 @@
 > de tocar nada. Se actualiza al cerrar cada fase.
 
 **Ultima actualizacion:** 2026-09-11
-**Fases cerradas:** 00 → 07, 09, 10 · **En curso:** 08 (calidad y pruebas)
+**Fases cerradas:** 00 → 07, 09, 10, 11 · **En curso:** 08 (calidad y pruebas)
 **Estado:** **en produccion** en <https://vice-gestion.uaeftt-ute.site>
 
 ---
@@ -33,7 +33,7 @@ Entregado y funcionando:
 
 | Componente | Estado |
 |---|---|
-| Backend | 50 rutas / 69 operaciones; **357 pruebas en verde** (331 unitarias + 26 de integracion) |
+| Backend | 51 rutas / 70 operaciones; **376 pruebas en verde** (350 unitarias + 26 de integracion) |
 | Base de datos | 27 tablas; migracion aplica y revierte sobre PostgreSQL 18 real |
 | Frontend | Compila sin avisos; 343 kB iniciales (100 kB comprimidos) |
 | Verificacion | Recorrido completo en navegador contra backend y base reales |
@@ -173,7 +173,16 @@ Lo que quedo abierto:
 - La contrasena de root del VPS viajo en texto plano en la sesion del
   despliegue: conviene rotarla y dejar solo acceso por clave.
 
-### Fase 11 — espera confirmacion funcional
+### Fase 11 — cerrada
+
+Alcance academico: cada cuenta se acota a un conjunto de facultades y carreras.
+Detalle en [`changelogs/11-alcance-academico.md`](changelogs/11-alcance-academico.md);
+el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
+
+Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
+libre y habria que normalizarla antes—, y no hay alcance por sede.
+
+### Fase 12 — espera confirmacion funcional
 
 El Vicerrectorado no ha confirmado que tablas adicionales incorporar. El
 procedimiento para agregar una sin romper nada esta en
@@ -220,7 +229,7 @@ que se creia.
 
 ## 9. Antes de dar algo por terminado
 
-- `make test` en verde (331 unitarias) y `make test-integracion` tambien (26).
+- `make test` en verde (350 unitarias) y `make test-integracion` tambien (26).
   Son dos objetivos: las de integracion recrean el esquema y se niegan a correr
   contra una base que no termine en `_test`.
 - `make lint` sin errores.
