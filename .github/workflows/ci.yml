@@ -1,0 +1,113 @@
+# =====================================================================
+# Integracion continua — UTE Vice · Gestion Academica
+# =====================================================================
+# Corre en cada empujon y en cada pull request. El despliegue es un flujo
+# aparte que depende de este: nada llega al servidor sin pasar por aqui.
+# =====================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------
+  backend:
+    name: Backend · lint, tipos y pruebas
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # El nombre de la base termina en `_test` a proposito: las pruebas de
+        # integracion recrean el esquema y se niegan a correr contra otra cosa.
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ute
+          POSTGRES_PASSWORD: ute
+          POSTGRES_DB: ute_vice_test
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ute -d ute_vice_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 55432
+      POSTGRES_USER: ute
+      POSTGRES_PASSWORD: ute
+      POSTGRES_DB: ute_vice_test
+      SECRET_KEY: clave-solo-para-integracion-continua-0123456789abcdef
+      ENVIRONMENT: development
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Extensiones de PostgreSQL
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+          PGPASSWORD=ute psql -h localhost -p 55432 -U ute -d ute_vice_test -c \
+            "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS unaccent;"
+
+      - name: Dependencias
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Ruff
+        working-directory: backend
+        run: |
+          ruff check src tests
+          ruff format --check src tests
+
+      - name: Mypy
+        working-directory: backend
+        run: mypy src
+
+      - name: Pruebas
+        working-directory: backend
+        run: pytest -q
+
+  # -------------------------------------------------------------------
+  frontend:
+    name: Frontend · compilacion
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dependencias
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Compilar
+        working-directory: frontend
+        run: npm run build
+
+      # El artefacto lo reutiliza el despliegue: asi el VPS —1,8 GB de RAM
+      # compartidos con otras aplicaciones— nunca compila Angular.
+      - name: Guardar el paquete
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/ute-vice/browser
+          retention-days: 5
+          if-no-files-found: error

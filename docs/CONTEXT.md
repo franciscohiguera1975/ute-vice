@@ -5,8 +5,8 @@
 > de tocar nada. Se actualiza al cerrar cada fase.
 
 **Ultima actualizacion:** 2026-09-11
-**Fases cerradas:** 00 → 07, 09 · **En curso:** 08 (calidad y pruebas)
-**Estado:** backend y frontend funcionales, verificados de extremo a extremo
+**Fases cerradas:** 00 → 07, 09, 10 · **En curso:** 08 (calidad y pruebas)
+**Estado:** **en produccion** en <https://vice-gestion.uaeftt-ute.site>
 
 ---
 
@@ -157,7 +157,23 @@ Lo que quedo abierto ahi:
 - `SEDE` sale normalizada en la plantilla de origen; si hiciera falta el texto
   literal del consolidado, habria que guardarlo al importar.
 
-### Fase 10 — espera confirmacion funcional
+### Fase 10 — cerrada
+
+Desplegada en el VPS con entrega continua desde GitHub Actions. El detalle —los
+puertos, la restriccion de memoria que definio el diseno y los tres fallos que
+aparecieron al desplegar— en
+[`changelogs/10-despliegue.md`](changelogs/10-despliegue.md); la operacion, en
+[`manual/despliegue.md`](manual/despliegue.md).
+
+Lo que quedo abierto:
+
+- **El `.env` de produccion existe en un solo sitio**, el servidor. Sin copia
+  fuera, perderlo es perder los secretos.
+- **Los respaldos de la base viven en el mismo disco** que la base.
+- La contrasena de root del VPS viajo en texto plano en la sesion del
+  despliegue: conviene rotarla y dejar solo acceso por clave.
+
+### Fase 11 — espera confirmacion funcional
 
 El Vicerrectorado no ha confirmado que tablas adicionales incorporar. El
 procedimiento para agregar una sin romper nada esta en
@@ -189,6 +205,10 @@ No los reintroduzcas. Estan documentados en el changelog de su fase:
     un 500 en lugar de decir que no caben (Fase 09)
 15. Las pruebas de integracion apuntando por omision a `ute_vice` en lugar de
     `ute_vice_test`: correr la bateria borraba la base de desarrollo (Fase 09)
+16. El paquete de produccion de Angular apuntando a `localhost:8000`, porque
+    `angular.json` no reemplazaba el archivo de entorno (Fase 10)
+17. El volumen de PostgreSQL 18 montado en `/var/lib/postgresql/data`, como en
+    la 16: el contenedor se niega a arrancar (Fase 10)
 
 El octavo es el mas ilustrativo: un fallo en la ruta feliz de la configuracion
 de ejemplo, que solo aparecio al arrancar con un `.env` realista. Los dos

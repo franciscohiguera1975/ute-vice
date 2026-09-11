@@ -27,3 +27,4 @@ pendiente.
 | [07](07-frontend-modulos.md) | Frontend: modulos funcionales | ✅ |
 | [08](08-calidad-ci.md) | Pruebas y calidad | 🚧 |
 | [09](09-distributivo.md) | Distributivo docente, catalogos y exportacion | ✅ |
+| [10](10-despliegue.md) | Despliegue en VPS y entrega continua | ✅ |

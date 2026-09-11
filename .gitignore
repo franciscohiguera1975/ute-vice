@@ -23,6 +23,7 @@ npm-debug.log*
 .env.local
 .env.*.local
 !.env.example
+!.env.prod.example
 
 # ---- Datos / artefactos ----
 *.sqlite3

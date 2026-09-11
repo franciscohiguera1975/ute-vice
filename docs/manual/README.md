@@ -6,6 +6,8 @@ Documentacion de uso y operacion de la plataforma.
 
 - **[instalacion.md](instalacion.md)** — Levantar la plataforma, configurarla y
   ponerla en produccion.
+- **[despliegue.md](despliegue.md)** — El VPS, los puertos, la entrega continua
+  y como operar lo que ya esta publicado.
 - **[consultas-senescyt.md](consultas-senescyt.md)** — Operar las campanas de
   consulta al registro nacional y configurar el proveedor.
 

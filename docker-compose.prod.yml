@@ -1,9 +1,21 @@
+# =====================================================================
+# Despliegue de produccion — UTE Vice · Gestion Academica
+# =====================================================================
+# Dos contenedores y nada mas: el frontend son archivos estaticos que sirve
+# el nginx del host. En un VPS de 1,8 GB compartido con otras aplicaciones,
+# cada contenedor que no hace falta es memoria que se le quita al resto.
+#
+# Los puertos se publican **solo en 127.0.0.1**: al exterior se llega por el
+# nginx del host, que es quien termina TLS. Nada de esto queda expuesto en
+# la interfaz publica.
+# =====================================================================
+
 name: ute-vice
 
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: ute_vice_postgres
+    container_name: vice_gestion_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -12,7 +24,7 @@ services:
       TZ: ${TZ:-America/Guayaquil}
       PGTZ: ${TZ:-America/Guayaquil}
     ports:
-      - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_EXTERNAL_PORT:-5437}:5432"
     volumes:
       # PostgreSQL 18 cambio la convencion: el volumen va en
       # `/var/lib/postgresql` y la imagen coloca los datos en un subdirectorio
@@ -22,65 +34,51 @@ services:
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 20s
-    networks: [ute_net]
+      start_period: 30s
+    networks: [vice_net]
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: development
-    container_name: ute_vice_backend
+      target: production
+    image: ute-vice-backend:prod
+    container_name: vice_gestion_backend
     restart: unless-stopped
     env_file: [.env]
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
     ports:
-      - "${BACKEND_EXTERNAL_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_EXTERNAL_PORT:-8100}:8000"
     volumes:
-      - ./backend:/app
       - backend_storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
+    # Dos trabajadores, no cuatro: con 1,8 GB compartidos, cuatro procesos de
+    # uvicorn compiten con las demas aplicaciones del servidor.
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips='*'"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status == 200 else 1)"]
-      interval: 20s
+      interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 40s
-    networks: [ute_net]
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: ute_vice_frontend
-    restart: unless-stopped
-    environment:
-      NG_API_URL: ${FRONTEND_API_URL:-http://localhost:8000/api/v1}
-    ports:
-      - "${FRONTEND_EXTERNAL_PORT:-4200}:4200"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    depends_on:
-      - backend
-    networks: [ute_net]
+      start_period: 60s
+    networks: [vice_net]
 
 volumes:
   postgres_data:
+    name: vice_gestion_postgres_data
   backend_storage:
-  frontend_node_modules:
+    name: vice_gestion_backend_storage
 
 networks:
-  ute_net:
+  vice_net:
+    name: vice_gestion_net
     driver: bridge

@@ -43,7 +43,7 @@ Nombre, descripcion y permiso son los tres campos de un catalogo de skills.
 Reciben un `ContextoEjecucion` y lanzan errores de dominio. Un agente los invoca
 igual que un endpoint, y traduce los errores a su propio lenguaje.
 
-## Restriccion de diseno para la Fase 14
+## Restriccion de diseno para la Fase 15
 
 Cuando se implementen las consultas en lenguaje natural, **el modelo no debe
 generar SQL libre**. Solo podra componer skills registradas, que ya llevan sus
@@ -66,9 +66,9 @@ forma del registro.
 
 ## Consecuencias
 
-- Hay un `descriptor()` que hoy no usa nadie. Es codigo muerto hasta la Fase 12,
+- Hay un `descriptor()` que hoy no usa nadie. Es codigo muerto hasta la Fase 13,
   y es barato.
 - La uniformidad de firma obliga a declarar una dataclass de entrada incluso
   para casos de uso que reciben un solo UUID.
-- La restriccion sobre SQL libre debe recordarse cuando llegue la Fase 14. Por
+- La restriccion sobre SQL libre debe recordarse cuando llegue la Fase 15. Por
   eso esta escrita aqui y no en la cabeza de nadie.

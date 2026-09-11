@@ -9,6 +9,13 @@ FastAPI · PostgreSQL 18 · Angular 20 · Arquitectura limpia
 
 ---
 
+## En produccion
+
+<https://vice-gestion.uaeftt-ute.site> — desplegada desde `main` por GitHub
+Actions. Detalle en [`docs/manual/despliegue.md`](docs/manual/despliegue.md).
+
+---
+
 ## Arranque
 
 ```bash
@@ -119,7 +126,8 @@ Para agregar una tabla nueva:
 
 ## Estado
 
-Fases 00 a 07 y 09 cerradas; fase 08 (calidad) en curso. **357 pruebas en verde.**
+Fases 00 a 07, 09 y 10 cerradas; fase 08 (calidad) en curso. **357 pruebas en
+verde** y la aplicacion publicada.
 
 Backend y frontend funcionales, verificados de extremo a extremo contra
 PostgreSQL real y contra el consolidado de distributivo completo (15.219 filas).

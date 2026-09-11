@@ -44,7 +44,7 @@ vertical habria multiplicado el codigo sin reducir el acoplamiento real.
 
 - Las 200+ pruebas unitarias corren sin Docker, sin base y sin red.
 - Cambiar de proveedor SENESCYT es cambiar una variable de entorno.
-- Los casos de uso no dependen de HTTP, lo que habilita la Fase 12 sin
+- Los casos de uso no dependen de HTTP, lo que habilita la Fase 13 sin
   reescribirlos.
 
 **En contra**

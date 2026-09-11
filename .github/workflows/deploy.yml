@@ -1,0 +1,114 @@
+# =====================================================================
+# Despliegue — UTE Vice · Gestion Academica
+# =====================================================================
+# Se dispara al terminar CI en `main`, y solo si CI paso. Tambien se puede
+# lanzar a mano desde la pestana Actions.
+#
+# El VPS es un destino tonto: no clona el repositorio ni guarda credenciales
+# de GitHub. Este flujo le copia el codigo y el frontend ya compilado, y
+# ejecuta el script de despliegue. Angular se compila aqui, nunca alla: el
+# servidor tiene 1,8 GB de RAM compartidos con otras aplicaciones.
+#
+# Secretos que hacen falta (Settings › Secrets and variables › Actions):
+#   VPS_SSH_KEY   clave privada de despliegue (ed25519, sin passphrase)
+#   VPS_HOST      74.208.222.22
+#   VPS_USER      root
+# =====================================================================
+name: Despliegue
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: despliegue-produccion
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    name: Publicar en el VPS
+    runs-on: ubuntu-latest
+    # En `workflow_run` hay que comprobarlo a mano: el evento llega tanto si
+    # CI paso como si fallo.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    environment:
+      name: produccion
+      url: https://vice-gestion.uaeftt-ute.site
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Compilar el frontend
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Preparar el acceso SSH
+        env:
+          CLAVE: ${{ secrets.VPS_SSH_KEY }}
+          MAQUINA: ${{ secrets.VPS_HOST }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CLAVE" > ~/.ssh/despliegue
+          chmod 600 ~/.ssh/despliegue
+          ssh-keyscan -H "$MAQUINA" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Copiar el codigo
+        env:
+          DESTINO: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+        run: |
+          SSH="ssh -i ~/.ssh/despliegue -o BatchMode=yes"
+
+          # `--delete` deja el servidor identico al repositorio. El `.env` vive
+          # solo alla y ninguna de estas rutas lo toca.
+          rsync -az --delete -e "$SSH" \
+            --exclude '.venv' --exclude '__pycache__' --exclude '.pytest_cache' \
+            --exclude '.mypy_cache' --exclude '.ruff_cache' --exclude '*.pyc' \
+            backend/ "$DESTINO":/opt/vice-gestion/backend/
+
+          rsync -az --delete -e "$SSH" infra/ "$DESTINO":/opt/vice-gestion/infra/
+          rsync -az           -e "$SSH" docker-compose.prod.yml "$DESTINO":/opt/vice-gestion/
+          rsync -az --delete  -e "$SSH" frontend/dist/ute-vice/browser/ \
+            "$DESTINO":/opt/vice-gestion/frontend/
+
+      - name: Desplegar
+        env:
+          DESTINO: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+        run: |
+          ssh -i ~/.ssh/despliegue -o BatchMode=yes "$DESTINO" \
+            'chown -R www-data:www-data /opt/vice-gestion/frontend &&
+             cd /opt/vice-gestion &&
+             set -a && . ./.env && set +a &&
+             bash infra/deploy/deploy.sh'
+
+      - name: Comprobar el sitio publicado
+        run: |
+          for intento in $(seq 1 10); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+              https://vice-gestion.uaeftt-ute.site/health || true)
+            if [ "$codigo" = "200" ]; then
+              echo "El sitio responde 200."
+              exit 0
+            fi
+            echo "intento $intento: HTTP $codigo"
+            sleep 6
+          done
+          echo "El sitio no respondio 200 tras el despliegue." >&2
+          exit 1
+
+      - name: Limpiar la clave
+        if: always()
+        run: rm -f ~/.ssh/despliegue
