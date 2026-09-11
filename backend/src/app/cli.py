@@ -385,6 +385,38 @@ async def vaciar_distributivo() -> None:
 # ---------------------------------------------------------------------------
 
 
+async def sincronizar_personas() -> None:
+    """Crea registros de personas a partir del padron docente.
+
+        python -m app.cli personas-desde-docentes
+
+    Es idempotente: correrlo dos veces no duplica a nadie. Los docentes con
+    pasaporte quedan fuera —`Persona` exige cedula, que es con lo que se
+    consulta al registro nacional— y se informan al final.
+    """
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.personas_desde_docentes import (
+        SincronizarPersonasDesdeDocentes,
+    )
+
+    contenedor = Contenedor(get_settings())
+    caso = SincronizarPersonasDesdeDocentes(contenedor.unidad_de_trabajo())
+    resultado = await caso(None, ContextoEjecucion.sistema())
+
+    print(f"  personas creadas   : {resultado.personas_creadas:,}".replace(",", "."))
+    print(f"  docentes enlazados : {resultado.docentes_enlazados:,}".replace(",", "."))
+    print(f"  ya tenian persona  : {resultado.ya_estaban:,}".replace(",", "."))
+    print(f"  con pasaporte      : {resultado.sin_cedula:,}".replace(",", "."))
+
+    if resultado.problemas:
+        print()
+        print(f"  SIN PROCESAR: {len(resultado.problemas)}")
+        for detalle in resultado.problemas[:10]:
+            print(f"      {detalle}")
+        if len(resultado.problemas) > 10:
+            print(f"      … y {len(resultado.problemas) - 10} mas")
+
+
 async def restablecer_contrasena() -> None:
     """Devuelve el acceso a una cuenta que perdio su contrasena.
 
@@ -490,6 +522,10 @@ _COMANDOS = {
     "vaciar-distributivo": (
         vaciar_distributivo,
         "Borra las filas del distributivo (conserva catalogos y docentes)",
+    ),
+    "personas-desde-docentes": (
+        sincronizar_personas,
+        "Crea registros de personas a partir del padron docente",
     ),
     "reset-password": (
         restablecer_contrasena,

@@ -100,6 +100,18 @@ export abstract class RepositorioDistributivo {
   /** Que plantillas de exportacion ofrece el backend. */
   abstract plantillasReporte(): Observable<readonly PlantillaReporte[]>;
 
+  /**
+   * Carreras que existen en esos periodos y facultades.
+   *
+   * Es la relacion entre facultades y carreras, derivada de los datos: doce
+   * carreras se dictan en dos facultades a la vez, asi que no puede vivir en
+   * una columna del catalogo.
+   */
+  abstract carrerasDisponibles(
+    paoIds: readonly string[],
+    facultadIds: readonly string[],
+  ): Observable<readonly OpcionSelector[]>;
+
   /** Muestra el reporte antes de descargarlo. */
   abstract vistaPreviaReporte(
     peticion: PeticionReporteDistributivo,

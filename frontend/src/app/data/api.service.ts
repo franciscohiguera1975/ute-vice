@@ -27,6 +27,10 @@ export class ApiService {
   private construirParametros(objeto?: object): HttpParams {
     let parametros = new HttpParams();
     for (const [clave, valor] of Object.entries(aParametros(objeto ?? {}))) {
+      if (Array.isArray(valor)) {
+        for (const uno of valor) parametros = parametros.append(clave, uno);
+        continue;
+      }
       parametros = parametros.set(clave, valor);
     }
     return parametros;

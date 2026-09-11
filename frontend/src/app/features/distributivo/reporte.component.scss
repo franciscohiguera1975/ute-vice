@@ -43,6 +43,25 @@
 
 .opciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
+/* Periodos y facultades: pocos y cortos, asi que caben en linea. Con un
+   desplegable habria que abrirlo trece veces para marcar trece. */
+.casillas-en-linea { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ficha:hover { background: var(--superficie-2); }
+.ficha--activa { border-color: var(--azul-600); background: var(--azul-50); font-weight: 600; }
+.ficha input { width: auto; margin: 0; flex-shrink: 0; }
+
 /* Plantillas: una debajo de otra, porque la descripcion es lo que distingue
    un formato del otro y en columna se lee. */
 .plantillas { display: flex; flex-direction: column; gap: 0.5rem; }

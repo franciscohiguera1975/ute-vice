@@ -4,6 +4,10 @@ El consolidado tiene 72 columnas: los datos del docente y su contrato, mas el
 reparto de horas en cuatro bloques (`Da`..`Dn`, `Ga`..`Gn`, `Ia`..`Ij`,
 `Va`..`Vi`).
 
+`CARRERA/PROGRAMA` **no se lee**: traia el mismo dato que `CARRERA`, solo que
+capitalizado. Importar las dos creaba dos catalogos que siempre decian lo
+mismo y obligaban a elegir entre ellos en cada formulario.
+
 Las columnas `D`, `G`, `I`, `V` y `TotalHoras` del archivo son **derivadas** y no
 se leen: el sistema las recalcula desde el detalle. Si el archivo trae un total
 que no cuadra con sus componentes, manda el detalle.
@@ -35,7 +39,6 @@ _COLUMNAS = {
     "dedicacion": "DEDICACION",
     "categoria": "CATEGORIA",
     "nivel": "NIVEL",
-    "programa": "CARRERA/PROGRAMA",
     "titulo": "TITULO",
     "tipo_titulo": "TIPOTITULO",
     "genero": "GENERO",
@@ -141,7 +144,6 @@ class LectorDistributivoExcel:
             dedicacion=_texto(leer("DEDICACION")),
             categoria=_texto(leer("CATEGORIA")),
             nivel=_texto(leer("NIVEL")),
-            programa=_texto(leer("CARRERA/PROGRAMA")),
             titulo=_texto(leer("TITULO")),
             tipo_titulo=_texto(leer("TIPOTITULO")),
             genero=_texto(leer("GENERO")),

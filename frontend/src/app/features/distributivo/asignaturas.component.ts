@@ -153,10 +153,15 @@ export class AsignaturasComponent {
       .subscribe({
         next: (resultado) => {
           this.guardando.set(false);
+          const nuevas = resultado.asignaturasCreadas;
           this.notificaciones.exito(
             'Asignaturas guardadas',
-            `${resultado.actualizadas} registro(s) actualizado(s).`,
+            `${resultado.actualizadas} registro(s) actualizado(s)` +
+              (nuevas > 0 ? ` · ${nuevas} asignatura(s) nueva(s) en el catálogo.` : '.'),
           );
+          // El catalogo crecio: se refresca para que la lista de sugerencias
+          // incluya lo que se acaba de crear.
+          if (nuevas > 0) this.catalogos.cargar(true);
           // Se recarga: con «solo pendientes» activo, lo guardado sale de la
           // lista y queda a la vista lo que falta.
           this.editado.set({});

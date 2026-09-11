@@ -42,10 +42,11 @@ class FiltroDistributivo:
     pao_id: UUID | None = None
     pao_ids: tuple[UUID, ...] = ()
     facultad_id: UUID | None = None
+    facultad_ids: tuple[UUID, ...] = ()
+    """Varias facultades a la vez, igual que las carreras y los periodos."""
     carrera_id: UUID | None = None
     carrera_ids: tuple[UUID, ...] = ()
     """Varias carreras a la vez: es como se emite el reporte institucional."""
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
@@ -83,7 +84,6 @@ class FilaDistributivoResuelta:
     pao: str
     facultad: str
     carrera: str
-    programa: str | None = None
     sede: str | None = None
     nivel: str | None = None
     titularidad: str | None = None
@@ -91,6 +91,7 @@ class FilaDistributivoResuelta:
     categoria: str | None = None
     tipo_titulo: str | None = None
     genero: str | None = None
+    asignatura: str | None = None
 
     #: Titulos profesionales del docente, en el orden del origen. Van en la fila
     #: y no en el docente porque quien exporta el consolidado necesita la fila
@@ -101,7 +102,6 @@ class FilaDistributivoResuelta:
     #: importacion lo capitalizara. Solo lo trae la exportacion que reproduce el
     #: archivo de origen; los listados usan los nombres, que se leen mejor.
     codigo_carrera: str | None = None
-    codigo_programa: str | None = None
     codigo_sede: str | None = None
     codigo_nivel: str | None = None
     codigo_titularidad: str | None = None
@@ -109,6 +109,7 @@ class FilaDistributivoResuelta:
     codigo_categoria: str | None = None
     codigo_tipo_titulo: str | None = None
     codigo_genero: str | None = None
+    codigo_asignatura: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +273,26 @@ class RepositorioDistributivo(Protocol):
 
     async def filas_para_reporte(self, filtro: FiltroDistributivo) -> list[FilaReporteDocencia]:
         """Arma el reporte institucional, con el anio de inicio ya derivado."""
+        ...
+
+    async def unidades_por_docente(self) -> dict[UUID, str]:
+        """Facultad de cada docente en su periodo mas reciente.
+
+        Sirve para poblar la `unidad` de las personas: un docente puede haber
+        cambiado de facultad a lo largo del historico, y la que corresponde es
+        la ultima, no una cualquiera.
+        """
+        ...
+
+    async def carreras_presentes(self, filtro: FiltroDistributivo) -> list[ElementoCatalogo]:
+        """Carreras que **de hecho** aparecen en las filas del filtro.
+
+        Es la relacion entre facultades y carreras, derivada de los datos en
+        lugar de guardada en una columna. Tiene que ser asi: doce carreras se
+        dictan en dos facultades a la vez —la facultad y la unidad en linea—, y
+        una columna `facultad_id` en el catalogo obligaria a elegir una de las
+        dos y a equivocarse en la otra.
+        """
         ...
 
     async def filas_resueltas(self, filtro: FiltroDistributivo) -> list[FilaDistributivoResuelta]:

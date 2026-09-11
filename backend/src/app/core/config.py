@@ -107,7 +107,11 @@ class DatabaseSettings(BaseModel):
 class JWTSettings(BaseModel):
     secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
+    #: Dos horas. Media hora obligaba a renovar constantemente durante una
+    #: jornada de captura de asignaturas, y cada renovacion es una ventana para
+    #: que algo falle; el token de refresco sigue siendo el que limita de
+    #: verdad cuanto dura una sesion.
+    access_token_expire_minutes: int = Field(default=120, ge=1, le=1440)
     refresh_token_expire_days: int = Field(default=7, ge=1, le=90)
     issuer: str = "ute-vice"
     audience: str = "ute-vice-api"
@@ -412,7 +416,7 @@ def _build_settings() -> Settings:
         jwt=JWTSettings(
             secret_key=secret,
             algorithm=get("JWT_ALGORITHM", "HS256"),
-            access_token_expire_minutes=as_int("ACCESS_TOKEN_EXPIRE_MINUTES", 30),
+            access_token_expire_minutes=as_int("ACCESS_TOKEN_EXPIRE_MINUTES", 120),
             refresh_token_expire_days=as_int("REFRESH_TOKEN_EXPIRE_DAYS", 7),
         ),
         google=GoogleOAuthSettings(

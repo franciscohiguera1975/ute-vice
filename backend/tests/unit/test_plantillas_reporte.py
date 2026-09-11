@@ -7,6 +7,8 @@ ambos archivos sin alinearlos a mano.
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from app.application.plantillas import (
@@ -37,6 +39,27 @@ CABECERA_ORIGEN = [
     "NIVEL", "CARRERA/PROGRAMA", "TotalHoras", "MEDIDA",
     "NA", "an", "gen", "N.x", "TITULO", "TIPOTITULO", "GENERO", "N.y",
 ]  # fmt: skip
+
+
+class _RelojFijo:
+    """Reloj congelado: el caso de uso lo exige para sellar el archivo."""
+
+    def ahora(self):  # type: ignore[no-untyped-def]
+        from datetime import UTC, datetime
+
+        return datetime(2026, 9, 11, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def contexto_admin(roles):  # type: ignore[no-untyped-def]
+    from tests.conftest import hacer_usuario
+
+    from app.application.base import ContextoEjecucion
+    from app.domain.enums import RolCodigo
+
+    return ContextoEjecucion(
+        actor=hacer_usuario(roles={roles[RolCodigo.ADMIN.value]}, superusuario=True)
+    )
 
 
 class _Uow:
@@ -74,7 +97,6 @@ def _resuelta(**cambios) -> FilaDistributivoResuelta:  # type: ignore[no-untyped
         "pao": "2026-1",
         "facultad": "FCID",
         "carrera": "SOFTWARE",
-        "programa": "SOFTWARE",
         "sede": "MATRIZ QUITO",
         "nivel": "GRADO",
         "titularidad": "TITULAR",
@@ -348,3 +370,173 @@ def test_el_pdf_acepta_la_plantilla_institucional() -> None:
     )
     archivo = ExportadorPDF().exportar(tabla)
     assert archivo.contenido.startswith(b"%PDF")
+
+
+# ===========================================================================
+# Seleccion multiple
+# ===========================================================================
+
+
+class _UowConCatalogos:
+    """Unidad de trabajo con catalogos, para el caso de uso del reporte."""
+
+    def __init__(self, elementos, reporte=None):  # type: ignore[no-untyped-def]
+        self.catalogos = _RepoCatalogos(elementos)
+        self.distributivo = _RepoConFiltro(reporte or [])
+        self.commits = 0
+
+    async def __aenter__(self):  # type: ignore[no-untyped-def]
+        return self
+
+    async def __aexit__(self, *_):  # type: ignore[no-untyped-def]
+        return False
+
+
+class _RepoCatalogos:
+    def __init__(self, elementos):  # type: ignore[no-untyped-def]
+        self._por_id = {e.id: e for e in elementos}
+
+    async def obtener(self, tipo, elemento_id):  # type: ignore[no-untyped-def]
+        elemento = self._por_id.get(elemento_id)
+        return elemento if elemento is not None and elemento.tipo is tipo else None
+
+
+class _RepoConFiltro:
+    """Guarda el filtro recibido: es lo que las pruebas quieren comprobar."""
+
+    def __init__(self, reporte):  # type: ignore[no-untyped-def]
+        self._reporte = reporte
+        self.ultimo_filtro = None
+
+    async def filas_para_reporte(self, filtro):  # type: ignore[no-untyped-def]
+        self.ultimo_filtro = filtro
+        return list(self._reporte)
+
+    async def filas_resueltas(self, filtro):  # type: ignore[no-untyped-def]
+        self.ultimo_filtro = filtro
+        return []
+
+
+def _catalogo(tipo, codigo, nombre=None):  # type: ignore[no-untyped-def]
+    from app.domain.entities.catalogo import ElementoCatalogo
+
+    return ElementoCatalogo(tipo=tipo, codigo=codigo, nombre=nombre or codigo)
+
+
+async def test_el_reporte_admite_varios_periodos_y_facultades(contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Un reporte rara vez es de un periodo y una carrera."""
+    from app.application.casos_uso.reporte_distributivo import (
+        EntradaReporteDistributivo,
+        VistaPreviaReporteDistributivo,
+    )
+    from app.domain.entities.catalogo import TipoCatalogo
+
+    p1, p2 = _catalogo(TipoCatalogo.PAO, "2025-2"), _catalogo(TipoCatalogo.PAO, "2026-1")
+    f1, f2 = _catalogo(TipoCatalogo.FACULTAD, "FCID"), _catalogo(TipoCatalogo.FACULTAD, "FCSEE")
+    uow = _UowConCatalogos([p1, p2, f1, f2], reporte=[_reporte()])
+
+    vista = await VistaPreviaReporteDistributivo(uow, _RelojFijo())(  # type: ignore[arg-type]
+        EntradaReporteDistributivo(
+            pao_ids=(p1.id, p2.id),
+            facultad_ids=(f1.id, f2.id),
+        ),
+        contexto_admin,
+    )
+
+    assert vista.periodos == ["2025-2", "2026-1"]
+    assert vista.facultades == ["FCID", "FCSEE"]
+
+    filtro = uow.distributivo.ultimo_filtro
+    assert filtro.pao_ids == (p1.id, p2.id)
+    assert filtro.facultad_ids == (f1.id, f2.id)
+
+
+async def test_el_reporte_exige_al_menos_un_periodo(contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Sin periodo saldria el historico entero, que nadie quiere por accidente."""
+    from app.application.casos_uso.reporte_distributivo import (
+        EntradaReporteDistributivo,
+        VistaPreviaReporteDistributivo,
+    )
+
+    uow = _UowConCatalogos([])
+    with pytest.raises(ErrorValidacion, match="periodo"):
+        await VistaPreviaReporteDistributivo(uow, _RelojFijo())(  # type: ignore[arg-type]
+            EntradaReporteDistributivo(), contexto_admin
+        )
+
+
+async def test_un_identificador_inexistente_corta_el_reporte(contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Devolver menos filas en silencio daria un reporte incompleto."""
+    from uuid import uuid4
+
+    from app.application.casos_uso.reporte_distributivo import (
+        EntradaReporteDistributivo,
+        VistaPreviaReporteDistributivo,
+    )
+    from app.domain.entities.catalogo import TipoCatalogo
+    from app.domain.errors import NoEncontrado
+
+    pao = _catalogo(TipoCatalogo.PAO, "2026-1")
+    uow = _UowConCatalogos([pao])
+
+    with pytest.raises(NoEncontrado):
+        await VistaPreviaReporteDistributivo(uow, _RelojFijo())(  # type: ignore[arg-type]
+            EntradaReporteDistributivo(pao_ids=(pao.id,), facultad_ids=(uuid4(),)),
+            contexto_admin,
+        )
+
+
+# ===========================================================================
+# Relacion facultad -> carrera
+# ===========================================================================
+
+
+async def test_las_carreras_disponibles_salen_de_los_datos(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """La relacion no vive en una columna: se deriva de las filas.
+
+    Doce carreras se dictan en dos facultades a la vez —la facultad y la unidad
+    en linea—, asi que un `facultad_id` en el catalogo se equivocaria en una de
+    las dos.
+    """
+    from app.application.casos_uso.reporte_distributivo import (
+        CarrerasDisponibles,
+        EntradaCarrerasDisponibles,
+    )
+    from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
+
+    uow.distributivo.carreras = [
+        ElementoCatalogo(tipo=TipoCatalogo.CARRERA, codigo="SOFTWARE", nombre="Software")
+    ]
+    pao, facultad = uuid4(), uuid4()
+
+    carreras = await CarrerasDisponibles(uow)(
+        EntradaCarrerasDisponibles(pao_ids=(pao,), facultad_ids=(facultad,)),
+        contexto_admin,
+    )
+
+    assert [c.nombre for c in carreras] == ["Software"]
+    # El filtro llega entero: lo ofrecido coincide con lo que saldra despues.
+    assert uow.distributivo.ultimo_filtro.pao_ids == (pao,)
+    assert uow.distributivo.ultimo_filtro.facultad_ids == (facultad,)
+
+
+async def test_las_carreras_disponibles_respetan_el_alcance(uow, roles) -> None:  # type: ignore[no-untyped-def]
+    from tests.conftest import hacer_usuario
+
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.reporte_distributivo import (
+        CarrerasDisponibles,
+        EntradaCarrerasDisponibles,
+    )
+    from app.domain.enums import RolCodigo
+
+    usuario = hacer_usuario(roles={roles[RolCodigo.COORDINADOR.value]})
+    facultad_propia = uuid4()
+    usuario.definir_alcance([facultad_propia], [])
+
+    await CarrerasDisponibles(uow)(
+        EntradaCarrerasDisponibles(pao_ids=(uuid4(),)),
+        ContextoEjecucion(actor=usuario),
+    )
+
+    assert uow.distributivo.ultimo_filtro.alcance.facultades == {facultad_propia}

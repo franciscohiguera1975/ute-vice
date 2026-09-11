@@ -24,6 +24,7 @@ from app.api.esquemas.distributivo import (
     FilaDistributivoActualizar,
     FilaDistributivoCrear,
     FilaDistributivoSalida,
+    OpcionSelector,
     PeticionCapturaAsignaturas,
     PeticionReporteDistributivo,
     PlantillaReporteSalida,
@@ -55,6 +56,8 @@ from app.application.casos_uso.docentes import (
     ObtenerDocente,
 )
 from app.application.casos_uso.reporte_distributivo import (
+    CarrerasDisponibles,
+    EntradaCarrerasDisponibles,
     EntradaReporteDistributivo,
     GenerarReporteDistributivo,
     ListarPlantillasReporte,
@@ -204,7 +207,6 @@ def _filtro(
     facultad_id: UUID | None = None,
     carrera_id: UUID | None = None,
     carrera_ids: list[UUID] | None = None,
-    programa_id: UUID | None = None,
     sede_id: UUID | None = None,
     nivel_id: UUID | None = None,
     titularidad_id: UUID | None = None,
@@ -221,7 +223,6 @@ def _filtro(
         facultad_id=facultad_id,
         carrera_id=carrera_id,
         carrera_ids=tuple(carrera_ids or ()),
-        programa_id=programa_id,
         sede_id=sede_id,
         nivel_id=nivel_id,
         titularidad_id=titularidad_id,
@@ -290,14 +291,13 @@ async def crear(
             pao_id=datos.pao_id,
             facultad_id=datos.facultad_id,
             carrera_id=datos.carrera_id,
-            programa_id=datos.programa_id,
             sede_id=datos.sede_id,
             nivel_id=datos.nivel_id,
             titularidad_id=datos.titularidad_id,
             dedicacion_id=datos.dedicacion_id,
             categoria_id=datos.categoria_id,
             tipo_titulo_id=datos.tipo_titulo_id,
-            asignatura=datos.asignatura,
+            asignatura_id=datos.asignatura_id,
             horas=datos.horas,
             medida=datos.medida,
             observaciones=datos.observaciones,
@@ -333,6 +333,7 @@ async def capturar_asignaturas(
     return ResultadoCapturaAsignaturasSalida(
         actualizadas=resultado.actualizadas,
         sin_cambios=resultado.sin_cambios,
+        asignaturas_creadas=resultado.asignaturas_creadas,
     )
 
 
@@ -364,14 +365,13 @@ async def actualizar(
             fila_id=fila_id,
             facultad_id=datos.facultad_id,
             carrera_id=datos.carrera_id,
-            programa_id=datos.programa_id,
             sede_id=datos.sede_id,
             nivel_id=datos.nivel_id,
             titularidad_id=datos.titularidad_id,
             dedicacion_id=datos.dedicacion_id,
             categoria_id=datos.categoria_id,
             tipo_titulo_id=datos.tipo_titulo_id,
-            asignatura=datos.asignatura,
+            asignatura_id=datos.asignatura_id,
             horas=datos.horas,
             medida=datos.medida,
             observaciones=datos.observaciones,
@@ -422,6 +422,35 @@ async def listar_plantillas(contexto: ContextoDep) -> list[PlantillaReporteSalid
     ]
 
 
+@router.get(
+    "/reportes/distributivo/carreras",
+    response_model=list[OpcionSelector],
+    summary="Carreras presentes en los periodos y facultades indicados",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def carreras_disponibles(
+    uow: UowDep,
+    contexto: ContextoDep,
+    pao_ids: Annotated[list[UUID] | None, Query(description="Periodos academicos")] = None,
+    facultad_ids: Annotated[list[UUID] | None, Query(description="Facultades")] = None,
+) -> list[OpcionSelector]:
+    """La relacion entre facultades y carreras, tal como esta en los datos.
+
+    No sale de una columna del catalogo: doce carreras se dictan en dos
+    facultades a la vez, y una columna obligaria a elegir una y a equivocarse
+    en la otra.
+    """
+    caso = CarrerasDisponibles(uow)
+    carreras = await caso(
+        EntradaCarrerasDisponibles(
+            pao_ids=tuple(pao_ids or ()),
+            facultad_ids=tuple(facultad_ids or ()),
+        ),
+        contexto,
+    )
+    return [OpcionSelector.desde(c) for c in carreras]
+
+
 @router.post(
     "/reportes/distributivo/vista-previa",
     response_model=VistaPreviaReporteSalida,
@@ -442,8 +471,8 @@ async def vista_previa_reporte(
     caso = VistaPreviaReporteDistributivo(uow, contenedor.reloj)
     vista = await caso(
         EntradaReporteDistributivo(
-            pao_id=datos.pao_id,
-            facultad_id=datos.facultad_id,
+            pao_ids=tuple(datos.pao_ids),
+            facultad_ids=tuple(datos.facultad_ids),
             carrera_ids=tuple(datos.carrera_ids),
             plantilla=datos.plantilla,
             incluir_columnas_auditoria=datos.incluir_columnas_auditoria,
@@ -459,8 +488,8 @@ async def vista_previa_reporte(
         total_docentes=vista.total_docentes,
         sin_asignatura=vista.sin_asignatura,
         sin_anio_inicio=vista.sin_anio_inicio,
-        periodo=vista.periodo,
-        facultad=vista.facultad,
+        periodos=vista.periodos,
+        facultades=vista.facultades,
         carreras=vista.carreras,
         esta_completo=vista.esta_completo,
     )
@@ -495,8 +524,8 @@ async def generar_reporte(
     )
     archivo = await caso(
         EntradaReporteDistributivo(
-            pao_id=datos.pao_id,
-            facultad_id=datos.facultad_id,
+            pao_ids=tuple(datos.pao_ids),
+            facultad_ids=tuple(datos.facultad_ids),
             carrera_ids=tuple(datos.carrera_ids),
             plantilla=datos.plantilla,
             formato=formato,

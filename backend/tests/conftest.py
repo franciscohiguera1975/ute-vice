@@ -490,6 +490,8 @@ class RepoDistributivo:
         # Las pruebas de alcance comprueban con que filtro se consulto: es la
         # unica forma de verificar que el recorte lo impone el caso de uso.
         self.ultimo_filtro: Any = None
+        self.carreras: list[Any] = []
+        self.unidades: dict[UUID, str] = {}
 
     async def obtener(self, fila_id: UUID):  # type: ignore[no-untyped-def]
         return self.datos.get(fila_id)
@@ -549,6 +551,13 @@ class RepoDistributivo:
 
     async def filas_para_reporte(self, filtro):  # type: ignore[no-untyped-def]
         return list(self.reporte)
+
+    async def unidades_por_docente(self):  # type: ignore[no-untyped-def]
+        return dict(self.unidades)
+
+    async def carreras_presentes(self, filtro):  # type: ignore[no-untyped-def]
+        self.ultimo_filtro = filtro
+        return list(self.carreras)
 
     async def filas_resueltas(self, filtro):  # type: ignore[no-untyped-def]
         return list(self.resueltas)

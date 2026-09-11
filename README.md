@@ -133,3 +133,10 @@ verde** y la aplicacion publicada.
 Backend y frontend funcionales, verificados de extremo a extremo contra
 PostgreSQL real y contra el consolidado de distributivo completo (15.219 filas).
 Lo pendiente esta listado en [`docs/CONTEXT.md`](docs/CONTEXT.md).
+
+
+
+
+eliminar carrera/programa 
+
+pestaña muestra

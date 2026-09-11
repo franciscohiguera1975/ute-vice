@@ -19,10 +19,10 @@ export const TipoCatalogo = {
   DEDICACION: 'dedicaciones',
   CATEGORIA: 'categorias',
   NIVEL: 'niveles',
-  PROGRAMA: 'programas',
   TITULO_PROFESIONAL: 'titulos-profesionales',
   TIPO_TITULO: 'tipos-titulo',
   GENERO: 'generos',
+  ASIGNATURA: 'asignaturas',
 } as const;
 export type TipoCatalogo = (typeof TipoCatalogo)[keyof typeof TipoCatalogo];
 
@@ -157,8 +157,6 @@ export interface FilaDistributivo {
   readonly carreraId: string;
   readonly carrera: string;
 
-  readonly programaId: string | null;
-  readonly programa: string | null;
   readonly sedeId: string | null;
   readonly sede: string | null;
   readonly nivelId: string | null;
@@ -172,6 +170,7 @@ export interface FilaDistributivo {
   readonly tipoTituloId: string | null;
   readonly tipoTitulo: string | null;
 
+  readonly asignaturaId: string | null;
   readonly asignatura: string | null;
   /** `true` si dicta clase pero nadie registro que asignatura. */
   readonly requiereAsignatura: boolean;
@@ -190,7 +189,6 @@ export interface FiltroDistributivo {
   readonly carreraId?: string;
   /** Varias carreras a la vez: es como se emite el reporte institucional. */
   readonly carreraIds?: readonly string[];
-  readonly programaId?: string;
   readonly sedeId?: string;
   readonly nivelId?: string;
   readonly titularidadId?: string;
@@ -206,14 +204,13 @@ export interface DatosFilaDistributivo {
   readonly paoId: string;
   readonly facultadId: string;
   readonly carreraId: string;
-  readonly programaId?: string | null;
   readonly sedeId?: string | null;
   readonly nivelId?: string | null;
   readonly titularidadId?: string | null;
   readonly dedicacionId?: string | null;
   readonly categoriaId?: string | null;
   readonly tipoTituloId?: string | null;
-  readonly asignatura?: string | null;
+  readonly asignaturaId?: string | null;
   readonly horas?: Record<string, number>;
   readonly medida?: string | null;
   readonly observaciones?: string | null;
@@ -249,8 +246,9 @@ export interface ResumenDistributivo {
 // ---------------------------------------------------------------------------
 
 export interface PeticionReporteDistributivo {
-  readonly paoId: string;
-  readonly facultadId?: string | null;
+  /** Al menos uno. Varios periodos salen en un solo archivo. */
+  readonly paoIds: readonly string[];
+  readonly facultadIds?: readonly string[];
   readonly carreraIds?: readonly string[];
   /** Codigo de la plantilla. Vacio usa la institucional. */
   readonly plantilla?: string | null;
@@ -291,8 +289,8 @@ export interface VistaPreviaReporte {
   readonly totalDocentes: number;
   readonly sinAsignatura: number;
   readonly sinAnioInicio: number;
-  readonly periodo: string;
-  readonly facultad: string | null;
+  readonly periodos: readonly string[];
+  readonly facultades: readonly string[];
   readonly carreras: readonly string[];
   readonly estaCompleto: boolean;
 }
@@ -307,6 +305,8 @@ export interface AsignaturaCapturada {
 export interface ResultadoCapturaAsignaturas {
   readonly actualizadas: number;
   readonly sinCambios: number;
+  /** Asignaturas que no estaban en el catalogo y se agregaron al vuelo. */
+  readonly asignaturasCreadas: number;
 }
 
 export type PaginaDistributivo = Pagina<FilaDistributivo>;

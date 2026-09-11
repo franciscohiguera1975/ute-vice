@@ -133,7 +133,6 @@ class FilaDistributivo:
     facultad_id: UUID
     carrera_id: UUID
 
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
@@ -145,7 +144,12 @@ class FilaDistributivo:
     #: reparte horas por tipo de actividad, no por materia. Se captura a mano
     #: porque el reporte institucional la exige; mientras nadie la complete,
     #: viaja vacia al Excel en lugar de rellenarse con un dato inventado.
-    asignatura: str | None = None
+    #:
+    #: Apunta al catalogo y no es texto libre: el mismo nombre escrito de dos
+    #: formas en cien filas se corrige una sola vez, en el catalogo, en lugar
+    #: de cien. La pantalla de captura sigue admitiendo texto y crea el
+    #: elemento cuando no existe, para no volver lenta la carga masiva.
+    asignatura_id: UUID | None = None
 
     horas: DistribucionHoras = field(default_factory=DistribucionHoras.vacia)
 
@@ -160,10 +164,6 @@ class FilaDistributivo:
     creado_por: UUID | None = None
 
     def __post_init__(self) -> None:
-        if self.asignatura is not None:
-            self.asignatura = " ".join(self.asignatura.split()) or None
-        if self.asignatura and len(self.asignatura) > 400:
-            raise ErrorValidacion("La asignatura excede los 400 caracteres", campo="asignatura")
         if self.medida is not None:
             self.medida = " ".join(self.medida.split()) or None
 
@@ -183,22 +183,31 @@ class FilaDistributivo:
         Es lo que el reporte institucional deja en blanco, asi que sirve para
         saber cuanto falta por completar antes de emitirlo.
         """
-        return self.horas.total_docencia > 0 and not self.asignatura
+        return self.horas.total_docencia > 0 and self.asignatura_id is None
 
     # ------------------------------------------------------------ mutaciones
+    def definir_asignatura(self, asignatura_id: UUID | None) -> None:
+        """Fija la asignatura, o la retira con `None`.
+
+        Va aparte de `actualizar` porque alli un `None` significa «no lo
+        cambies», y aqui tiene que significar «borralo»: sin este metodo no
+        habria forma de quitar una asignatura mal asignada.
+        """
+        self.asignatura_id = asignatura_id
+        self.actualizado_en = ahora_utc()
+
     def actualizar(
         self,
         *,
         facultad_id: UUID | None = None,
         carrera_id: UUID | None = None,
-        programa_id: UUID | None = None,
         sede_id: UUID | None = None,
         nivel_id: UUID | None = None,
         titularidad_id: UUID | None = None,
         dedicacion_id: UUID | None = None,
         categoria_id: UUID | None = None,
         tipo_titulo_id: UUID | None = None,
-        asignatura: str | None = None,
+        asignatura_id: UUID | None = None,
         horas: DistribucionHoras | None = None,
         medida: str | None = None,
         observaciones: str | None = None,
@@ -212,8 +221,6 @@ class FilaDistributivo:
             self.facultad_id = facultad_id
         if carrera_id is not None:
             self.carrera_id = carrera_id
-        if programa_id is not None:
-            self.programa_id = programa_id
         if sede_id is not None:
             self.sede_id = sede_id
         if nivel_id is not None:
@@ -226,8 +233,8 @@ class FilaDistributivo:
             self.categoria_id = categoria_id
         if tipo_titulo_id is not None:
             self.tipo_titulo_id = tipo_titulo_id
-        if asignatura is not None:
-            self.asignatura = asignatura
+        if asignatura_id is not None:
+            self.asignatura_id = asignatura_id
         if horas is not None:
             self.horas = horas
         if medida is not None:

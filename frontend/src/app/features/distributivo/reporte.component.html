@@ -43,27 +43,53 @@
         </div>
       </fieldset>
 
-      <div class="campo">
-        <label class="campo__etiqueta" for="rep-pao">
-          Periodo académico <span class="campo__requerido" aria-hidden="true">*</span>
-        </label>
-        <select id="rep-pao" [ngModel]="paoId()" (ngModelChange)="cambiarPao($event)">
-          <option value="">Seleccione un periodo</option>
+      <!-- Periodos: varios a la vez salen en un solo archivo -->
+      <fieldset class="grupo">
+        <legend class="fila entre envolver hueco-sm">
+          <span class="campo__etiqueta">
+            Periodos académicos <span class="campo__requerido" aria-hidden="true">*</span>
+          </span>
+          <span class="texto-xs texto-tenue">{{ resumenPeriodos() }}</span>
+        </legend>
+        <div class="casillas-en-linea" role="group" aria-label="Periodos del reporte">
           @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
-            <option [value]="o.id">{{ o.codigo }}</option>
+            <label class="ficha" [class.ficha--activa]="paosSeleccionados().includes(o.id)">
+              <input
+                type="checkbox"
+                [checked]="paosSeleccionados().includes(o.id)"
+                (change)="alternarPao(o.id, $any($event.target).checked)"
+              />
+              <span>{{ o.codigo }}</span>
+            </label>
+          } @empty {
+            <p class="texto-sm texto-tenue">Cargando periodos…</p>
           }
-        </select>
-      </div>
+        </div>
+      </fieldset>
 
-      <div class="campo">
-        <label class="campo__etiqueta" for="rep-facultad">Facultad</label>
-        <select id="rep-facultad" [ngModel]="facultadId()" (ngModelChange)="cambiarFacultad($event)">
-          <option value="">Todas las facultades</option>
+      <!-- Facultades -->
+      <fieldset class="grupo">
+        <legend class="fila entre envolver hueco-sm">
+          <span class="campo__etiqueta">Facultades</span>
+          <span class="texto-xs texto-tenue">{{ resumenFacultades() }}</span>
+        </legend>
+        <p class="campo__ayuda">Sin selección se incluyen todas.</p>
+        <div class="casillas-en-linea" role="group" aria-label="Facultades del reporte">
           @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
-            <option [value]="o.id">{{ o.codigo }} — {{ o.nombre }}</option>
+            <label class="ficha" [class.ficha--activa]="facultadesSeleccionadas().includes(o.id)">
+              <input
+                type="checkbox"
+                [checked]="facultadesSeleccionadas().includes(o.id)"
+                [attr.title]="o.nombre"
+                (change)="alternarFacultad(o.id, $any($event.target).checked)"
+              />
+              <span>{{ o.codigo }}</span>
+            </label>
+          } @empty {
+            <p class="texto-sm texto-tenue">Cargando facultades…</p>
           }
-        </select>
-      </div>
+        </div>
+      </fieldset>
 
       <!-- Selección múltiple de carreras -->
       <fieldset class="grupo">
@@ -90,22 +116,30 @@
         </div>
 
         <p class="campo__ayuda">
-          Sin selección, se incluyen todas las carreras del periodo y la facultad
-          elegidos.
+          Solo se listan las carreras que existen en los periodos y facultades
+          elegidos. Sin selección se incluyen todas ellas.
         </p>
 
         <div class="lista-carreras" role="group" aria-label="Carreras del reporte">
           @for (c of carrerasDisponibles(); track c.id) {
-            <label class="carrera" [class.carrera--activa]="estaSeleccionada(c.id)">
+            <label class="carrera" [class.carrera--activa]="carrerasSeleccionadas().includes(c.id)">
               <input
                 type="checkbox"
-                [checked]="estaSeleccionada(c.id)"
+                [checked]="carrerasSeleccionadas().includes(c.id)"
                 (change)="alternarCarrera(c.id, $any($event.target).checked)"
               />
               <span>{{ c.nombre }}</span>
             </label>
           } @empty {
-            <p class="texto-sm texto-tenue">Ninguna carrera coincide con el filtro.</p>
+            @if (cargandoCarreras()) {
+              <p class="texto-sm texto-tenue">Buscando carreras…</p>
+            } @else if (paosSeleccionados().length === 0) {
+              <p class="texto-sm texto-tenue">Elija primero un periodo.</p>
+            } @else {
+              <p class="texto-sm texto-tenue">
+                Ninguna carrera coincide. Revise el filtro, o las facultades marcadas.
+              </p>
+            }
           }
         </div>
       </fieldset>
@@ -150,7 +184,7 @@
         <button
           type="button"
           class="btn btn--secundario crecer"
-          [disabled]="cargandoVista() || !paoId()"
+          [disabled]="cargandoVista() || !puedeGenerar()"
           (click)="previsualizar()"
         >
           {{ cargandoVista() ? 'Consultando…' : 'Previsualizar' }}
@@ -184,8 +218,8 @@
       @if (v.totalFilas === 0) {
         <div class="tarjeta__cuerpo">
           <p class="texto-sm texto-suave">
-            Ningún docente cumple los filtros. Revise el periodo, la facultad y las
-            carreras seleccionadas.
+            Ningún docente cumple los filtros. Revise los periodos, las facultades
+            y las carreras seleccionadas.
           </p>
         </div>
       } @else {
@@ -202,7 +236,10 @@
             </p>
             <a
               routerLink="/distributivo/asignaturas"
-              [queryParams]="{ paoId: paoId(), facultadId: facultadId() || null }"
+              [queryParams]="{
+                paoId: paosSeleccionados()[0],
+                facultadId: facultadesSeleccionadas()[0] ?? null
+              }"
               class="btn btn--secundario btn--sm"
             >
               Capturar asignaturas
@@ -220,7 +257,7 @@
         <div class="tabla-envoltura">
           <table class="tabla tabla--reporte">
             <caption class="sr-solo">
-              Primeros registros de {{ v.nombrePlantilla }}, periodo {{ v.periodo }}
+              Primeros registros de {{ v.nombrePlantilla }}, {{ resumenPeriodos() }}
             </caption>
             <thead>
               <tr>
@@ -261,8 +298,8 @@
     } @else {
       <div class="tarjeta__cuerpo">
         <p class="texto-sm texto-suave">
-          Elija un periodo y pulse <span class="negrita">Previsualizar</span> para ver qué
-          contendría el archivo antes de descargarlo.
+          Elija al menos un periodo y pulse <span class="negrita">Previsualizar</span>
+          para ver qué contendría el archivo antes de descargarlo.
         </p>
       </div>
     }

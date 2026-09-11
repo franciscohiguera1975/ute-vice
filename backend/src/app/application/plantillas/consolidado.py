@@ -175,7 +175,10 @@ class PlantillaConsolidadoOrigen(PlantillaDistributivo):
         fila.update(
             {
                 "NIVEL": r.codigo_nivel or r.nivel,
-                "CARRERA/PROGRAMA": r.codigo_programa or r.programa,
+                # El origen traia esta columna con el mismo dato que `CARRERA`,
+                # capitalizado. El sistema ya no guarda las dos: se reconstruye
+                # desde la carrera, que es lo que siempre fue.
+                "CARRERA/PROGRAMA": r.carrera,
                 "TotalHoras": r.fila.total_horas,
                 "MEDIDA": r.fila.medida,
                 # Residuos del cruce que produjo el archivo original; se

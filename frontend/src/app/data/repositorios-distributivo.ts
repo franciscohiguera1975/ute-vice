@@ -154,6 +154,16 @@ export class DistributivoHttp extends RepositorioDistributivo {
     return this.api.get<readonly PlantillaReporte[]>('/reportes/distributivo/plantillas');
   }
 
+  carrerasDisponibles(
+    paoIds: readonly string[],
+    facultadIds: readonly string[],
+  ): Observable<readonly OpcionSelector[]> {
+    return this.api.get<readonly OpcionSelector[]>('/reportes/distributivo/carreras', {
+      paoIds,
+      facultadIds,
+    });
+  }
+
   vistaPreviaReporte(peticion: PeticionReporteDistributivo): Observable<VistaPreviaReporte> {
     return this.api.post<VistaPreviaReporte>('/reportes/distributivo/vista-previa', peticion);
   }

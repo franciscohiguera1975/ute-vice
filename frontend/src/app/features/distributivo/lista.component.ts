@@ -73,7 +73,6 @@ export class ListaDistributivoComponent {
   // --- Edicion ---
   protected readonly editando = signal<FilaDistributivo | null>(null);
   protected readonly guardando = signal(false);
-  protected readonly asignatura = signal('');
   protected readonly observaciones = signal('');
   protected readonly horas = signal<Record<string, number>>({});
   protected readonly selecciones = signal<Record<string, string>>({});
@@ -188,7 +187,6 @@ export class ListaDistributivoComponent {
   // -------------------------------------------------------------- edicion
   protected abrirEdicion(fila: FilaDistributivo): void {
     this.editando.set(fila);
-    this.asignatura.set(fila.asignatura ?? '');
     this.observaciones.set(fila.observaciones ?? '');
     this.horas.set({
       ...fila.horas.docencia,
@@ -199,13 +197,13 @@ export class ListaDistributivoComponent {
     this.selecciones.set({
       facultadId: fila.facultadId,
       carreraId: fila.carreraId,
-      programaId: fila.programaId ?? '',
       sedeId: fila.sedeId ?? '',
       nivelId: fila.nivelId ?? '',
       titularidadId: fila.titularidadId ?? '',
       dedicacionId: fila.dedicacionId ?? '',
       categoriaId: fila.categoriaId ?? '',
       tipoTituloId: fila.tipoTituloId ?? '',
+      asignaturaId: fila.asignaturaId ?? '',
     });
   }
 
@@ -236,14 +234,13 @@ export class ListaDistributivoComponent {
       .actualizar(fila.id, {
         facultadId: s['facultadId'] || undefined,
         carreraId: s['carreraId'] || undefined,
-        programaId: opcional('programaId'),
         sedeId: opcional('sedeId'),
         nivelId: opcional('nivelId'),
         titularidadId: opcional('titularidadId'),
         dedicacionId: opcional('dedicacionId'),
         categoriaId: opcional('categoriaId'),
         tipoTituloId: opcional('tipoTituloId'),
-        asignatura: this.asignatura().trim() || null,
+        asignaturaId: opcional('asignaturaId'),
         observaciones: this.observaciones().trim() || null,
         horas: this.horas(),
       })

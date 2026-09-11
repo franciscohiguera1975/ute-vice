@@ -63,9 +63,19 @@ export const interceptorAutenticacion: HttpInterceptorFn = (peticion, siguiente)
   return siguiente(conToken).pipe(
     catchError((error: unknown) => {
       const es401 = error instanceof HttpErrorResponse && error.status === 401;
-      if (!es401 || !sesion.tokenRefresco) {
+      if (!es401) {
         return throwError(() => error);
       }
+
+      // Un 401 sin token de refresco no se puede recuperar, y dejar al usuario
+      // en la pantalla viendo errores no le dice que hacer: la sesion caduco y
+      // hay que volver a entrar. Sin esto, la aplicacion se quedaba a medias
+      // —los datos no cargaban y nada explicaba por que—.
+      if (!sesion.tokenRefresco) {
+        sesion.expirar(location.pathname + location.search);
+        return throwError(() => error);
+      }
+
       return renovarYReintentar(peticion, siguiente, sesion, autenticacion);
     }),
   );

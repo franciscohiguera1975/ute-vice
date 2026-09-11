@@ -27,7 +27,14 @@ from app.domain.value_objects_distributivo import PeriodoAcademico
 
 
 class TipoCatalogo(StrEnum):
-    """Los doce catalogos. El valor es el segmento de URL de su API."""
+    """Los doce catalogos. El valor es el segmento de URL de su API.
+
+    No hay catalogo de «programa»: el consolidado traia `CARRERA` y
+    `CARRERA/PROGRAMA` con la misma informacion —el segundo era el primero
+    capitalizado— y mantener los dos obligaba a elegir entre ellos en cada
+    formulario sin que la eleccion significara nada. Quedo `carrera`, que es
+    ademas parte de la clave natural de una fila.
+    """
 
     PAO = "paos"
     FACULTAD = "facultades"
@@ -37,10 +44,10 @@ class TipoCatalogo(StrEnum):
     DEDICACION = "dedicaciones"
     CATEGORIA = "categorias"
     NIVEL = "niveles"
-    PROGRAMA = "programas"
     TITULO_PROFESIONAL = "titulos-profesionales"
     TIPO_TITULO = "tipos-titulo"
     GENERO = "generos"
+    ASIGNATURA = "asignaturas"
 
     @property
     def etiqueta(self) -> str:
@@ -60,10 +67,10 @@ _ETIQUETAS: dict[TipoCatalogo, str] = {
     TipoCatalogo.DEDICACION: "Dedicaciones",
     TipoCatalogo.CATEGORIA: "Categorias",
     TipoCatalogo.NIVEL: "Niveles",
-    TipoCatalogo.PROGRAMA: "Programas",
     TipoCatalogo.TITULO_PROFESIONAL: "Titulos profesionales",
     TipoCatalogo.TIPO_TITULO: "Tipos de titulo",
     TipoCatalogo.GENERO: "Generos",
+    TipoCatalogo.ASIGNATURA: "Asignaturas",
 }
 
 _SINGULARES: dict[TipoCatalogo, str] = {
@@ -75,10 +82,10 @@ _SINGULARES: dict[TipoCatalogo, str] = {
     TipoCatalogo.DEDICACION: "dedicacion",
     TipoCatalogo.CATEGORIA: "categoria",
     TipoCatalogo.NIVEL: "nivel",
-    TipoCatalogo.PROGRAMA: "programa",
     TipoCatalogo.TITULO_PROFESIONAL: "titulo profesional",
     TipoCatalogo.TIPO_TITULO: "tipo de titulo",
     TipoCatalogo.GENERO: "genero",
+    TipoCatalogo.ASIGNATURA: "asignatura",
 }
 
 

@@ -27,7 +27,6 @@ class FilaCrudaDistributivo:
     dedicacion: str | None = None
     categoria: str | None = None
     nivel: str | None = None
-    programa: str | None = None
     titulo: str | None = None
     tipo_titulo: str | None = None
     genero: str | None = None

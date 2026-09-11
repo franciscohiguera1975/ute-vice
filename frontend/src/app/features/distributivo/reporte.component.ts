@@ -6,6 +6,8 @@ import {
   effect,
   inject,
   signal,
+  untracked,
+  type WritableSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -58,8 +60,8 @@ export class ReporteDistributivoComponent {
 
   protected readonly plantillas = signal<readonly PlantillaReporte[]>([]);
   protected readonly plantilla = signal('');
-  protected readonly paoId = signal('');
-  protected readonly facultadId = signal('');
+  protected readonly paosSeleccionados = signal<readonly string[]>([]);
+  protected readonly facultadesSeleccionadas = signal<readonly string[]>([]);
   protected readonly carrerasSeleccionadas = signal<readonly string[]>([]);
   protected readonly formato = signal<FormatoReporte>(FormatoReporte.XLSX);
   protected readonly incluirAuditoria = signal(false);
@@ -74,41 +76,93 @@ export class ReporteDistributivoComponent {
   );
 
   /**
-   * Carreras que se pueden elegir.
+   * Carreras que existen en los periodos y facultades elegidos.
    *
-   * Se listan todas y no solo las de la facultad: el backend acota igual, y asi
-   * quien lo necesite puede mezclar carreras de varias facultades.
+   * Las pide al backend en lugar de filtrar el catalogo completo, porque la
+   * relacion entre facultades y carreras no vive en una columna: doce carreras
+   * se dictan en dos facultades a la vez. Con 278 carreras, ofrecerlas todas
+   * cuando ya se marco una facultad convierte el selector en una busqueda a
+   * ciegas.
    */
+  private readonly carrerasDelAmbito = signal<readonly OpcionSelector[]>([]);
+  protected readonly cargandoCarreras = signal(false);
+
   protected readonly carrerasDisponibles = computed<readonly OpcionSelector[]>(() => {
     const patron = this.filtroCarrera().trim().toLowerCase();
-    const todas = this.catalogos.de(TipoCatalogo.CARRERA);
+    const todas = this.carrerasDelAmbito();
     if (!patron) return todas;
     return todas.filter((c) => c.nombre.toLowerCase().includes(patron));
   });
 
-  protected readonly puedeGenerar = computed(() => this.paoId() !== '' && !this.generando());
+  protected readonly puedeGenerar = computed(
+    () => this.paosSeleccionados().length > 0 && !this.generando(),
+  );
 
-  protected readonly resumenSeleccion = computed(() => {
-    const seleccion = this.carrerasSeleccionadas();
-    if (seleccion.length === 0) return 'Todas las carreras';
-    if (seleccion.length === 1) {
-      return this.catalogos.nombreDe(TipoCatalogo.CARRERA, seleccion[0]);
-    }
-    return `${seleccion.length} carreras seleccionadas`;
-  });
+  protected readonly resumenSeleccion = computed(() =>
+    this.resumir(TipoCatalogo.CARRERA, this.carrerasSeleccionadas(), 'Todas las carreras', 'carreras'),
+  );
+
+  protected readonly resumenPeriodos = computed(() =>
+    this.resumir(
+      TipoCatalogo.PAO,
+      this.paosSeleccionados(),
+      'Ninguno seleccionado',
+      'periodos',
+      'seleccionados',
+    ),
+  );
+
+  protected readonly resumenFacultades = computed(() =>
+    this.resumir(
+      TipoCatalogo.FACULTAD,
+      this.facultadesSeleccionadas(),
+      'Todas las facultades',
+      'facultades',
+    ),
+  );
+
+  /** Un nombre si se eligio uno, un recuento si son varios. */
+  private resumir(
+    tipo: TipoCatalogo,
+    seleccion: readonly string[],
+    vacio: string,
+    plural: string,
+    // «periodos seleccionados», «carreras seleccionadas»: el genero lo decide
+    // el sustantivo, no la plantilla.
+    participio: 'seleccionados' | 'seleccionadas' = 'seleccionadas',
+  ): string {
+    if (seleccion.length === 0) return vacio;
+    if (seleccion.length === 1) return this.catalogos.nombreDe(tipo, seleccion[0]);
+    return `${seleccion.length} ${plural} ${participio}`;
+  }
 
   constructor() {
     this.catalogos.cargar();
     this.cargarPlantillas();
 
     // Los catalogos llegan de forma asincrona: se espera a que esten para
-    // elegir el periodo, en lugar de intentarlo una vez y fallar la carrera.
+    // preseleccionar el periodo, en lugar de intentarlo una vez y fallar la
+    // carrera. Se marca solo el mas reciente, que es lo que se reporta casi
+    // siempre; quien necesite varios los agrega.
     effect(() => {
       const paos = this.catalogos.de(TipoCatalogo.PAO);
-      if (paos.length > 0 && !this.paoId()) {
+      if (paos.length > 0 && this.paosSeleccionados().length === 0) {
         const ultimo = [...paos].sort((a, b) => b.codigo.localeCompare(a.codigo))[0];
-        this.paoId.set(ultimo.id);
+        this.paosSeleccionados.set([ultimo.id]);
       }
+    });
+
+    // Cada vez que cambia el ambito, se vuelve a preguntar que carreras hay
+    // dentro de el. Va en un efecto y no en cada `alternar` para no repetir la
+    // llamada en tres sitios.
+    effect(() => {
+      const paos = this.paosSeleccionados();
+      const facultades = this.facultadesSeleccionadas();
+      if (paos.length === 0) {
+        this.carrerasDelAmbito.set([]);
+        return;
+      }
+      untracked(() => this.recargarCarreras(paos, facultades));
     });
   }
 
@@ -131,25 +185,49 @@ export class ReporteDistributivoComponent {
     this.vista.set(null);
   }
 
-  protected cambiarPao(valor: string): void {
-    this.paoId.set(valor);
+  /** Marca o desmarca un elemento en cualquiera de las tres listas. */
+  private alternar(
+    seleccion: WritableSignal<readonly string[]>,
+    id: string,
+    marcado: boolean,
+  ): void {
+    seleccion.update((lista) =>
+      marcado ? [...new Set([...lista, id])] : lista.filter((x) => x !== id),
+    );
+    // Lo previsualizado deja de corresponder con lo elegido.
     this.vista.set(null);
   }
 
-  protected cambiarFacultad(valor: string): void {
-    this.facultadId.set(valor);
-    this.vista.set(null);
+  protected alternarPao(id: string, marcado: boolean): void {
+    this.alternar(this.paosSeleccionados, id, marcado);
+  }
+
+  protected alternarFacultad(id: string, marcada: boolean): void {
+    this.alternar(this.facultadesSeleccionadas, id, marcada);
   }
 
   protected alternarCarrera(id: string, marcada: boolean): void {
-    this.carrerasSeleccionadas.update((lista) =>
-      marcada ? [...new Set([...lista, id])] : lista.filter((c) => c !== id),
-    );
-    this.vista.set(null);
+    this.alternar(this.carrerasSeleccionadas, id, marcada);
   }
 
-  protected estaSeleccionada(id: string): boolean {
-    return this.carrerasSeleccionadas().includes(id);
+  private recargarCarreras(paos: readonly string[], facultades: readonly string[]): void {
+    this.cargandoCarreras.set(true);
+    this.repositorio.carrerasDisponibles(paos, facultades).subscribe({
+      next: (carreras) => {
+        this.carrerasDelAmbito.set(carreras);
+        this.cargandoCarreras.set(false);
+
+        // Lo que ya no cabe en el ambito deja de estar marcado: si no, el
+        // archivo saldria filtrado por una carrera que la pantalla ya no
+        // muestra y nadie entenderia por que faltan filas.
+        const vigentes = new Set(carreras.map((c) => c.id));
+        this.carrerasSeleccionadas.update((sel) => sel.filter((id) => vigentes.has(id)));
+      },
+      error: (error: ErrorApi) => {
+        this.cargandoCarreras.set(false);
+        this.notificaciones.error('No fue posible cargar las carreras', error.mensaje);
+      },
+    });
   }
 
   protected seleccionarTodas(): void {
@@ -163,8 +241,8 @@ export class ReporteDistributivoComponent {
   }
 
   protected previsualizar(): void {
-    if (!this.paoId()) {
-      this.notificaciones.aviso('Seleccione un periodo académico');
+    if (this.paosSeleccionados().length === 0) {
+      this.notificaciones.aviso('Seleccione al menos un periodo académico');
       return;
     }
 
@@ -188,8 +266,8 @@ export class ReporteDistributivoComponent {
   }
 
   protected generar(): void {
-    if (!this.paoId()) {
-      this.notificaciones.aviso('Seleccione un periodo académico');
+    if (this.paosSeleccionados().length === 0) {
+      this.notificaciones.aviso('Seleccione al menos un periodo académico');
       return;
     }
 
@@ -216,8 +294,8 @@ export class ReporteDistributivoComponent {
 
   private peticion() {
     return {
-      paoId: this.paoId(),
-      facultadId: this.facultadId() || null,
+      paoIds: this.paosSeleccionados(),
+      facultadIds: this.facultadesSeleccionadas(),
       carreraIds: this.carrerasSeleccionadas(),
       plantilla: this.plantilla() || null,
       incluirColumnasAuditoria: this.incluirAuditoria(),

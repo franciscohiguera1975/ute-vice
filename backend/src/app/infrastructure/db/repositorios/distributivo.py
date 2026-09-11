@@ -25,6 +25,7 @@ from app.domain.value_objects import normalizar_texto
 from app.infrastructure.db import mapeadores_distributivo as m
 from app.infrastructure.db.modelos_distributivo import (
     MODELOS_CATALOGO,
+    AsignaturaModel,
     CarreraModel,
     CategoriaModel,
     DedicacionModel,
@@ -34,7 +35,6 @@ from app.infrastructure.db.modelos_distributivo import (
     GeneroModel,
     NivelModel,
     PaoModel,
-    ProgramaModel,
     SedeModel,
     TipoTituloModel,
     TitularidadModel,
@@ -59,7 +59,6 @@ _ORDEN_DISTRIBUTIVO: dict[str, Any] = {
 #: `add_columns` respeta al anadirlos a la consulta.
 _CODIGOS_ORIGEN: tuple[Any, ...] = (
     CarreraModel.codigo,
-    ProgramaModel.codigo,
     SedeModel.codigo,
     NivelModel.codigo,
     TitularidadModel.codigo,
@@ -67,11 +66,11 @@ _CODIGOS_ORIGEN: tuple[Any, ...] = (
     CategoriaModel.codigo,
     TipoTituloModel.codigo,
     GeneroModel.codigo,
+    AsignaturaModel.codigo,
 )
 
 _NOMBRES_CODIGOS_ORIGEN: tuple[str, ...] = (
     "codigo_carrera",
-    "codigo_programa",
     "codigo_sede",
     "codigo_nivel",
     "codigo_titularidad",
@@ -79,6 +78,7 @@ _NOMBRES_CODIGOS_ORIGEN: tuple[str, ...] = (
     "codigo_categoria",
     "codigo_tipo_titulo",
     "codigo_genero",
+    "codigo_asignatura",
 )
 
 
@@ -217,7 +217,6 @@ class RepositorioCatalogosSQL:
             TipoCatalogo.PAO: FilaDistributivoModel.pao_id,
             TipoCatalogo.FACULTAD: FilaDistributivoModel.facultad_id,
             TipoCatalogo.CARRERA: FilaDistributivoModel.carrera_id,
-            TipoCatalogo.PROGRAMA: FilaDistributivoModel.programa_id,
             TipoCatalogo.SEDE: FilaDistributivoModel.sede_id,
             TipoCatalogo.NIVEL: FilaDistributivoModel.nivel_id,
             TipoCatalogo.TITULARIDAD: FilaDistributivoModel.titularidad_id,
@@ -409,7 +408,6 @@ class RepositorioDistributivoSQL:
                 PaoModel.codigo,
                 FacultadModel.codigo,
                 CarreraModel.nombre,
-                ProgramaModel.nombre,
                 SedeModel.nombre,
                 NivelModel.nombre,
                 TitularidadModel.nombre,
@@ -417,13 +415,13 @@ class RepositorioDistributivoSQL:
                 CategoriaModel.nombre,
                 TipoTituloModel.nombre,
                 GeneroModel.nombre,
+                AsignaturaModel.nombre,
                 _titulos_del_docente(),
             )
             .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
             .join(PaoModel, PaoModel.id == FilaDistributivoModel.pao_id)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
-            .outerjoin(ProgramaModel, ProgramaModel.id == FilaDistributivoModel.programa_id)
             .outerjoin(SedeModel, SedeModel.id == FilaDistributivoModel.sede_id)
             .outerjoin(NivelModel, NivelModel.id == FilaDistributivoModel.nivel_id)
             .outerjoin(
@@ -433,6 +431,7 @@ class RepositorioDistributivoSQL:
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
             .outerjoin(GeneroModel, GeneroModel.id == DocenteModel.genero_id)
+            .outerjoin(AsignaturaModel, AsignaturaModel.id == FilaDistributivoModel.asignatura_id)
         )
 
     def _filtrar(self, consulta: Select[Any], filtro: FiltroDistributivo) -> Select[Any]:
@@ -449,13 +448,13 @@ class RepositorioDistributivoSQL:
             consulta = consulta.where(f.pao_id.in_(filtro.pao_ids))
         if filtro.facultad_id:
             consulta = consulta.where(f.facultad_id == filtro.facultad_id)
+        if filtro.facultad_ids:
+            consulta = consulta.where(f.facultad_id.in_(filtro.facultad_ids))
         if filtro.carrera_id:
             consulta = consulta.where(f.carrera_id == filtro.carrera_id)
         if filtro.carrera_ids:
             # Varias carreras a la vez: es como se emite el reporte institucional.
             consulta = consulta.where(f.carrera_id.in_(filtro.carrera_ids))
-        if filtro.programa_id:
-            consulta = consulta.where(f.programa_id == filtro.programa_id)
         if filtro.sede_id:
             consulta = consulta.where(f.sede_id == filtro.sede_id)
         if filtro.nivel_id:
@@ -471,7 +470,7 @@ class RepositorioDistributivoSQL:
         if filtro.sin_asignatura:
             # Filas que dictan clase pero nadie registro que asignatura: es lo
             # que queda en blanco en el reporte institucional.
-            consulta = consulta.where(f.total_docencia > 0, f.asignatura.is_(None))
+            consulta = consulta.where(f.total_docencia > 0, f.asignatura_id.is_(None))
         if filtro.con_carga is not None:
             consulta = consulta.where(f.total_horas > 0 if filtro.con_carga else f.total_horas == 0)
 
@@ -501,14 +500,14 @@ class RepositorioDistributivoSQL:
             pao=fila[3],
             facultad=fila[4],
             carrera=fila[5],
-            programa=fila[6],
-            sede=fila[7],
-            nivel=fila[8],
-            titularidad=fila[9],
-            dedicacion=fila[10],
-            categoria=fila[11],
-            tipo_titulo=fila[12],
-            genero=fila[13],
+            sede=fila[6],
+            nivel=fila[7],
+            titularidad=fila[8],
+            dedicacion=fila[9],
+            categoria=fila[10],
+            tipo_titulo=fila[11],
+            genero=fila[12],
+            asignatura=fila[13],
             titulos=tuple(fila[14] or ()),
             **codigos,
         )
@@ -621,7 +620,7 @@ class RepositorioDistributivoSQL:
                         func.sum(
                             func.cast(
                                 (FilaDistributivoModel.total_docencia > 0)
-                                & (FilaDistributivoModel.asignatura.is_(None)),
+                                & (FilaDistributivoModel.asignatura_id.is_(None)),
                                 Integer,
                             )
                         ).label("sin_asignatura"),
@@ -663,6 +662,35 @@ class RepositorioDistributivoSQL:
         )
 
     # -------------------------------------------------------------- reporte
+    async def unidades_por_docente(self) -> dict[UUID, str]:
+        # `DISTINCT ON` con el orden por periodo descendente deja una fila por
+        # docente: la de su periodo mas reciente. Es una sola pasada, frente a
+        # una consulta por docente sobre tres mil.
+        consulta = (
+            select(FilaDistributivoModel.docente_id, FacultadModel.nombre)
+            .distinct(FilaDistributivoModel.docente_id)
+            .join(PaoModel, PaoModel.id == FilaDistributivoModel.pao_id)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .order_by(FilaDistributivoModel.docente_id, PaoModel.orden.desc())
+        )
+        return dict((await self._s.execute(consulta)).all())  # type: ignore[arg-type]
+
+    async def carreras_presentes(self, filtro: FiltroDistributivo) -> list[ElementoCatalogo]:
+        consulta = (
+            select(CarreraModel)
+            .distinct()
+            .select_from(FilaDistributivoModel)
+            .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
+            .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
+            .order_by(CarreraModel.nombre)
+        )
+        # Se reutiliza el filtro entero —periodos, facultades y alcance— para
+        # que la lista ofrecida coincida exactamente con lo que despues saldra
+        # en el archivo. Ofrecer una carrera que luego devuelve cero filas es
+        # peor que no ofrecerla.
+        filas = await self._s.scalars(self._filtrar(consulta, filtro))
+        return [m.catalogo_a_dominio(f, TipoCatalogo.CARRERA) for f in filas]
+
     async def filas_resueltas(self, filtro: FiltroDistributivo) -> list[FilaDistributivoResuelta]:
         # Se piden tambien los codigos —el texto con que el consolidado nombraba
         # cada catalogo— porque de aqui sale la exportacion que reproduce el
@@ -748,7 +776,7 @@ class RepositorioDistributivoSQL:
                 DocenteModel.identificacion,
                 primer_titulo.label("titulo_profesional"),
                 func.coalesce(TipoTituloModel.nombre, ultimo_grado).label("grado"),
-                FilaDistributivoModel.asignatura,
+                AsignaturaModel.nombre.label("asignatura"),
                 anio_inicio.label("anio_inicio"),
                 CategoriaModel.nombre.label("categoria"),
                 DedicacionModel.nombre.label("dedicacion"),
@@ -771,6 +799,7 @@ class RepositorioDistributivoSQL:
             .outerjoin(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
+            .outerjoin(AsignaturaModel, AsignaturaModel.id == FilaDistributivoModel.asignatura_id)
         )
         consulta = self._filtrar(consulta, filtro).order_by(
             CarreraModel.nombre, DocenteModel.nombre_completo

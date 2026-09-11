@@ -70,10 +70,19 @@ export function aSnake<T>(valor: unknown): T {
  * Omite los valores vacios: un filtro sin usar no debe aparecer en la URL, ni
  * en los registros del servidor, ni en la constancia de filtros del reporte.
  */
-export function aParametros(objeto: object): Record<string, string> {
-  const parametros: Record<string, string> = {};
+export function aParametros(objeto: object): Record<string, string | string[]> {
+  const parametros: Record<string, string | string[]> = {};
   for (const [clave, valor] of Object.entries(objeto)) {
     if (valor === undefined || valor === null || valor === '') continue;
+
+    // Un arreglo se manda como el parametro repetido —`?ids=a&ids=b`—, que es
+    // lo que espera el backend. Convertirlo con `String()` produciria un solo
+    // valor `"a,b"` y el servidor lo rechazaria como identificador invalido.
+    if (Array.isArray(valor)) {
+      if (valor.length === 0) continue;
+      parametros[aSnakeCase(clave)] = valor.map(String);
+      continue;
+    }
     parametros[aSnakeCase(clave)] = String(valor);
   }
   return parametros;

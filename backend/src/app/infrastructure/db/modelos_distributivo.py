@@ -126,11 +126,6 @@ class NivelModel(Base, MixinCatalogo):
     __table_args__ = _indices_catalogo("cat_niveles")
 
 
-class ProgramaModel(Base, MixinCatalogo):
-    __tablename__ = "cat_programas"
-    __table_args__ = _indices_catalogo("cat_programas")
-
-
 class TituloProfesionalModel(Base, MixinCatalogo):
     __tablename__ = "cat_titulos_profesionales"
     __table_args__ = _indices_catalogo("cat_titulos_profesionales")
@@ -146,6 +141,18 @@ class GeneroModel(Base, MixinCatalogo):
     __table_args__ = _indices_catalogo("cat_generos")
 
 
+class AsignaturaModel(Base, MixinCatalogo):
+    """Materias que imparte el profesorado.
+
+    A diferencia de los otros doce, este catalogo **no sale del consolidado**:
+    el distributivo reparte horas por tipo de actividad y nunca dice que
+    materia se dicta. Se puebla a mano, a medida que se capturan las filas.
+    """
+
+    __tablename__ = "cat_asignaturas"
+    __table_args__ = _indices_catalogo("cat_asignaturas")
+
+
 #: Traduccion entre el tipo de catalogo del dominio y su tabla. Es lo que hace
 #: posible que un solo repositorio sirva a los doce.
 MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
@@ -157,10 +164,10 @@ MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.DEDICACION: DedicacionModel,
     TipoCatalogo.CATEGORIA: CategoriaModel,
     TipoCatalogo.NIVEL: NivelModel,
-    TipoCatalogo.PROGRAMA: ProgramaModel,
     TipoCatalogo.TITULO_PROFESIONAL: TituloProfesionalModel,
     TipoCatalogo.TIPO_TITULO: TipoTituloModel,
     TipoCatalogo.GENERO: GeneroModel,
+    TipoCatalogo.ASIGNATURA: AsignaturaModel,
 }
 
 
@@ -318,9 +325,6 @@ class FilaDistributivoModel(Base, MixinAuditoria):
         nullable=False,
     )
 
-    programa_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("cat_programas.id", ondelete="SET NULL")
-    )
     sede_id: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("cat_sedes.id", ondelete="SET NULL")
     )
@@ -343,7 +347,12 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     #: No viene del consolidado: el distributivo reparte horas por tipo de
     #: actividad, no por materia. Se captura a mano porque el reporte
     #: institucional la exige.
-    asignatura: Mapped[str | None] = mapped_column(String(400))
+    #:
+    #: `SET NULL` como el resto de catalogos: borrar una asignatura del
+    #: catalogo no debe llevarse por delante la carga horaria de nadie.
+    asignatura_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("cat_asignaturas.id", ondelete="SET NULL")
+    )
 
     #: Detalle de horas por subactividad, en cuatro bloques. Va en JSONB y no en
     #: 47 columnas: son datos del origen que hay que conservar, pero que nadie

@@ -106,6 +106,14 @@
       }
     </div>
 
+    <!-- Las asignaturas ya registradas se ofrecen al escribir: el catalogo
+         existe para que la misma materia no acabe con tres grafias. -->
+    <datalist id="asignaturas-conocidas">
+      @for (a of catalogos.de(TipoCatalogo.ASIGNATURA); track a.id) {
+        <option [value]="a.nombre"></option>
+      }
+    </datalist>
+
     <div class="tabla-envoltura">
       <table class="tabla tabla--captura">
         <caption class="sr-solo">Asignaturas por registro del distributivo</caption>
@@ -138,7 +146,8 @@
                 <input
                   type="text"
                   class="entrada-asignatura"
-                  maxlength="400"
+                  maxlength="320"
+                  list="asignaturas-conocidas"
                   [attr.aria-label]="'Asignatura de ' + fila.docenteNombre"
                   [ngModel]="valorDe(fila)"
                   (ngModelChange)="escribir(fila.id, $event)"

@@ -253,16 +253,22 @@
         <!-- Asignatura -->
         <div class="campo">
           <label class="campo__etiqueta" for="ed-asignatura">Asignatura que imparte</label>
-          <input
+          <select
             id="ed-asignatura"
-            type="text"
-            placeholder="ANATOMÍA HUMANA I"
-            [ngModel]="asignatura()"
-            (ngModelChange)="asignatura.set($event)"
-          />
+            [ngModel]="selecciones()['asignaturaId'] ?? ''"
+            (ngModelChange)="fijarSeleccion('asignaturaId', $event)"
+          >
+            <option value="">— Sin asignatura —</option>
+            @for (o of catalogos.de(TipoCatalogo.ASIGNATURA); track o.id) {
+              <option [value]="o.id">{{ o.nombre }}</option>
+            }
+          </select>
           <p class="campo__ayuda">
             No viene del consolidado: el distributivo reparte horas por tipo de actividad,
-            no por materia. El reporte institucional la exige, así que se captura aquí.
+            no por materia. El reporte institucional la exige, así que se captura aparte.
+            Para agregar una que no esté en la lista, use
+            <a routerLink="/distributivo/asignaturas">Asignaturas</a>: allí se escribe y
+            se crea sola en el catálogo.
           </p>
         </div>
 
@@ -279,18 +285,9 @@
               </select>
             </div>
             <div class="campo">
-              <label class="campo__etiqueta" for="ed-carrera">Carrera</label>
+              <label class="campo__etiqueta" for="ed-carrera">Carrera / programa</label>
               <select id="ed-carrera" [ngModel]="selecciones()['carreraId']" (ngModelChange)="fijarSeleccion('carreraId', $event)">
                 @for (o of catalogos.de(TipoCatalogo.CARRERA); track o.id) {
-                  <option [value]="o.id">{{ o.nombre }}</option>
-                }
-              </select>
-            </div>
-            <div class="campo">
-              <label class="campo__etiqueta" for="ed-programa">Carrera / programa</label>
-              <select id="ed-programa" [ngModel]="selecciones()['programaId']" (ngModelChange)="fijarSeleccion('programaId', $event)">
-                <option value="">(sin programa)</option>
-                @for (o of catalogos.de(TipoCatalogo.PROGRAMA); track o.id) {
                   <option [value]="o.id">{{ o.nombre }}</option>
                 }
               </select>

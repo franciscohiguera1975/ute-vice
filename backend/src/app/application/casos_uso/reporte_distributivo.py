@@ -19,7 +19,7 @@ from app.application.plantillas import (
     PlantillaDistributivo,
     RegistroPlantillas,
 )
-from app.domain.entities.catalogo import TipoCatalogo
+from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.enums import FormatoReporte, Permiso
 from app.domain.errors import ErrorValidacion, NoEncontrado, ReporteDemasiadoGrande
 from app.domain.ports.distributivo import FiltroDistributivo
@@ -40,12 +40,14 @@ _FILAS_VISTA_PREVIA = 50
 class EntradaReporteDistributivo:
     """Filtros del reporte.
 
-    `carrera_ids` admite varias carreras: es como se emite el reporte, una
-    facultad con el conjunto de sus programas.
+    Los tres admiten varios valores. Un reporte rara vez es de un periodo y una
+    carrera: se emite una facultad con todos sus programas, o la evolucion de
+    una carrera a lo largo de varios periodos. Obligar a generar un archivo por
+    combinacion y pegarlos despues era el trabajo manual que esto evita.
     """
 
-    pao_id: UUID
-    facultad_id: UUID | None = None
+    pao_ids: tuple[UUID, ...] = ()
+    facultad_ids: tuple[UUID, ...] = ()
     carrera_ids: tuple[UUID, ...] = ()
     plantilla: str | None = None
     """Codigo de la plantilla. Vacio usa la institucional."""
@@ -53,6 +55,25 @@ class EntradaReporteDistributivo:
     formato: FormatoReporte = FormatoReporte.XLSX
     incluir_columnas_auditoria: bool = False
     """Agrega identificacion, carrera y total de horas al final del archivo."""
+
+
+@dataclass(frozen=True, slots=True)
+class _Seleccion:
+    """Lo que se eligio, ya resuelto a texto.
+
+    Viaja junto porque los tres van siempre al mismo sitio: la cabecera del
+    archivo y la constancia de filtros aplicados.
+    """
+
+    periodos: list[str]
+    facultades: list[str]
+    carreras: list[str]
+
+    def resumir(self, etiqueta: str, valores: list[str]) -> str | None:
+        """Un nombre si es uno, «N etiqueta» si son varios, nada si no hay."""
+        if not valores:
+            return None
+        return valores[0] if len(valores) == 1 else f"{len(valores)} {etiqueta}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,8 +98,8 @@ class VistaPreviaReporte:
     total_docentes: int = 0
     sin_asignatura: int = 0
     sin_anio_inicio: int = 0
-    periodo: str = ""
-    facultad: str | None = None
+    periodos: list[str] = field(default_factory=list)
+    facultades: list[str] = field(default_factory=list)
     carreras: list[str] = field(default_factory=list)
 
     @property
@@ -110,6 +131,42 @@ class ListarPlantillasReporte(CasoDeUso[None, list[PlantillaDisponible]]):
         ]
 
 
+@dataclass(frozen=True, slots=True)
+class EntradaCarrerasDisponibles:
+    """De que periodos y facultades se quieren las carreras."""
+
+    pao_ids: tuple[UUID, ...] = ()
+    facultad_ids: tuple[UUID, ...] = ()
+
+
+class CarrerasDisponibles(CasoDeUso[EntradaCarrerasDisponibles, list[ElementoCatalogo]]):
+    """Carreras que existen en los periodos y facultades elegidos.
+
+    La pantalla de exportacion la usa para acotar su lista: con 278 carreras,
+    ofrecerlas todas cuando se marco una facultad convierte el selector en un
+    campo de busqueda a ciegas.
+    """
+
+    nombre = "reportes.carreras_disponibles"
+    descripcion = "Carreras presentes en los periodos y facultades indicados"
+    permiso_requerido = Permiso.DISTRIBUTIVO_LEER
+
+    def __init__(self, uow: UnidadDeTrabajo) -> None:
+        self._uow = uow
+
+    async def _ejecutar(
+        self, entrada: EntradaCarrerasDisponibles, contexto: ContextoEjecucion
+    ) -> list[ElementoCatalogo]:
+        async with self._uow:
+            return await self._uow.distributivo.carreras_presentes(
+                FiltroDistributivo(
+                    pao_ids=entrada.pao_ids,
+                    facultad_ids=entrada.facultad_ids,
+                    alcance=contexto.alcance,
+                )
+            )
+
+
 class _BaseReporteDistributivo:
     """Resuelve filtros y delega el contenido en la plantilla."""
 
@@ -129,35 +186,22 @@ class _BaseReporteDistributivo:
         contexto: ContextoEjecucion,
         *,
         limite: int | None,
-    ) -> tuple[PlantillaDistributivo, ContenidoPlantilla, str, str | None, list[str]]:
+    ) -> tuple[PlantillaDistributivo, ContenidoPlantilla, _Seleccion]:
         plantilla = self._plantillas.obtener(entrada.plantilla)
 
+        if not entrada.pao_ids:
+            raise ErrorValidacion("Seleccione al menos un periodo academico.", campo="pao_ids")
+
         async with self._uow:
-            pao = await self._uow.catalogos.obtener(TipoCatalogo.PAO, entrada.pao_id)
-            if pao is None:
-                raise NoEncontrado("periodo academico", entrada.pao_id)
-
-            facultad = None
-            if entrada.facultad_id:
-                elemento = await self._uow.catalogos.obtener(
-                    TipoCatalogo.FACULTAD, entrada.facultad_id
-                )
-                if elemento is None:
-                    raise NoEncontrado("facultad", entrada.facultad_id)
-                facultad = elemento.nombre
-
-            carreras: list[str] = []
-            for carrera_id in entrada.carrera_ids:
-                elemento = await self._uow.catalogos.obtener(TipoCatalogo.CARRERA, carrera_id)
-                if elemento is None:
-                    raise NoEncontrado("carrera", carrera_id)
-                carreras.append(elemento.nombre)
+            periodos = await self._nombres(TipoCatalogo.PAO, entrada.pao_ids, codigo=True)
+            facultades = await self._nombres(TipoCatalogo.FACULTAD, entrada.facultad_ids)
+            carreras = await self._nombres(TipoCatalogo.CARRERA, entrada.carrera_ids)
 
             contenido = await plantilla.construir(
                 self._uow,
                 FiltroDistributivo(
-                    pao_id=entrada.pao_id,
-                    facultad_id=entrada.facultad_id,
+                    pao_ids=entrada.pao_ids,
+                    facultad_ids=entrada.facultad_ids,
                     carrera_ids=entrada.carrera_ids,
                     # Quien coordina una facultad exporta su facultad, no el
                     # padron entero, aunque pida «todas».
@@ -167,7 +211,24 @@ class _BaseReporteDistributivo:
                 limite=limite,
             )
 
-        return plantilla, contenido, pao.codigo, facultad, carreras
+        return plantilla, contenido, _Seleccion(periodos, facultades, carreras)
+
+    async def _nombres(
+        self, tipo: TipoCatalogo, ids: tuple[UUID, ...], *, codigo: bool = False
+    ) -> list[str]:
+        """Resuelve los identificadores a texto, fallando si alguno no existe.
+
+        Se comprueba uno a uno en lugar de dejar que la consulta devuelva menos
+        filas: un identificador equivocado daria un reporte incompleto sin que
+        nadie se enterara.
+        """
+        nombres: list[str] = []
+        for elemento_id in ids:
+            elemento = await self._uow.catalogos.obtener(tipo, elemento_id)
+            if elemento is None:
+                raise NoEncontrado(tipo.singular, elemento_id)
+            nombres.append(elemento.codigo if codigo else elemento.nombre)
+        return nombres
 
 
 class VistaPreviaReporteDistributivo(
@@ -186,7 +247,7 @@ class VistaPreviaReporteDistributivo(
     async def _ejecutar(
         self, entrada: EntradaReporteDistributivo, contexto: ContextoEjecucion
     ) -> VistaPreviaReporte:
-        plantilla, contenido, periodo, facultad, carreras = await self._resolver(
+        plantilla, contenido, seleccion = await self._resolver(
             entrada, contexto, limite=_FILAS_VISTA_PREVIA
         )
         return VistaPreviaReporte(
@@ -198,9 +259,9 @@ class VistaPreviaReporteDistributivo(
             total_docentes=contenido.total_docentes,
             sin_asignatura=contenido.sin_asignatura,
             sin_anio_inicio=contenido.sin_anio_inicio,
-            periodo=periodo,
-            facultad=facultad,
-            carreras=carreras,
+            periodos=seleccion.periodos,
+            facultades=seleccion.facultades,
+            carreras=seleccion.carreras,
         )
 
 
@@ -228,9 +289,7 @@ class GenerarReporteDistributivo(
     async def _ejecutar(
         self, entrada: EntradaReporteDistributivo, contexto: ContextoEjecucion
     ) -> ArchivoReporte:
-        plantilla, contenido, periodo, facultad, carreras = await self._resolver(
-            entrada, contexto, limite=None
-        )
+        plantilla, contenido, seleccion = await self._resolver(entrada, contexto, limite=None)
 
         if not contenido.filas:
             raise ErrorValidacion(
@@ -243,10 +302,10 @@ class GenerarReporteDistributivo(
 
         tabla = TablaReporte(
             titulo=plantilla.titulo,
-            subtitulo=self._subtitulo(periodo, facultad, carreras),
+            subtitulo=self._subtitulo(seleccion),
             columnas=contenido.columnas,
             filas=contenido.filas,
-            filtros_aplicados=self._filtros(plantilla, periodo, facultad, carreras),
+            filtros_aplicados=self._filtros(plantilla, seleccion),
             generado_en=self._reloj.ahora(),
             generado_por=contexto.actor.nombre_completo if contexto.actor else "Sistema",
             totales=contenido.totales,
@@ -256,26 +315,29 @@ class GenerarReporteDistributivo(
 
     # ------------------------------------------------------------ internos
     @staticmethod
-    def _subtitulo(periodo: str, facultad: str | None, carreras: list[str]) -> str:
-        partes = [f"Periodo {periodo}"]
-        if facultad:
-            partes.append(facultad)
-        if carreras:
-            partes.append(carreras[0] if len(carreras) == 1 else f"{len(carreras)} carreras")
-        return " · ".join(partes)
+    def _subtitulo(seleccion: _Seleccion) -> str:
+        """Cabecera corta: un nombre si se eligio uno, un recuento si varios."""
+        partes = [
+            seleccion.resumir("periodos", seleccion.periodos),
+            seleccion.resumir("facultades", seleccion.facultades),
+            seleccion.resumir("carreras", seleccion.carreras),
+        ]
+        return " · ".join(p for p in partes if p)
 
     @staticmethod
-    def _filtros(
-        plantilla: PlantillaDistributivo,
-        periodo: str,
-        facultad: str | None,
-        carreras: list[str],
-    ) -> dict[str, object]:
-        filtros: dict[str, object] = {"Plantilla": plantilla.nombre, "Periodo": periodo}
-        if facultad:
-            filtros["Facultad"] = facultad
-        if carreras:
-            # Se listan por nombre, no por cantidad: un reporte sin constancia de
-            # que carreras incluye no se puede contrastar con otro.
-            filtros["Carreras"] = "; ".join(carreras)
+    def _filtros(plantilla: PlantillaDistributivo, seleccion: _Seleccion) -> dict[str, object]:
+        """Constancia de lo aplicado, **enumerado**.
+
+        Se listan por nombre y no por cantidad: un reporte que no deja
+        constancia de que periodos y carreras incluye no se puede contrastar
+        con otro, que es justo para lo que se emite.
+        """
+        filtros: dict[str, object] = {"Plantilla": plantilla.nombre}
+        for etiqueta, valores in (
+            ("Periodos", seleccion.periodos),
+            ("Facultades", seleccion.facultades),
+            ("Carreras", seleccion.carreras),
+        ):
+            if valores:
+                filtros[etiqueta] = "; ".join(valores)
         return filtros

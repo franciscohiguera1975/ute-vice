@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
-from app.domain.entities.catalogo import TipoCatalogo
+from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import FilaDistributivo
 from app.domain.enums import Permiso
 from app.domain.errors import ErrorValidacion, FueraDeAlcance, NoEncontrado, YaExiste
@@ -32,14 +32,13 @@ class EntradaCrearFila:
     pao_id: UUID
     facultad_id: UUID
     carrera_id: UUID
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura: str | None = None
+    asignatura_id: UUID | None = None
     horas: dict[str, float] = field(default_factory=dict)
     medida: str | None = None
     observaciones: str | None = None
@@ -50,14 +49,13 @@ class EntradaActualizarFila:
     fila_id: UUID
     facultad_id: UUID | None = None
     carrera_id: UUID | None = None
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura: str | None = None
+    asignatura_id: UUID | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None
     observaciones: str | None = None
@@ -74,13 +72,13 @@ _REFERENCIAS_OBLIGATORIAS: tuple[tuple[str, TipoCatalogo], ...] = (
 #: foranea invalida se detecta aqui con un mensaje util, no como un error de
 #: integridad de PostgreSQL a mitad de la transaccion.
 _REFERENCIAS_OPCIONALES: tuple[tuple[str, TipoCatalogo], ...] = (
-    ("programa_id", TipoCatalogo.PROGRAMA),
     ("sede_id", TipoCatalogo.SEDE),
     ("nivel_id", TipoCatalogo.NIVEL),
     ("titularidad_id", TipoCatalogo.TITULARIDAD),
     ("dedicacion_id", TipoCatalogo.DEDICACION),
     ("categoria_id", TipoCatalogo.CATEGORIA),
     ("tipo_titulo_id", TipoCatalogo.TIPO_TITULO),
+    ("asignatura_id", TipoCatalogo.ASIGNATURA),
 )
 
 
@@ -247,14 +245,13 @@ class CrearFilaDistributivo(CasoDeUso[EntradaCrearFila, FilaDistributivo]):
                 pao_id=entrada.pao_id,
                 facultad_id=entrada.facultad_id,
                 carrera_id=entrada.carrera_id,
-                programa_id=entrada.programa_id,
                 sede_id=entrada.sede_id,
                 nivel_id=entrada.nivel_id,
                 titularidad_id=entrada.titularidad_id,
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
-                asignatura=entrada.asignatura,
+                asignatura_id=entrada.asignatura_id,
                 horas=horas,
                 medida=entrada.medida,
                 observaciones=entrada.observaciones,
@@ -312,14 +309,13 @@ class ActualizarFilaDistributivo(CasoDeUso[EntradaActualizarFila, FilaDistributi
             fila.actualizar(
                 facultad_id=entrada.facultad_id,
                 carrera_id=entrada.carrera_id,
-                programa_id=entrada.programa_id,
                 sede_id=entrada.sede_id,
                 nivel_id=entrada.nivel_id,
                 titularidad_id=entrada.titularidad_id,
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
-                asignatura=entrada.asignatura,
+                asignatura_id=entrada.asignatura_id,
                 horas=horas,
                 medida=entrada.medida,
                 observaciones=entrada.observaciones,
@@ -396,6 +392,8 @@ class AsignaturaDeFila:
 class ResultadoCapturaAsignaturas:
     actualizadas: int = 0
     sin_cambios: int = 0
+    #: Asignaturas que no estaban en el catalogo y se agregaron al vuelo.
+    asignaturas_creadas: int = 0
 
 
 class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsignaturas]):
@@ -419,6 +417,7 @@ class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsig
 
     def __init__(self, uow: UnidadDeTrabajo) -> None:
         self._uow = uow
+        self._creadas: set[UUID] = set()
 
     async def _ejecutar(
         self, entrada: list[AsignaturaDeFila], contexto: ContextoEjecucion
@@ -451,18 +450,44 @@ class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsig
                     # el resto dejaria al usuario sin saber que quedo afuera.
                     raise NoEncontrado("Fila de distributivo", item.fila_id)
 
-                # Se normaliza igual que la entidad para poder comparar: si el
-                # texto no cambia, no se toca la fila ni su fecha de auditoria.
-                nueva = " ".join(item.asignatura.split()) or None
-                if nueva == fila.asignatura:
+                # La pantalla manda texto, no identificadores: capturar
+                # cientos de filas obligando a elegir de una lista que empieza
+                # vacia no seria capturar nada. El texto se resuelve contra el
+                # catalogo y, si no existe, se agrega.
+                asignatura_id = await self._resolver(item.asignatura)
+                if asignatura_id == fila.asignatura_id:
                     sin_cambios += 1
                     continue
 
-                # La entidad interpreta la cadena vacia como borrado.
-                fila.actualizar(asignatura=item.asignatura or "")
+                fila.definir_asignatura(asignatura_id)
                 await self._uow.distributivo.actualizar(fila)
                 actualizadas += 1
 
             await self._uow.commit()
 
-        return ResultadoCapturaAsignaturas(actualizadas=actualizadas, sin_cambios=sin_cambios)
+        return ResultadoCapturaAsignaturas(
+            actualizadas=actualizadas,
+            sin_cambios=sin_cambios,
+            asignaturas_creadas=len(self._creadas),
+        )
+
+    async def _resolver(self, texto: str) -> UUID | None:
+        """Texto → elemento del catalogo. Vacio retira la asignatura.
+
+        Busca por codigo, que es el texto en mayusculas: asi «Calculo I» y
+        «CALCULO I» son la misma asignatura y no dos entradas distintas.
+        """
+        limpio = " ".join(texto.split())
+        if not limpio:
+            return None
+
+        codigo = limpio.upper()
+        existente = await self._uow.catalogos.obtener_por_codigo(TipoCatalogo.ASIGNATURA, codigo)
+        if existente is not None:
+            return existente.id
+
+        creada = await self._uow.catalogos.agregar(
+            ElementoCatalogo(tipo=TipoCatalogo.ASIGNATURA, codigo=codigo, nombre=limpio)
+        )
+        self._creadas.add(creada.id)
+        return creada.id

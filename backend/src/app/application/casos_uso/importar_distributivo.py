@@ -121,7 +121,7 @@ class _Catalogos:
 
     Resuelve codigo → id en memoria. Sin ella, una carga de 15.000 filas haria
     una consulta por cada valor de cada fila: cientos de miles de viajes a la
-    base para resolver trece catalogos que caben holgadamente en un diccionario.
+    base para resolver doce catalogos que caben holgadamente en un diccionario.
     """
 
     def __init__(self, uow: UnidadDeTrabajo) -> None:
@@ -436,9 +436,6 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
                     facultad_id=facultad_id,
                     carrera_id=carrera_id,
                     sede_id=sede_id,
-                    programa_id=catalogos.resolver(
-                        TipoCatalogo.PROGRAMA, _normalizar(principal.programa)
-                    ),
                     nivel_id=catalogos.resolver(TipoCatalogo.NIVEL, _normalizar(principal.nivel)),
                     titularidad_id=catalogos.resolver(
                         TipoCatalogo.TITULARIDAD, _normalizar(principal.titularidad)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
@@ -249,7 +251,7 @@ class TestFilaDistributivo:
     ) -> None:
         """Es lo que el reporte institucional deja en blanco."""
         assert fila.requiere_asignatura
-        fila.actualizar(asignatura="ANATOMIA HUMANA I")
+        fila.definir_asignatura(uuid4())
         assert not fila.requiere_asignatura
 
     def test_una_fila_sin_docencia_no_requiere_asignatura(self) -> None:
@@ -264,13 +266,22 @@ class TestFilaDistributivo:
         )
         assert not fila.requiere_asignatura
 
-    def test_normaliza_la_asignatura(self, fila: FilaDistributivo) -> None:
-        fila.actualizar(asignatura="  anatomia   humana  ")
-        assert fila.asignatura == "anatomia humana"
+    def test_definir_asignatura_con_none_la_retira(self, fila: FilaDistributivo) -> None:
+        """`actualizar` no puede hacerlo: alli `None` significa «no cambies»."""
+        asignatura = uuid4()
+        fila.definir_asignatura(asignatura)
+        assert fila.asignatura_id == asignatura
 
-    def test_rechaza_una_asignatura_desmedida(self, fila: FilaDistributivo) -> None:
-        with pytest.raises(ErrorValidacion, match="asignatura"):
-            fila.actualizar(asignatura="x" * 401)
+        fila.definir_asignatura(None)
+        assert fila.asignatura_id is None
+        assert fila.requiere_asignatura
+
+    def test_actualizar_no_retira_la_asignatura(self, fila: FilaDistributivo) -> None:
+        """Un `None` en `actualizar` deja el campo como estaba, no lo borra."""
+        asignatura = uuid4()
+        fila.definir_asignatura(asignatura)
+        fila.actualizar(medida="NO APLICA")
+        assert fila.asignatura_id == asignatura
 
     def test_actualizar_recalcula_los_totales(self, fila: FilaDistributivo) -> None:
         fila.actualizar(horas=DistribucionHoras.desde_plano({"Da": 1.0}))

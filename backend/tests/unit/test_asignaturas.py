@@ -3,6 +3,10 @@
 Es el unico dato del reporte institucional que no existe en el consolidado —el
 distributivo reparte horas por tipo de actividad, no por materia— asi que se
 captura a mano sobre cientos de filas. De ahi que se guarde por tandas.
+
+La pantalla manda **texto** y el caso de uso lo resuelve contra el catalogo,
+creando el elemento si no existe: obligar a elegir de una lista que empieza
+vacia no seria capturar nada.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ from tests.conftest import hacer_usuario
 
 from app.application.base import ContextoEjecucion
 from app.application.casos_uso.distributivo import AsignaturaDeFila, CapturarAsignaturas
+from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import FilaDistributivo
 from app.domain.enums import RolCodigo
 from app.domain.errors import ErrorValidacion, NoEncontrado
@@ -26,6 +31,21 @@ def contexto_admin(roles):  # type: ignore[no-untyped-def]
     return ContextoEjecucion(
         actor=hacer_usuario(roles={roles[RolCodigo.ADMIN.value]}, superusuario=True)
     )
+
+
+def _nombre_asignatura(uow, fila_id):  # type: ignore[no-untyped-def]
+    """El texto de la asignatura enlazada, o `None` si no tiene."""
+    asignatura_id = uow.distributivo.datos[fila_id].asignatura_id
+    if asignatura_id is None:
+        return None
+    return uow.catalogos.datos[TipoCatalogo.ASIGNATURA][asignatura_id].nombre
+
+
+def _con_asignatura(uow, texto):  # type: ignore[no-untyped-def]
+    """Siembra un elemento del catalogo y devuelve su identificador."""
+    elemento = ElementoCatalogo(tipo=TipoCatalogo.ASIGNATURA, codigo=texto.upper(), nombre=texto)
+    uow.catalogos.datos[TipoCatalogo.ASIGNATURA][elemento.id] = elemento
+    return elemento.id
 
 
 def _fila(uow, **cambios):  # type: ignore[no-untyped-def]
@@ -53,14 +73,18 @@ async def test_guarda_la_tanda_completa(uow, contexto_admin) -> None:  # type: i
     )
 
     assert resultado.actualizadas == 2
-    assert uow.distributivo.datos[a.id].asignatura == "CALCULO I"
-    assert uow.distributivo.datos[b.id].asignatura == "FISICA"
+    assert _nombre_asignatura(uow, a.id) == "CALCULO I"
+    assert _nombre_asignatura(uow, b.id) == "FISICA"
     assert uow.commits == 1
+
+    # Ninguna de las dos existia: el catalogo se poblo solo.
+    assert resultado.asignaturas_creadas == 2
 
 
 async def test_no_toca_lo_que_no_cambia(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
-    """El texto normaliza al mismo valor: no hay nada que guardar."""
-    fila = _fila(uow, asignatura="CALCULO I")
+    """El texto resuelve al mismo elemento: no hay nada que guardar."""
+    asignatura_id = _con_asignatura(uow, "CALCULO I")
+    fila = _fila(uow, asignatura_id=asignatura_id)
 
     resultado = await CapturarAsignaturas(uow)(
         [AsignaturaDeFila(fila_id=fila.id, asignatura="  CALCULO   I ")],
@@ -69,10 +93,44 @@ async def test_no_toca_lo_que_no_cambia(uow, contexto_admin) -> None:  # type: i
 
     assert resultado.actualizadas == 0
     assert resultado.sin_cambios == 1
+    assert resultado.asignaturas_creadas == 0
 
 
-async def test_texto_vacio_borra_la_asignatura(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
-    fila = _fila(uow, asignatura="CALCULO I")
+async def test_dos_grafias_del_mismo_nombre_son_una_sola(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Es la razon de ser del catalogo: una materia, una entrada."""
+    a, b = _fila(uow), _fila(uow)
+
+    resultado = await CapturarAsignaturas(uow)(
+        [
+            AsignaturaDeFila(fila_id=a.id, asignatura="Calculo I"),
+            AsignaturaDeFila(fila_id=b.id, asignatura="  CALCULO   I  "),
+        ],
+        contexto_admin,
+    )
+
+    assert resultado.actualizadas == 2
+    assert resultado.asignaturas_creadas == 1
+    assert uow.distributivo.datos[a.id].asignatura_id == uow.distributivo.datos[b.id].asignatura_id
+    assert len(uow.catalogos.datos[TipoCatalogo.ASIGNATURA]) == 1
+
+
+async def test_reutiliza_lo_que_ya_esta_en_el_catalogo(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    existente = _con_asignatura(uow, "Anatomia Humana")
+    fila = _fila(uow)
+
+    resultado = await CapturarAsignaturas(uow)(
+        [AsignaturaDeFila(fila_id=fila.id, asignatura="anatomia humana")],
+        contexto_admin,
+    )
+
+    assert resultado.asignaturas_creadas == 0
+    assert uow.distributivo.datos[fila.id].asignatura_id == existente
+
+
+async def test_texto_vacio_retira_la_asignatura(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Retira el enlace, sin borrar la asignatura del catalogo."""
+    asignatura_id = _con_asignatura(uow, "CALCULO I")
+    fila = _fila(uow, asignatura_id=asignatura_id)
 
     resultado = await CapturarAsignaturas(uow)(
         [AsignaturaDeFila(fila_id=fila.id, asignatura="")],
@@ -80,7 +138,8 @@ async def test_texto_vacio_borra_la_asignatura(uow, contexto_admin) -> None:  # 
     )
 
     assert resultado.actualizadas == 1
-    assert uow.distributivo.datos[fila.id].asignatura is None
+    assert uow.distributivo.datos[fila.id].asignatura_id is None
+    assert len(uow.catalogos.datos[TipoCatalogo.ASIGNATURA]) == 1
 
 
 async def test_aborta_entera_si_una_fila_no_existe(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]

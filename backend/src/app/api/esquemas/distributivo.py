@@ -199,8 +199,6 @@ class FilaDistributivoSalida(EsquemaBase):
     carrera_id: UUID
     carrera: str
 
-    programa_id: UUID | None
-    programa: str | None
     sede_id: UUID | None
     sede: str | None
     nivel_id: UUID | None
@@ -214,6 +212,7 @@ class FilaDistributivoSalida(EsquemaBase):
     tipo_titulo_id: UUID | None
     tipo_titulo: str | None
 
+    asignatura_id: UUID | None
     asignatura: str | None
     requiere_asignatura: bool
     horas: HorasSalida
@@ -236,8 +235,6 @@ class FilaDistributivoSalida(EsquemaBase):
             facultad=r.facultad,
             carrera_id=f.carrera_id,
             carrera=r.carrera,
-            programa_id=f.programa_id,
-            programa=r.programa,
             sede_id=f.sede_id,
             sede=r.sede,
             nivel_id=f.nivel_id,
@@ -250,7 +247,8 @@ class FilaDistributivoSalida(EsquemaBase):
             categoria=r.categoria,
             tipo_titulo_id=f.tipo_titulo_id,
             tipo_titulo=r.tipo_titulo,
-            asignatura=f.asignatura,
+            asignatura_id=f.asignatura_id,
+            asignatura=r.asignatura,
             requiere_asignatura=f.requiere_asignatura,
             horas=HorasSalida.desde(f.horas),
             total_horas=f.total_horas,
@@ -265,14 +263,13 @@ class FilaDistributivoCrear(EsquemaBase):
     pao_id: UUID
     facultad_id: UUID
     carrera_id: UUID
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura: str | None = Field(default=None, max_length=400)
+    asignatura_id: UUID | None = None
     horas: dict[str, float] = Field(
         default_factory=dict,
         description="Horas por subactividad: Da..Dn, Ga..Gn, Ia..Ij, Va..Vi",
@@ -284,14 +281,13 @@ class FilaDistributivoCrear(EsquemaBase):
 class FilaDistributivoActualizar(EsquemaBase):
     facultad_id: UUID | None = None
     carrera_id: UUID | None = None
-    programa_id: UUID | None = None
     sede_id: UUID | None = None
     nivel_id: UUID | None = None
     titularidad_id: UUID | None = None
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura: str | None = Field(default=None, max_length=400)
+    asignatura_id: UUID | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None
     observaciones: str | None = None
@@ -334,7 +330,10 @@ class AsignaturaCapturada(EsquemaBase):
     asignatura: str = Field(
         default="",
         max_length=400,
-        description="Texto vacio borra la asignatura registrada.",
+        description=(
+            "Nombre de la asignatura. Se resuelve contra el catalogo y se agrega "
+            "si no existe. Texto vacio retira la asignatura registrada."
+        ),
     )
 
 
@@ -345,17 +344,19 @@ class PeticionCapturaAsignaturas(EsquemaBase):
 class ResultadoCapturaAsignaturasSalida(EsquemaBase):
     actualizadas: int
     sin_cambios: int
+    asignaturas_creadas: int = 0
 
 
 class PeticionReporteDistributivo(EsquemaBase):
     """Filtros de la exportacion.
 
-    `carrera_ids` admite varias: es como se emite el reporte institucional, una
-    facultad con el conjunto de sus programas.
+    Los tres admiten varios valores: un reporte rara vez es de un periodo y una
+    carrera. Se emite una facultad con todos sus programas, o la evolucion de
+    una carrera a lo largo de varios periodos.
     """
 
-    pao_id: UUID
-    facultad_id: UUID | None = None
+    pao_ids: list[UUID] = Field(min_length=1, description="Al menos un periodo academico")
+    facultad_ids: list[UUID] = Field(default_factory=list)
     carrera_ids: list[UUID] = Field(default_factory=list)
     plantilla: str | None = Field(
         default=None,
@@ -412,8 +413,8 @@ class VistaPreviaReporteSalida(EsquemaBase):
     total_docentes: int
     sin_asignatura: int
     sin_anio_inicio: int
-    periodo: str
-    facultad: str | None
+    periodos: list[str]
+    facultades: list[str]
     carreras: list[str]
     esta_completo: bool
 
