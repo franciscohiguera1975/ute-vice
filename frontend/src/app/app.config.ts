@@ -10,7 +10,9 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import localeEsEc from '@angular/common/locales/es-EC';
 import {
   type ApplicationConfig,
+  ErrorHandler,
   LOCALE_ID,
+  provideAppInitializer,
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
@@ -20,6 +22,7 @@ import { PROVEEDORES_DISTRIBUTIVO } from '@data/repositorios-distributivo';
 
 import { rutas } from './app.routes';
 import { interceptorAutenticacion, interceptorErrores } from './core/interceptores';
+import { ManejadorDeErrores, limpiarCerrojoDeRecarga } from './core/recarga-por-despliegue';
 
 // `LOCALE_ID` por si solo no basta: los pipes de formato necesitan los datos de
 // la configuracion regional cargados, o fallan en tiempo de ejecucion. Se
@@ -46,6 +49,12 @@ export const configuracionApp: ApplicationConfig = {
     provideHttpClient(withInterceptors([interceptorAutenticacion, interceptorErrores])),
 
     { provide: LOCALE_ID, useValue: 'es-EC' },
+
+    // Recupera la navegacion cuando se publica una version nueva con la
+    // aplicacion abierta: sin esto, los enlaces a secciones aun no visitadas
+    // dejan de responder y parece que la interfaz se rompio.
+    { provide: ErrorHandler, useClass: ManejadorDeErrores },
+    provideAppInitializer(() => limpiarCerrojoDeRecarga()),
 
     ...PROVEEDORES_DATOS,
     ...PROVEEDORES_DISTRIBUTIVO,

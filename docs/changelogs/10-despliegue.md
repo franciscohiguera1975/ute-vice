@@ -87,6 +87,22 @@ De paso, CI vuelca ahora las ultimas sesenta lineas del fallo al resumen del
 trabajo. Diagnosticar el primer fallo exigio reproducir el entorno entero en
 local porque los registros de un trabajo no son legibles sin autenticacion.
 
+## Un fallo que solo aparece al desplegar
+
+**Los enlaces dejaban de responder para quien tenia la aplicacion abierta.**
+
+Angular divide la aplicacion en fragmentos y cada compilacion les cambia el
+nombre. Al publicar una version nueva, el `rsync --delete` retira los antiguos;
+quien tenia la pestana abierta seguia con un `index.html` que los nombraba. Al
+pulsar una seccion en la que no habia entrado todavia, el navegador pedia un
+archivo que ya no existia y **la navegacion fallaba en silencio**: ni error
+visible, ni cambio de pantalla. Parecia que el enlace estaba roto.
+
+`core/recarga-por-despliegue.ts` detecta ese fallo concreto y recarga la pagina
+una sola vez —lo unico que puede arreglarlo, porque hay que volver a pedir el
+`index.html` para conocer los nombres nuevos—, con un cerrojo en
+`sessionStorage` para no entrar en bucle si el fragmento sigue sin aparecer.
+
 ## Pendiente
 
 - **Respaldo del `.env` de produccion fuera del VPS.** Existe en un solo sitio.
