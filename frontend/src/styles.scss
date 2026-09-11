@@ -1,0 +1,410 @@
+/* =====================================================================
+   UTE-VICE — Estilos base
+
+   Todo el color pasa por variables CSS. Eso permite el tema oscuro sin
+   duplicar reglas y hace que un ajuste de identidad institucional sea un
+   cambio en un solo bloque.
+   ===================================================================== */
+
+:root {
+  /* --- Identidad --- */
+  --azul-900: #14264a;
+  --azul-800: #1f3864;
+  --azul-700: #2b4a80;
+  --azul-600: #3a5f9e;
+  --azul-100: #dbe6f7;
+  --azul-50: #f0f5fd;
+
+  /* --- Estado --- */
+  --exito: #1b7f4b;
+  --exito-suave: #e3f5ec;
+  --error: #b3261e;
+  --error-suave: #fbe9e8;
+  --aviso: #9a6400;
+  --aviso-suave: #fdf3e0;
+  --info: #1f3864;
+  --info-suave: #e8eefb;
+
+  /* --- Superficies --- */
+  --fondo: #f6f7fa;
+  --superficie: #ffffff;
+  --superficie-2: #fbfcfe;
+  --borde: #dfe3ec;
+  --borde-fuerte: #c3cad9;
+
+  /* --- Texto --- */
+  --texto: #1a1e2b;
+  --texto-suave: #5a6376;
+  --texto-tenue: #8a91a3;
+  --texto-inverso: #ffffff;
+
+  /* --- Medidas --- */
+  --radio: 8px;
+  --radio-sm: 5px;
+  --radio-lg: 14px;
+  --sombra-1: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+  --sombra-2: 0 4px 8px -2px rgb(16 24 40 / 10%), 0 2px 4px -2px rgb(16 24 40 / 6%);
+  --sombra-3: 0 12px 20px -4px rgb(16 24 40 / 12%), 0 4px 8px -4px rgb(16 24 40 / 6%);
+
+  --ancho-lateral: 252px;
+  --alto-cabecera: 60px;
+
+  --fuente: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --fuente-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --transicion: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* El tema oscuro redefine solo los tokens; ninguna regla se duplica. */
+:root[data-tema='oscuro'] {
+  --fondo: #12151c;
+  --superficie: #1a1e27;
+  --superficie-2: #212633;
+  --borde: #2c3340;
+  --borde-fuerte: #3d4657;
+
+  --texto: #e8eaf0;
+  --texto-suave: #a4acbd;
+  --texto-tenue: #737c8f;
+
+  --azul-100: #24354f;
+  --azul-50: #1c2534;
+
+  --exito-suave: #12291f;
+  --error-suave: #2d1614;
+  --aviso-suave: #2b2110;
+  --info-suave: #1a2540;
+
+  --sombra-1: 0 1px 3px rgb(0 0 0 / 40%);
+  --sombra-2: 0 4px 10px rgb(0 0 0 / 45%);
+  --sombra-3: 0 14px 26px rgb(0 0 0 / 50%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--fuente);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--texto);
+  background: var(--fondo);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.011em;
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.175rem; }
+h3 { font-size: 1rem; }
+
+p { margin: 0 0 0.75rem; }
+
+a {
+  color: var(--azul-700);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+code, .mono {
+  font-family: var(--fuente-mono);
+  font-size: 0.86em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- foco --- */
+/* Un anillo de foco visible y consistente: la navegacion por teclado debe ser
+   utilizable, no una idea de ultimo momento. */
+:focus-visible {
+  outline: 2px solid var(--azul-600);
+  outline-offset: 2px;
+  border-radius: var(--radio-sm);
+}
+
+/* ------------------------------------------------------------ botones --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transicion), border-color var(--transicion),
+    color var(--transicion), box-shadow var(--transicion);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primario {
+  background: var(--azul-800);
+  color: var(--texto-inverso);
+}
+.btn--primario:hover:not(:disabled) { background: var(--azul-700); }
+
+.btn--secundario {
+  background: var(--superficie);
+  color: var(--texto);
+  border-color: var(--borde-fuerte);
+}
+.btn--secundario:hover:not(:disabled) { background: var(--superficie-2); }
+
+.btn--fantasma {
+  background: transparent;
+  color: var(--texto-suave);
+}
+.btn--fantasma:hover:not(:disabled) {
+  background: var(--azul-50);
+  color: var(--texto);
+}
+
+.btn--peligro {
+  background: var(--error);
+  color: var(--texto-inverso);
+}
+.btn--peligro:hover:not(:disabled) { filter: brightness(1.1); }
+
+.btn--sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+.btn--bloque { width: 100%; }
+
+/* ---------------------------------------------------------- formulario --- */
+.campo { margin-bottom: 1rem; }
+
+.campo__etiqueta {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.campo__requerido { color: var(--error); }
+
+.campo__control,
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='date'],
+input[type='number'],
+input[type='search'],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  transition: border-color var(--transicion), box-shadow var(--transicion);
+}
+
+.campo__control:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--azul-600);
+  box-shadow: 0 0 0 3px var(--azul-100);
+}
+
+.campo__control--error {
+  border-color: var(--error);
+}
+.campo__control--error:focus {
+  box-shadow: 0 0 0 3px var(--error-suave);
+}
+
+.campo__error {
+  margin-top: 0.25rem;
+  font-size: 0.775rem;
+  color: var(--error);
+}
+
+.campo__ayuda {
+  margin-top: 0.25rem;
+  font-size: 0.775rem;
+  color: var(--texto-tenue);
+}
+
+textarea { resize: vertical; min-height: 76px; }
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.casilla input { width: auto; margin-top: 0.15rem; }
+
+/* -------------------------------------------------------------- tarjeta --- */
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-1);
+}
+
+.tarjeta__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tarjeta__titulo { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.tarjeta__cuerpo { padding: 1.15rem; }
+
+/* --------------------------------------------------------------- tabla --- */
+.tabla-envoltura {
+  overflow-x: auto;
+  border-radius: var(--radio-lg);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.tabla th {
+  position: sticky;
+  top: 0;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  background: var(--superficie-2);
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla th[role='button'] { cursor: pointer; user-select: none; }
+.tabla th[role='button']:hover { color: var(--texto); }
+
+.tabla td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: middle;
+}
+
+.tabla tbody tr:hover { background: var(--azul-50); }
+.tabla tbody tr:last-child td { border-bottom: none; }
+
+.tabla--clicable tbody tr { cursor: pointer; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.centro { text-align: center; }
+.truncar {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ utilidades --- */
+.pila { display: flex; flex-direction: column; }
+.fila { display: flex; align-items: center; }
+.entre { justify-content: space-between; }
+.hueco-xs { gap: 0.35rem; }
+.hueco-sm { gap: 0.6rem; }
+.hueco { gap: 1rem; }
+.hueco-lg { gap: 1.5rem; }
+.envolver { flex-wrap: wrap; }
+.crecer { flex: 1; }
+
+.texto-suave { color: var(--texto-suave); }
+.texto-tenue { color: var(--texto-tenue); }
+.texto-error { color: var(--error); }
+.texto-exito { color: var(--exito); }
+.texto-sm { font-size: 0.8rem; }
+.texto-xs { font-size: 0.73rem; }
+.negrita { font-weight: 600; }
+
+.sr-solo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.rejilla { display: grid; gap: 1rem; }
+.rejilla--2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rejilla--3 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.rejilla--4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* --------------------------------------------------------------- barra --- */
+.barra {
+  height: 7px;
+  background: var(--borde);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.barra__relleno {
+  height: 100%;
+  background: var(--azul-700);
+  border-radius: 99px;
+  transition: width 320ms ease;
+}
+
+/* ------------------------------------------------------------- scroll --- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--borde-fuerte);
+  border: 2px solid var(--fondo);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--texto-tenue); }
+
+/* Respeta la preferencia del sistema de reducir el movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-imprimir { display: none !important; }
+  body { background: #fff; }
+}

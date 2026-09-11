@@ -1,0 +1,83 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1.25rem; }
+
+.periodo {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.periodo__opcion {
+  padding: 0.28rem 0.6rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  background: none;
+  border: none;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+.periodo__opcion--activa {
+  color: var(--azul-800);
+  background: var(--superficie);
+  font-weight: 600;
+  box-shadow: var(--sombra-1);
+}
+
+.metrica {
+  padding: 1rem 1.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-1);
+}
+
+.metrica__etiqueta {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+}
+
+.metrica__valor {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrica__barra { margin: 0.55rem 0 0.35rem; }
+.metrica__pie { margin: 0.3rem 0 0; }
+
+.alertas { list-style: none; margin: 0; padding: 0.4rem 0; }
+
+.alertas__item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--borde);
+}
+.alertas__item:last-child { border-bottom: none; }
+
+.alertas__marca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--aviso);
+  background: var(--aviso-suave);
+  border-radius: 50%;
+}

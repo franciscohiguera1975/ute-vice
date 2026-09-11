@@ -1,0 +1,100 @@
+.acceso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, var(--azul-100), transparent 65%),
+    var(--fondo);
+}
+
+.acceso__panel {
+  width: min(25rem, 100%);
+  padding: 2rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-2);
+}
+
+.acceso__marca { text-align: center; margin-bottom: 1.5rem; }
+
+.acceso__sigla {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--azul-800);
+  border-radius: var(--radio);
+}
+
+.acceso__titulo { margin: 0; font-size: 1.2rem; }
+.acceso__subtitulo { margin: 0.2rem 0 0; font-size: 0.78rem; color: var(--texto-tenue); }
+
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  margin-bottom: 1.25rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.pestana {
+  flex: 1;
+  padding: 0.4rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  background: none;
+  border: none;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+.pestana--activa {
+  color: var(--azul-800);
+  background: var(--superficie);
+  font-weight: 600;
+  box-shadow: var(--sombra-1);
+}
+
+.alerta {
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  color: var(--error);
+  background: var(--error-suave);
+  border-radius: var(--radio);
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.15rem 0;
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+}
+.separador::before,
+.separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--borde);
+}
+
+.acceso__pie {
+  margin: 1.5rem 0 0;
+  padding-top: 1rem;
+  text-align: center;
+  line-height: 1.45;
+  border-top: 1px solid var(--borde);
+}

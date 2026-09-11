@@ -1,0 +1,102 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1rem; }
+
+.submenu {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+.submenu__enlace {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+.submenu__enlace:hover { color: var(--texto); text-decoration: none; }
+.submenu__enlace--activo {
+  color: var(--azul-800);
+  font-weight: 600;
+  border-bottom-color: var(--azul-800);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+.filtros__busqueda { flex: 1 1 16rem; min-width: 12rem; }
+.filtros select { width: auto; min-width: 9rem; font-size: 0.82rem; }
+
+.fila--inactiva { opacity: 0.6; }
+.casilla-rol { width: auto; cursor: pointer; }
+.casilla-rol:disabled { cursor: not-allowed; }
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(12 16 26 / 55%);
+}
+
+.dialogo {
+  width: min(28rem, 100%);
+  padding: 1.35rem;
+  background: var(--superficie);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-3);
+}
+.dialogo__titulo { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.dialogo__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+/* ------------------------------------------------------ matriz de roles --- */
+.aviso-admin {
+  padding: 0.6rem 1.15rem;
+  font-size: 0.8rem;
+  color: var(--info);
+  background: var(--info-suave);
+}
+
+.matriz__permiso { min-width: 15rem; }
+
+.matriz__grupo td {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-tenue);
+  background: var(--superficie-2);
+}
+
+.roles-descripcion { margin: 0; padding: 0.4rem 0; }
+
+.rol {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 1rem;
+  padding: 0.55rem 1.15rem;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.85rem;
+}
+.rol:last-child { border-bottom: none; }
+.rol dt { font-weight: 600; display: flex; flex-direction: column; }
+.rol dd { margin: 0; color: var(--texto-suave); display: flex; flex-direction: column; }
+
+@media (width <= 640px) {
+  .rol { grid-template-columns: 1fr; gap: 0.15rem; }
+}

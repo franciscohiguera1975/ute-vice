@@ -1,0 +1,316 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Campanas de consulta</h1>
+    <p class="texto-sm texto-suave">
+      Cada campana recorre el padron completo dentro de un periodo. Nadie se
+      vuelve a consultar hasta que el periodo cierre.
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <button type="button" class="btn btn--secundario btn--sm" (click)="cargar()">
+      Actualizar
+    </button>
+    <button
+      *utePermiso="Permiso.CONSULTAS_ADMINISTRAR"
+      type="button"
+      class="btn btn--primario"
+      [disabled]="jobActivo() !== undefined"
+      [title]="jobActivo() ? 'Ya existe una campana activa' : ''"
+      (click)="mostrarFormulario.set(!mostrarFormulario())"
+    >
+      Nueva campana
+    </button>
+  </div>
+</header>
+
+<ute-submenu-consultas />
+
+<!-- ------------------------------------------------------- formulario --- -->
+@if (mostrarFormulario()) {
+  <section class="tarjeta seccion no-imprimir">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Nueva campana de cobertura</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="nombre-job">
+            Nombre <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nombre-job"
+            type="text"
+            placeholder="Actualizacion semestral 2026-I"
+            [ngModel]="nombre()"
+            (ngModelChange)="nombre.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="periodo-job">Periodo (dias)</label>
+          <input
+            id="periodo-job"
+            type="number"
+            min="1"
+            max="730"
+            placeholder="Por defecto, el configurado en el servidor"
+            [ngModel]="periodoDias()"
+            (ngModelChange)="periodoDias.set($event ? +$event : null)"
+          />
+          <p class="campo__ayuda">
+            Ventana durante la cual nadie se reconsulta. Si el padron es grande,
+            un periodo mayor reparte mejor la carga.
+          </p>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="limite-job">Limitar a N personas</label>
+          <input
+            id="limite-job"
+            type="number"
+            min="1"
+            placeholder="Sin limite"
+            [ngModel]="limitePersonas()"
+            (ngModelChange)="limitePersonas.set($event ? +$event : null)"
+          />
+          <p class="campo__ayuda">Util para una prueba acotada antes de lanzar el padron completo.</p>
+        </div>
+
+        <div class="campo">
+          <label class="casilla">
+            <input type="checkbox" [ngModel]="iniciarYa()" (ngModelChange)="iniciarYa.set($event)" />
+            <span>Iniciar inmediatamente</span>
+          </label>
+          <label class="casilla" style="margin-top: 0.5rem">
+            <input type="checkbox" [ngModel]="distribuir()" (ngModelChange)="distribuir.set($event)" />
+            <span>
+              Repartir a lo largo del periodo
+              <span class="campo__ayuda">
+                Por defecto el ritmo lo impone el planificador. Actívelo solo si
+                prefiere que la frescura del dato se distribuya de forma uniforme.
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="fila hueco-sm" style="justify-content: flex-end">
+        <button type="button" class="btn btn--secundario" (click)="mostrarFormulario.set(false)">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn--primario" [disabled]="creando()" (click)="crear()">
+          {{ creando() ? 'Creando…' : 'Crear campana' }}
+        </button>
+      </div>
+    </div>
+  </section>
+}
+
+<!-- ------------------------------------------------------------ listado --- -->
+@if (cargando() && datos().items.length === 0) {
+  <ute-cargando mensaje="Cargando campanas…" />
+} @else if (datos().items.length === 0) {
+  <div class="tarjeta">
+    <ute-vacio
+      titulo="No hay campanas"
+      descripcion="Cree una campana para recorrer el padron y actualizar los titulos desde el registro nacional."
+      icono="⟳"
+    />
+  </div>
+} @else {
+  <div class="pila hueco">
+    @for (job of datos().items; track job.id) {
+      <article class="tarjeta job" [class.job--pausado]="job.pausadoAutomaticamente">
+        <div class="tarjeta__cabecera">
+          <div>
+            <h2 class="tarjeta__titulo">{{ job.nombre }}</h2>
+            <p class="texto-xs texto-tenue">
+              Periodo de {{ duracionPeriodo(job) }} dias ·
+              {{ job.periodoInicio | fechaLocal }} → {{ job.periodoFin | fechaLocal }}
+            </p>
+          </div>
+          <ute-insignia
+            [texto]="ETIQUETAS_ESTADO_JOB[job.estado]"
+            [tono]="TONO_ESTADO_JOB[job.estado]"
+          />
+        </div>
+
+        <div class="tarjeta__cuerpo">
+          <!-- Progreso -->
+          <div class="progreso">
+            <div class="fila entre texto-sm">
+              <span class="texto-suave">
+                {{ job.completados | number }} de {{ job.totalItems | number }} procesadas
+              </span>
+              <span class="negrita mono">{{ job.porcentajeAvance }}%</span>
+            </div>
+            <div class="barra">
+              <div class="barra__relleno" [style.width.%]="job.porcentajeAvance"></div>
+            </div>
+          </div>
+
+          <!-- Contadores -->
+          <div class="rejilla rejilla--4 contadores">
+            <div class="contador">
+              <span class="contador__valor">{{ job.completados | number }}</span>
+              <span class="contador__etiqueta">completadas</span>
+            </div>
+            <div class="contador">
+              <span class="contador__valor" [class.texto-error]="job.fallidos > 0">
+                {{ job.fallidos | number }}
+              </span>
+              <span class="contador__etiqueta">fallidas</span>
+            </div>
+            <div class="contador">
+              <span class="contador__valor">{{ job.pendientes | number }}</span>
+              <span class="contador__etiqueta">pendientes</span>
+            </div>
+            <div class="contador">
+              <span class="contador__valor" [class.texto-error]="job.esperandoDesafio > 0">
+                {{ job.esperandoDesafio | number }}
+              </span>
+              <span class="contador__etiqueta">esperan verificacion</span>
+            </div>
+          </div>
+
+          <!-- Cortacircuitos -->
+          @if (job.pausadoAutomaticamente) {
+            <div class="alerta-cortacircuitos" role="alert">
+              <p class="negrita">La campana se detuvo sola</p>
+              <p>{{ job.motivoPausa }}</p>
+              <p class="texto-xs">
+                Revise el estado del proveedor antes de reanudar. Insistir sobre
+                un servicio que esta fallando o rechazando peticiones solo empeora
+                la situacion.
+              </p>
+            </div>
+          } @else if (job.motivoPausa && job.estado === 'PAUSADO') {
+            <p class="texto-sm texto-suave nota">Pausada: {{ job.motivoPausa }}</p>
+          }
+
+          @if (job.esperandoDesafio > 0) {
+            <div class="alerta-desafios">
+              <p class="negrita">
+                {{ job.esperandoDesafio }} consulta(s) esperan verificacion humana
+              </p>
+              <p class="texto-xs">
+                El proveedor solicito un desafio que debe resolver una persona. El
+                sistema no lo resuelve por su cuenta: un operador con el permiso
+                correspondiente lo atiende desde el historico.
+              </p>
+              <a
+                [routerLink]="['/consultas/logs']"
+                [queryParams]="{ jobId: job.id, estado: 'DESAFIO_PENDIENTE' }"
+                class="btn btn--secundario btn--sm"
+              >
+                Ver desafios pendientes
+              </a>
+            </div>
+          }
+
+          <!-- Metadatos -->
+          <dl class="meta texto-xs">
+            <div><dt>Ultima actividad</dt><dd>{{ job.ultimaActividadEn | desdeHace }}</dd></div>
+            <div>
+              <dt>Ritmo necesario</dt>
+              <dd>{{ job.ritmoRequeridoPorHora }} consultas/hora</dd>
+            </div>
+            @if (job.fallosConsecutivos > 0) {
+              <div>
+                <dt>Fallos seguidos</dt>
+                <dd class="texto-error">{{ job.fallosConsecutivos }}</dd>
+              </div>
+            }
+          </dl>
+
+          <details class="configuracion">
+            <summary class="texto-xs texto-tenue">
+              Configuracion con la que se creo esta campana
+            </summary>
+            <dl class="meta texto-xs">
+              @for (par of configuracionLegible(job); track par.clave) {
+                <div><dt>{{ par.clave }}</dt><dd class="mono">{{ par.valor }}</dd></div>
+              }
+            </dl>
+          </details>
+        </div>
+
+        <!-- Acciones -->
+        <div class="job__acciones no-imprimir">
+          <a
+            [routerLink]="['/consultas/logs']"
+            [queryParams]="{ jobId: job.id }"
+            class="btn btn--fantasma btn--sm"
+          >
+            Ver historico
+          </a>
+
+          <div class="crecer"></div>
+
+          @if (job.estado === 'EN_CURSO') {
+            <button
+              *utePermiso="Permiso.CONSULTAS_EJECUTAR"
+              type="button"
+              class="btn btn--secundario btn--sm"
+              [disabled]="avanzando()"
+              (click)="avanzar(job)"
+              title="Ejecuta una consulta ahora, sin esperar al planificador"
+            >
+              {{ avanzando() ? 'Procesando…' : 'Avanzar un paso' }}
+            </button>
+            <button
+              *utePermiso="Permiso.CONSULTAS_ADMINISTRAR"
+              type="button"
+              class="btn btn--secundario btn--sm"
+              (click)="controlar(job, 'pausar', 'Pausada por un operador')"
+            >
+              Pausar
+            </button>
+          } @else if (job.estado === 'PAUSADO') {
+            <button
+              *utePermiso="Permiso.CONSULTAS_ADMINISTRAR"
+              type="button"
+              class="btn btn--primario btn--sm"
+              (click)="controlar(job, 'reanudar')"
+            >
+              Reanudar
+            </button>
+          } @else if (job.estado === 'PROGRAMADO') {
+            <button
+              *utePermiso="Permiso.CONSULTAS_ADMINISTRAR"
+              type="button"
+              class="btn btn--primario btn--sm"
+              (click)="controlar(job, 'iniciar')"
+            >
+              Iniciar
+            </button>
+          }
+
+          @if (job.estado !== 'COMPLETADO' && job.estado !== 'CANCELADO') {
+            <button
+              *utePermiso="Permiso.CONSULTAS_ADMINISTRAR"
+              type="button"
+              class="btn btn--fantasma btn--sm texto-error"
+              (click)="jobACancelar.set(job)"
+            >
+              Cancelar
+            </button>
+          }
+        </div>
+      </article>
+    }
+  </div>
+}
+
+<ute-confirmar
+  [abierto]="jobACancelar() !== null"
+  titulo="Cancelar campana"
+  mensaje="La campana se detendra definitivamente y no podra reanudarse. Las consultas ya realizadas se conservan en el historico."
+  advertencia="Las personas que quedaron sin consultar seguiran pendientes hasta la proxima campana."
+  textoConfirmar="Cancelar campana"
+  textoCancelar="Volver"
+  [peligroso]="true"
+  (confirmar)="controlar(jobACancelar()!, 'cancelar', 'Cancelada por un operador')"
+  (cancelar)="jobACancelar.set(null)"
+/>

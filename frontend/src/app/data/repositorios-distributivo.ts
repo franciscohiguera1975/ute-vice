@@ -1,0 +1,179 @@
+/** Implementaciones HTTP de los puertos del distributivo docente. */
+
+import { Injectable, inject } from '@angular/core';
+import type { Observable } from 'rxjs';
+
+import type {
+  ArchivoDescarga,
+  CambiosDocente,
+  CambiosElementoCatalogo,
+  CambiosFilaDistributivo,
+  DatosDocente,
+  DatosElementoCatalogo,
+  DatosFilaDistributivo,
+  DescriptorCatalogo,
+  Docente,
+  DocenteDetalle,
+  ElementoCatalogo,
+  FilaDistributivo,
+  FiltroCatalogo,
+  FiltroDistributivo,
+  FiltroDocentes,
+  FormatoReporte,
+  OpcionSelector,
+  Pagina,
+  ParametrosPaginacion,
+  AsignaturaCapturada,
+  PeticionReporteDistributivo,
+  PlantillaReporte,
+  ResultadoCapturaAsignaturas,
+  ResumenDistributivo,
+  TipoCatalogo,
+  VistaPreviaReporte,
+} from '@domain/modelos';
+import {
+  RepositorioCatalogos,
+  RepositorioDistributivo,
+  RepositorioDocentes,
+} from '@domain/puertos';
+
+import { ApiService } from './api.service';
+
+@Injectable()
+export class CatalogosHttp extends RepositorioCatalogos {
+  private readonly api = inject(ApiService);
+
+  tiposDisponibles(): Observable<readonly DescriptorCatalogo[]> {
+    return this.api.get<DescriptorCatalogo[]>('/catalogos');
+  }
+
+  opciones(
+    tipo: TipoCatalogo,
+    incluirInactivos = false,
+  ): Observable<readonly OpcionSelector[]> {
+    return this.api.get<OpcionSelector[]>(`/catalogos/${tipo}/opciones`, {
+      incluirInactivos,
+    });
+  }
+
+  listar(
+    tipo: TipoCatalogo,
+    filtro: FiltroCatalogo,
+    paginacion: ParametrosPaginacion,
+  ): Observable<Pagina<ElementoCatalogo>> {
+    return this.api.listar<ElementoCatalogo>(`/catalogos/${tipo}`, filtro, paginacion);
+  }
+
+  obtener(tipo: TipoCatalogo, id: string): Observable<ElementoCatalogo> {
+    return this.api.get<ElementoCatalogo>(`/catalogos/${tipo}/${id}`);
+  }
+
+  crear(tipo: TipoCatalogo, datos: DatosElementoCatalogo): Observable<ElementoCatalogo> {
+    return this.api.post<ElementoCatalogo>(`/catalogos/${tipo}`, datos);
+  }
+
+  actualizar(
+    tipo: TipoCatalogo,
+    id: string,
+    cambios: CambiosElementoCatalogo,
+  ): Observable<ElementoCatalogo> {
+    return this.api.patch<ElementoCatalogo>(`/catalogos/${tipo}/${id}`, cambios);
+  }
+
+  eliminar(tipo: TipoCatalogo, id: string): Observable<void> {
+    return this.api.delete<void>(`/catalogos/${tipo}/${id}`);
+  }
+}
+
+@Injectable()
+export class DocentesHttp extends RepositorioDocentes {
+  private readonly api = inject(ApiService);
+
+  listar(
+    filtro: FiltroDocentes,
+    paginacion: ParametrosPaginacion,
+  ): Observable<Pagina<Docente>> {
+    return this.api.listar<Docente>('/docentes', filtro, paginacion);
+  }
+
+  obtener(id: string): Observable<DocenteDetalle> {
+    return this.api.get<DocenteDetalle>(`/docentes/${id}`);
+  }
+
+  crear(datos: DatosDocente): Observable<Docente> {
+    return this.api.post<Docente>('/docentes', datos);
+  }
+
+  actualizar(id: string, cambios: CambiosDocente): Observable<Docente> {
+    return this.api.patch<Docente>(`/docentes/${id}`, cambios);
+  }
+
+  eliminar(id: string): Observable<void> {
+    return this.api.delete<void>(`/docentes/${id}`);
+  }
+}
+
+@Injectable()
+export class DistributivoHttp extends RepositorioDistributivo {
+  private readonly api = inject(ApiService);
+
+  listar(
+    filtro: FiltroDistributivo,
+    paginacion: ParametrosPaginacion,
+  ): Observable<Pagina<FilaDistributivo>> {
+    return this.api.listar<FilaDistributivo>('/distributivo', filtro, paginacion);
+  }
+
+  resumen(filtro: FiltroDistributivo): Observable<ResumenDistributivo> {
+    return this.api.get<ResumenDistributivo>('/distributivo/resumen', filtro);
+  }
+
+  obtener(id: string): Observable<FilaDistributivo> {
+    return this.api.get<FilaDistributivo>(`/distributivo/${id}`);
+  }
+
+  crear(datos: DatosFilaDistributivo): Observable<FilaDistributivo> {
+    return this.api.post<FilaDistributivo>('/distributivo', datos);
+  }
+
+  actualizar(id: string, cambios: CambiosFilaDistributivo): Observable<FilaDistributivo> {
+    return this.api.patch<FilaDistributivo>(`/distributivo/${id}`, cambios);
+  }
+
+  eliminar(id: string): Observable<void> {
+    return this.api.delete<void>(`/distributivo/${id}`);
+  }
+
+  capturarAsignaturas(
+    filas: readonly AsignaturaCapturada[],
+  ): Observable<ResultadoCapturaAsignaturas> {
+    return this.api.patch<ResultadoCapturaAsignaturas>('/distributivo/asignaturas', { filas });
+  }
+
+  plantillasReporte(): Observable<readonly PlantillaReporte[]> {
+    return this.api.get<readonly PlantillaReporte[]>('/reportes/distributivo/plantillas');
+  }
+
+  vistaPreviaReporte(peticion: PeticionReporteDistributivo): Observable<VistaPreviaReporte> {
+    return this.api.post<VistaPreviaReporte>('/reportes/distributivo/vista-previa', peticion);
+  }
+
+  generarReporte(
+    peticion: PeticionReporteDistributivo,
+    formato: FormatoReporte,
+  ): Observable<ArchivoDescarga> {
+    return this.api.descargarConCuerpo(
+      '/reportes/distributivo',
+      peticion,
+      { formato },
+      `distributivo.${formato.toLowerCase()}`,
+    );
+  }
+}
+
+/** Enlaza cada puerto del distributivo con su implementacion HTTP. */
+export const PROVEEDORES_DISTRIBUTIVO = [
+  { provide: RepositorioCatalogos, useClass: CatalogosHttp },
+  { provide: RepositorioDocentes, useClass: DocentesHttp },
+  { provide: RepositorioDistributivo, useClass: DistributivoHttp },
+];

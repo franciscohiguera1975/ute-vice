@@ -1,0 +1,30 @@
+.encabezado { margin-bottom: 1.25rem; }
+.disposicion { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); align-items: start; }
+
+.grupo { margin: 0 0 1.25rem; padding: 0; border: none; }
+.grupo legend { padding: 0; margin-bottom: 0.5rem; }
+
+.opciones { display: flex; flex-direction: column; gap: 0.5rem; }
+.opciones--fila { flex-direction: row; flex-wrap: wrap; }
+.opciones--fila .opcion { flex: 1 1 12rem; }
+
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  cursor: pointer;
+  transition: border-color var(--transicion), background var(--transicion);
+}
+.opcion:hover { background: var(--superficie-2); }
+.opcion--activa { border-color: var(--azul-600); background: var(--azul-50); }
+.opcion input { width: auto; margin-top: 0.2rem; flex-shrink: 0; }
+
+.opcion__titulo { display: block; font-size: 0.87rem; font-weight: 600; }
+.opcion__nota { display: block; font-size: 0.76rem; color: var(--texto-tenue); line-height: 1.4; }
+
+@media (width <= 900px) {
+  .disposicion { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,270 @@
+<nav class="miga no-imprimir" aria-label="Ruta de navegación">
+  <a routerLink="/distributivo">Distributivo</a>
+  <span aria-hidden="true">/</span>
+  <span>Exportar</span>
+</nav>
+
+<header class="encabezado">
+  <h1>Exportar el distributivo</h1>
+  <p class="texto-sm texto-suave">
+    Elija el formato, el periodo y las carreras. La vista previa muestra qué
+    contendría el archivo antes de descargarlo.
+  </p>
+</header>
+
+<div class="rejilla disposicion">
+  <!-- --------------------------------------------------------- filtros --- -->
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Seleccionar</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <!-- Plantilla -->
+      <fieldset class="grupo">
+        <legend class="campo__etiqueta">Formato del archivo</legend>
+        <div class="plantillas">
+          @for (p of plantillas(); track p.codigo) {
+            <label class="plantilla" [class.plantilla--activa]="plantilla() === p.codigo">
+              <input
+                type="radio"
+                name="plantilla"
+                [value]="p.codigo"
+                [ngModel]="plantilla()"
+                (ngModelChange)="cambiarPlantilla($event)"
+              />
+              <span>
+                <span class="plantilla__nombre">{{ p.nombre }}</span>
+                <span class="plantilla__nota">{{ p.descripcion }}</span>
+              </span>
+            </label>
+          } @empty {
+            <p class="texto-sm texto-tenue">Cargando plantillas…</p>
+          }
+        </div>
+      </fieldset>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="rep-pao">
+          Periodo académico <span class="campo__requerido" aria-hidden="true">*</span>
+        </label>
+        <select id="rep-pao" [ngModel]="paoId()" (ngModelChange)="cambiarPao($event)">
+          <option value="">Seleccione un periodo</option>
+          @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
+            <option [value]="o.id">{{ o.codigo }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="rep-facultad">Facultad</label>
+        <select id="rep-facultad" [ngModel]="facultadId()" (ngModelChange)="cambiarFacultad($event)">
+          <option value="">Todas las facultades</option>
+          @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+            <option [value]="o.id">{{ o.codigo }} — {{ o.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Selección múltiple de carreras -->
+      <fieldset class="grupo">
+        <legend class="fila entre envolver hueco-sm">
+          <span class="campo__etiqueta">Carreras</span>
+          <span class="texto-xs texto-tenue">{{ resumenSeleccion() }}</span>
+        </legend>
+
+        <div class="fila hueco-xs envolver acciones-seleccion">
+          <input
+            type="search"
+            class="filtro-carrera"
+            placeholder="Filtrar carreras…"
+            [ngModel]="filtroCarrera()"
+            (ngModelChange)="filtroCarrera.set($event)"
+            aria-label="Filtrar la lista de carreras"
+          />
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="seleccionarTodas()">
+            Todas
+          </button>
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarSeleccion()">
+            Ninguna
+          </button>
+        </div>
+
+        <p class="campo__ayuda">
+          Sin selección, se incluyen todas las carreras del periodo y la facultad
+          elegidos.
+        </p>
+
+        <div class="lista-carreras" role="group" aria-label="Carreras del reporte">
+          @for (c of carrerasDisponibles(); track c.id) {
+            <label class="carrera" [class.carrera--activa]="estaSeleccionada(c.id)">
+              <input
+                type="checkbox"
+                [checked]="estaSeleccionada(c.id)"
+                (change)="alternarCarrera(c.id, $any($event.target).checked)"
+              />
+              <span>{{ c.nombre }}</span>
+            </label>
+          } @empty {
+            <p class="texto-sm texto-tenue">Ninguna carrera coincide con el filtro.</p>
+          }
+        </div>
+      </fieldset>
+
+      <!-- Formato de salida -->
+      <fieldset class="grupo">
+        <legend class="campo__etiqueta">Tipo de archivo</legend>
+        <div class="opciones">
+          @for (f of formatos; track f.valor) {
+            <label class="opcion" [class.opcion--activa]="formato() === f.valor">
+              <input
+                type="radio"
+                name="formato"
+                [value]="f.valor"
+                [ngModel]="formato()"
+                (ngModelChange)="formato.set($event)"
+              />
+              <span>
+                <span class="opcion__titulo">{{ f.etiqueta }}</span>
+                <span class="opcion__nota">{{ f.nota }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      @if (plantillaActual()?.admiteAuditoria) {
+        <label class="casilla">
+          <input
+            type="checkbox"
+            [ngModel]="incluirAuditoria()"
+            (ngModelChange)="incluirAuditoria.set($event)"
+          />
+          <span>
+            Agregar columnas de auditoría
+            <span class="campo__ayuda">Identificación, carrera y total de horas al final.</span>
+          </span>
+        </label>
+      }
+
+      <div class="fila hueco-sm acciones">
+        <button
+          type="button"
+          class="btn btn--secundario crecer"
+          [disabled]="cargandoVista() || !paoId()"
+          (click)="previsualizar()"
+        >
+          {{ cargandoVista() ? 'Consultando…' : 'Previsualizar' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn--primario crecer"
+          [disabled]="!puedeGenerar()"
+          (click)="generar()"
+        >
+          {{ generando() ? 'Generando…' : 'Generar y descargar' }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------- vista previa --- -->
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Vista previa</h2>
+      @if (vista(); as v) {
+        <span class="texto-xs texto-tenue">
+          {{ v.totalFilas | number }} registros · {{ v.totalDocentes | number }} docentes
+        </span>
+      }
+    </div>
+
+    @if (cargandoVista()) {
+      <ute-cargando mensaje="Consultando…" />
+    } @else if (vista(); as v) {
+      @if (v.totalFilas === 0) {
+        <div class="tarjeta__cuerpo">
+          <p class="texto-sm texto-suave">
+            Ningún docente cumple los filtros. Revise el periodo, la facultad y las
+            carreras seleccionadas.
+          </p>
+        </div>
+      } @else {
+        @if (v.sinAsignatura > 0) {
+          <div class="aviso-incompleto" role="status">
+            <p class="negrita">
+              {{ v.sinAsignatura | number }} de {{ v.totalFilas | number }} registros no
+              tienen asignatura
+            </p>
+            <p class="texto-sm">
+              «Asignatura que imparte» no existe en el distributivo: el consolidado
+              reparte horas por tipo de actividad, no por materia. Se captura a mano;
+              el archivo se genera igual, con esa celda vacía.
+            </p>
+            <a
+              routerLink="/distributivo/asignaturas"
+              [queryParams]="{ paoId: paoId(), facultadId: facultadId() || null }"
+              class="btn btn--secundario btn--sm"
+            >
+              Capturar asignaturas
+            </a>
+          </div>
+        }
+
+        @if (v.sinAnioInicio > 0) {
+          <p class="nota-menor">
+            {{ v.sinAnioInicio }} registro(s) sin año de inicio: son docentes que solo
+            aparecen en este periodo, sin historial previo del que derivarlo.
+          </p>
+        }
+
+        <div class="tabla-envoltura">
+          <table class="tabla tabla--reporte">
+            <caption class="sr-solo">
+              Primeros registros de {{ v.nombrePlantilla }}, periodo {{ v.periodo }}
+            </caption>
+            <thead>
+              <tr>
+                @for (col of v.columnas; track col.clave) {
+                  <th
+                    [style.background-color]="fondoCabecera(col)"
+                    [class.th--plantilla]="col.colorCabecera"
+                  >
+                    {{ col.titulo }}
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of v.filas; track $index) {
+                <tr>
+                  @for (col of v.columnas; track col.clave) {
+                    <td
+                      [class.celda-vacia]="!valor(fila, $index)"
+                      [class.celda-numero]="col.tipo === 'numero'"
+                    >
+                      {{ valor(fila, $index) || '—' }}
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (v.totalFilas > v.filas.length) {
+          <p class="pie-tabla texto-xs texto-tenue">
+            Se muestran los primeros {{ v.filas.length }} de {{ v.totalFilas | number }}
+            registros. El archivo los incluye todos.
+          </p>
+        }
+      }
+    } @else {
+      <div class="tarjeta__cuerpo">
+        <p class="texto-sm texto-suave">
+          Elija un periodo y pulse <span class="negrita">Previsualizar</span> para ver qué
+          contendría el archivo antes de descargarlo.
+        </p>
+      </div>
+    }
+  </section>
+</div>

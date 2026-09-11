@@ -1,0 +1,66 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1rem; }
+
+.job--pausado { border-color: var(--aviso); }
+
+.progreso { margin-bottom: 1rem; }
+.progreso .barra { margin-top: 0.35rem; }
+
+.contadores { margin-bottom: 1rem; }
+
+.contador {
+  padding: 0.6rem 0.75rem;
+  background: var(--superficie-2);
+  border-radius: var(--radio);
+  text-align: center;
+}
+
+.contador__valor {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.contador__etiqueta {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--texto-tenue);
+}
+
+.alerta-cortacircuitos,
+.alerta-desafios {
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  border-radius: var(--radio);
+}
+.alerta-cortacircuitos { color: var(--error); background: var(--error-suave); }
+.alerta-desafios { color: var(--aviso); background: var(--aviso-suave); }
+
+.alerta-cortacircuitos p,
+.alerta-desafios p { margin: 0 0 0.3rem; }
+.alerta-desafios .btn { margin-top: 0.4rem; }
+
+.nota { margin: 0 0 1rem; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 1.25rem; margin: 0; }
+.meta div { display: flex; gap: 0.35rem; }
+.meta dt { color: var(--texto-tenue); }
+.meta dt::after { content: ':'; }
+.meta dd { margin: 0; }
+
+.configuracion { margin-top: 0.75rem; }
+.configuracion summary { cursor: pointer; }
+.configuracion .meta { margin-top: 0.5rem; }
+
+.job__acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.7rem 1.15rem;
+  border-top: 1px solid var(--borde);
+}

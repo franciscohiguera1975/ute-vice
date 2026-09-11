@@ -1,0 +1,193 @@
+<header class="encabezado">
+  <h1>Reportes</h1>
+  <p class="texto-sm texto-suave">
+    Todo reporte incluye en su cabecera los filtros con los que se genero: sin
+    esa constancia, las cifras no son auditables.
+  </p>
+</header>
+
+<div class="rejilla disposicion">
+  <!-- --------------------------------------------------- configuracion --- -->
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Configurar el reporte</h2>
+    </div>
+
+    <div class="tarjeta__cuerpo">
+      <!-- Tipo -->
+      <fieldset class="grupo">
+        <legend class="campo__etiqueta">Contenido</legend>
+        <div class="opciones">
+          <label class="opcion" [class.opcion--activa]="tipo() === 'personas'">
+            <input type="radio" name="tipo" value="personas" [ngModel]="tipo()" (ngModelChange)="tipo.set($event)" />
+            <span>
+              <span class="opcion__titulo">Padron de personas</span>
+              <span class="opcion__nota">Personal con su estado de validacion</span>
+            </span>
+          </label>
+          <label class="opcion" [class.opcion--activa]="tipo() === 'titulos'">
+            <input type="radio" name="tipo" value="titulos" [ngModel]="tipo()" (ngModelChange)="tipo.set($event)" />
+            <span>
+              <span class="opcion__titulo">Inventario de titulos</span>
+              <span class="opcion__nota">Titulos academicos con su titular</span>
+            </span>
+          </label>
+          <label class="opcion" [class.opcion--activa]="tipo() === 'consultas'">
+            <input type="radio" name="tipo" value="consultas" [ngModel]="tipo()" (ngModelChange)="tipo.set($event)" />
+            <span>
+              <span class="opcion__titulo">Historico de consultas</span>
+              <span class="opcion__nota">Auditoria del proceso de validacion</span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Filtros por tipo -->
+      @switch (tipo()) {
+        @case ('personas') {
+          <div class="rejilla rejilla--2">
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-unidad">Unidad</label>
+              <input id="r-unidad" type="text" [ngModel]="unidad()" (ngModelChange)="unidad.set($event)" />
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-vinculacion">Vinculacion</label>
+              <select id="r-vinculacion" [ngModel]="vinculacion()" (ngModelChange)="vinculacion.set($event)">
+                <option value="">Todas</option>
+                @for (v of vinculaciones; track v) {
+                  <option [value]="v">{{ ETIQUETAS_VINCULACION[v] }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-con-titulos">Titulos registrados</label>
+              <select id="r-con-titulos" [ngModel]="conTitulos()" (ngModelChange)="conTitulos.set($event)">
+                <option value="">Con y sin titulos</option>
+                <option value="true">Solo con titulos</option>
+                <option value="false">Solo sin titulos</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="casilla">
+                <input type="checkbox" [ngModel]="soloActivos()" (ngModelChange)="soloActivos.set($event)" />
+                <span>Solo personal activo</span>
+              </label>
+              <label class="casilla" style="margin-top: 0.5rem">
+                <input type="checkbox" [ngModel]="incluirTitulos()" (ngModelChange)="incluirTitulos.set($event)" />
+                <span>
+                  Desglosar por titulo
+                  <span class="campo__ayuda">Una fila por titulo en lugar de una por persona</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        }
+
+        @case ('titulos') {
+          <div class="rejilla rejilla--2">
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-nivel">Nivel academico</label>
+              <select id="r-nivel" [ngModel]="nivel()" (ngModelChange)="nivel.set($event)">
+                <option value="">Todos</option>
+                @for (n of niveles; track n) {
+                  <option [value]="n">{{ ETIQUETAS_NIVEL[n] }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-estado">Estado</label>
+              <select id="r-estado" [ngModel]="estadoTitulo()" (ngModelChange)="estadoTitulo.set($event)">
+                <option value="">Todos</option>
+                @for (e of estadosTitulo; track e) {
+                  <option [value]="e">{{ ETIQUETAS_ESTADO_TITULO[e] }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-institucion">Institucion</label>
+              <input id="r-institucion" type="text" [ngModel]="institucion()" (ngModelChange)="institucion.set($event)" />
+            </div>
+          </div>
+        }
+
+        @case ('consultas') {
+          <div class="rejilla rejilla--2">
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-desde">Desde</label>
+              <input id="r-desde" type="date" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="r-hasta">Hasta</label>
+              <input id="r-hasta" type="date" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+            </div>
+            <div class="campo">
+              <label class="casilla">
+                <input type="checkbox" [ngModel]="soloErrores()" (ngModelChange)="soloErrores.set($event)" />
+                <span>Solo consultas con error</span>
+              </label>
+              <label class="casilla" style="margin-top: 0.5rem">
+                <input type="checkbox" [ngModel]="soloConCambios()" (ngModelChange)="soloConCambios.set($event)" />
+                <span>Solo las que detectaron cambios</span>
+              </label>
+            </div>
+          </div>
+        }
+      }
+
+      <!-- Formato -->
+      <fieldset class="grupo">
+        <legend class="campo__etiqueta">Formato de salida</legend>
+        <div class="opciones opciones--fila">
+          @for (f of formatos; track f.valor) {
+            <label class="opcion" [class.opcion--activa]="formato() === f.valor">
+              <input type="radio" name="formato" [value]="f.valor" [ngModel]="formato()" (ngModelChange)="formato.set($event)" />
+              <span>
+                <span class="opcion__titulo">{{ f.etiqueta }}</span>
+                <span class="opcion__nota">{{ f.nota }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <button
+        type="button"
+        class="btn btn--primario btn--bloque"
+        [disabled]="generando()"
+        (click)="generar()"
+      >
+        {{ generando() ? 'Generando…' : 'Generar y descargar' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ ayuda --- -->
+  <aside class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Sobre los reportes</h2>
+    </div>
+    <div class="tarjeta__cuerpo texto-sm">
+      <p>
+        <span class="negrita">Constancia de filtros.</span> La cabecera de cada
+        archivo lista los filtros aplicados, quien lo genero y cuando. Un reporte
+        que dice «45 personas sin titulo» no significa nada si no se sabe si son
+        todas o solo las de una unidad.
+      </p>
+      <p>
+        <span class="negrita">Datos personales.</span> Estos archivos contienen
+        informacion personal del personal de la institucion. Trate su
+        distribucion con el cuidado que corresponde.
+      </p>
+      <p>
+        <span class="negrita">Limites.</span> El servidor rechaza reportes que
+        superan el maximo de filas configurado. Si ocurre, acote con filtros en
+        lugar de reintentar.
+      </p>
+      <p class="texto-tenue">
+        Los titulos marcados como <span class="negrita">retirados</span> aparecen
+        en los reportes: dejaron de figurar en el registro nacional y son
+        justamente el hallazgo que conviene revisar.
+      </p>
+    </div>
+  </aside>
+</div>

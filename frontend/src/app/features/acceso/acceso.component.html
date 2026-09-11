@@ -1,0 +1,102 @@
+<div class="acceso">
+  <div class="acceso__panel">
+    <div class="acceso__marca">
+      <span class="acceso__sigla" aria-hidden="true">UTE</span>
+      <h1 class="acceso__titulo">Gestión Académica</h1>
+      <p class="acceso__subtitulo">Vicerrectorado · Universidad Tecnologica Equinoccial</p>
+    </div>
+
+    @if (cargandoMetodos()) {
+      <ute-cargando mensaje="Preparando el acceso…" />
+    } @else {
+      @if (metodos()?.ldap) {
+        <div class="pestanas" role="tablist" aria-label="Metodo de acceso">
+          <button
+            type="button"
+            role="tab"
+            class="pestana"
+            [class.pestana--activa]="modo() === 'local'"
+            [attr.aria-selected]="modo() === 'local'"
+            (click)="cambiarModo('local')"
+          >
+            Correo institucional
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="pestana"
+            [class.pestana--activa]="modo() === 'ldap'"
+            [attr.aria-selected]="modo() === 'ldap'"
+            (click)="cambiarModo('ldap')"
+          >
+            Directorio activo
+          </button>
+        </div>
+      }
+
+      <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+        <div class="campo">
+          <label class="campo__etiqueta" for="identificador">
+            {{ modo() === 'ldap' ? 'Usuario de red' : 'Correo institucional' }}
+            <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="identificador"
+            formControlName="identificador"
+            [type]="modo() === 'ldap' ? 'text' : 'email'"
+            [attr.autocomplete]="modo() === 'ldap' ? 'username' : 'email'"
+            [placeholder]="modo() === 'ldap' ? 'jyepez' : 'nombre.apellido@ute.edu.ec'"
+            [class.campo__control--error]="campoInvalido('identificador')"
+            autofocus
+          />
+          @if (campoInvalido('identificador')) {
+            <p class="campo__error">Este campo es obligatorio</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="contrasena">
+            Contrasena
+            <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="contrasena"
+            formControlName="contrasena"
+            type="password"
+            autocomplete="current-password"
+            [class.campo__control--error]="campoInvalido('contrasena')"
+          />
+          @if (campoInvalido('contrasena')) {
+            <p class="campo__error">Este campo es obligatorio</p>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="alerta" role="alert">{{ error() }}</div>
+        }
+
+        <button type="submit" class="btn btn--primario btn--bloque" [disabled]="enviando()">
+          @if (enviando()) {
+            <ute-cargando [compacto]="true" mensaje="Ingresando" />
+            Ingresando…
+          } @else {
+            Ingresar
+          }
+        </button>
+      </form>
+
+      @if (metodos()?.google) {
+        <div class="separador"><span>o</span></div>
+        <button type="button" class="btn btn--secundario btn--bloque" (click)="accederConGoogle()">
+          <span aria-hidden="true">G</span>
+          Continuar con Google
+        </button>
+      }
+    }
+
+    <p class="acceso__pie texto-xs texto-tenue">
+      El acceso a esta plataforma queda registrado. Los datos que contiene son
+      informacion personal del personal de la institucion.
+    </p>
+  </div>
+</div>

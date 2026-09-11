@@ -1,0 +1,147 @@
+<header class="encabezado">
+  <h1>Titulos academicos</h1>
+  <p class="texto-sm texto-suave">
+    Inventario de titulos obtenidos del registro nacional y cargados manualmente
+  </p>
+</header>
+
+<section class="tarjeta">
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda-titulos">Buscar titulos</label>
+      <input
+        id="busqueda-titulos"
+        type="search"
+        placeholder="Buscar por denominacion, institucion o area…"
+        [ngModel]="texto()"
+        (ngModelChange)="buscar($event)"
+      />
+    </div>
+
+    <select
+      aria-label="Filtrar por nivel"
+      [ngModel]="filtro().nivel ?? ''"
+      (ngModelChange)="aplicarFiltro({ nivel: $event || undefined })"
+    >
+      <option value="">Todos los niveles</option>
+      @for (nivel of niveles; track nivel) {
+        <option [value]="nivel">{{ ETIQUETAS_NIVEL[nivel] }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Filtrar por estado"
+      [ngModel]="filtro().estado ?? ''"
+      (ngModelChange)="aplicarFiltro({ estado: $event || undefined })"
+    >
+      <option value="">Todos los estados</option>
+      @for (estado of estados; track estado) {
+        <option [value]="estado">{{ ETIQUETAS_ESTADO_TITULO[estado] }}</option>
+      }
+    </select>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().requiereAtencion ?? false"
+        (ngModelChange)="aplicarFiltro({ requiereAtencion: $event || undefined })"
+      />
+      <span>Requieren revision</span>
+    </label>
+
+    @if (hayFiltrosActivos) {
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+    }
+  </div>
+
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando titulos…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="No hay titulos"
+      [descripcion]="
+        hayFiltrosActivos
+          ? 'Ningun titulo coincide con los filtros aplicados.'
+          : 'Aun no se han registrado titulos. Ejecute una campana de consulta al registro nacional.'
+      "
+      icono="◇"
+    />
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <caption class="sr-solo">Inventario de titulos academicos</caption>
+        <thead>
+          <tr>
+            <th role="button" tabindex="0" (click)="ordenar('denominacion')" (keydown.enter)="ordenar('denominacion')">
+              Titulo
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('institucion')" (keydown.enter)="ordenar('institucion')">
+              Institucion
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('nivel')" (keydown.enter)="ordenar('nivel')">
+              Nivel
+            </th>
+            <th>Registro</th>
+            <th role="button" tabindex="0" (click)="ordenar('fecha_registro')" (keydown.enter)="ordenar('fecha_registro')">
+              Fecha
+            </th>
+            <th>Origen</th>
+            <th>Estado</th>
+            <th class="no-imprimir"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (titulo of datos().items; track titulo.id) {
+            <tr>
+              <td class="truncar">
+                <a [routerLink]="['/personas', titulo.personaId]">{{ titulo.denominacion }}</a>
+                @if (titulo.areaConocimiento) {
+                  <p class="texto-xs texto-tenue">{{ titulo.areaConocimiento }}</p>
+                }
+              </td>
+              <td class="truncar texto-sm texto-suave">{{ titulo.institucion }}</td>
+              <td class="texto-sm">{{ ETIQUETAS_NIVEL[titulo.nivel] }}</td>
+              <td class="mono texto-xs">{{ titulo.numeroRegistro || '—' }}</td>
+              <td class="texto-sm">{{ titulo.fechaRegistro | fechaLocal }}</td>
+              <td class="texto-sm texto-suave">{{ ETIQUETAS_ORIGEN[titulo.origen] }}</td>
+              <td>
+                <div class="fila hueco-xs envolver">
+                  <ute-insignia
+                    [texto]="ETIQUETAS_ESTADO_TITULO[titulo.estado]"
+                    [tono]="TONO_ESTADO_TITULO[titulo.estado]"
+                  />
+                  @if (titulo.verificado) {
+                    <ute-insignia texto="✓" tono="info" titulo="Verificado por un funcionario" />
+                  }
+                </div>
+              </td>
+              <td class="no-imprimir">
+                @if (!titulo.verificado && titulo.estado === 'POR_VERIFICAR') {
+                  <button
+                    *utePermiso="Permiso.TITULOS_VERIFICAR"
+                    type="button"
+                    class="btn btn--secundario btn--sm"
+                    (click)="verificar(titulo, $event)"
+                  >
+                    Verificar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>

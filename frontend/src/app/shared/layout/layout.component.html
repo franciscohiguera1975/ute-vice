@@ -1,0 +1,115 @@
+<div class="capa">
+  <!-- ------------------------------------------------------- cabecera --- -->
+  <header class="cabecera">
+    <button
+      type="button"
+      class="cabecera__menu no-imprimir"
+      (click)="alternarLateral()"
+      [attr.aria-expanded]="lateralAbierto()"
+      aria-controls="navegacion-principal"
+      aria-label="Alternar menu de navegacion"
+    >
+      ☰
+    </button>
+
+    <a routerLink="/tablero" class="marca">
+      <span class="marca__sigla" aria-hidden="true">UTE</span>
+      <span class="marca__texto">
+        <span class="marca__titulo">Gestión Académica</span>
+        <span class="marca__subtitulo">Vicerrectorado</span>
+      </span>
+    </a>
+
+    <div class="crecer"></div>
+
+    <button
+      type="button"
+      class="cabecera__accion no-imprimir"
+      (click)="alternarTema()"
+      [attr.aria-label]="temaOscuro() ? 'Usar tema claro' : 'Usar tema oscuro'"
+      [title]="temaOscuro() ? 'Tema claro' : 'Tema oscuro'"
+    >
+      {{ temaOscuro() ? '☀' : '☾' }}
+    </button>
+
+    <div class="usuario no-imprimir">
+      <button
+        type="button"
+        class="usuario__boton"
+        (click)="alternarMenu()"
+        [attr.aria-expanded]="menuAbierto()"
+        aria-haspopup="menu"
+      >
+        <span class="usuario__avatar" aria-hidden="true">{{ sesion.iniciales() }}</span>
+        <span class="usuario__nombre">{{ sesion.nombre() }}</span>
+        <span aria-hidden="true" class="usuario__flecha">▾</span>
+      </button>
+
+      @if (menuAbierto()) {
+        <div class="menu" role="menu">
+          <div class="menu__cabecera">
+            <p class="menu__nombre">{{ sesion.nombre() }}</p>
+            <p class="menu__correo">{{ sesion.usuario()?.email }}</p>
+            <div class="menu__roles">
+              @for (rol of sesion.usuario()?.roles ?? []; track rol.codigo) {
+                <span class="menu__rol">{{ rol.nombre }}</span>
+              }
+            </div>
+          </div>
+          <a routerLink="/perfil" role="menuitem" class="menu__item" (click)="alternarMenu()">
+            Mi perfil
+          </a>
+          <a
+            routerLink="/perfil/contrasena"
+            role="menuitem"
+            class="menu__item"
+            (click)="alternarMenu()"
+          >
+            Cambiar contrasena
+          </a>
+          <button type="button" role="menuitem" class="menu__item menu__item--salir" (click)="salir()">
+            Cerrar sesion
+          </button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <!-- ------------------------------------------------------ navegacion --- -->
+  <aside
+    id="navegacion-principal"
+    class="lateral no-imprimir"
+    [class.lateral--abierto]="lateralAbierto()"
+  >
+    <nav aria-label="Navegacion principal">
+      <ul class="nav">
+        @for (seccion of secciones; track seccion.ruta) {
+          <li *utePermiso="seccion.permisos">
+            <a
+              [routerLink]="seccion.ruta"
+              routerLinkActive="nav__enlace--activo"
+              class="nav__enlace"
+              (click)="cerrarLateral()"
+            >
+              <span class="nav__icono" aria-hidden="true">{{ seccion.icono }}</span>
+              <span>{{ seccion.etiqueta }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <footer class="lateral__pie">
+      <p class="texto-xs texto-tenue">UTE Vice · v0.8.0</p>
+    </footer>
+  </aside>
+
+  @if (lateralAbierto()) {
+    <div class="velo-lateral no-imprimir" (click)="cerrarLateral()" aria-hidden="true"></div>
+  }
+
+  <!-- --------------------------------------------------------- contenido --- -->
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>

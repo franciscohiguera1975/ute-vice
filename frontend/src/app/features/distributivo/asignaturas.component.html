@@ -1,0 +1,201 @@
+<nav class="miga" aria-label="Ruta de navegación">
+  <a routerLink="/distributivo">Distributivo</a>
+  <span aria-hidden="true">/</span>
+  <span>Asignaturas</span>
+</nav>
+
+<header class="encabezado fila entre envolver hueco-sm">
+  <div>
+    <h1>Asignatura que imparte</h1>
+    <p class="texto-sm texto-suave">
+      Este dato no viene del distributivo: el consolidado reparte horas por tipo de
+      actividad, no por materia. Se captura aquí y de aquí lo toma el reporte
+      institucional.
+    </p>
+  </div>
+  <a routerLink="/distributivo/reporte" class="btn btn--fantasma btn--sm">Ir a exportar</a>
+</header>
+
+<section class="tarjeta filtros">
+  <div class="tarjeta__cuerpo rejilla rejilla--filtros">
+    <div class="campo">
+      <label class="campo__etiqueta" for="asg-pao">
+        Periodo <span class="campo__requerido" aria-hidden="true">*</span>
+      </label>
+      <select id="asg-pao" [ngModel]="paoId()" (ngModelChange)="paoId.set($event)">
+        <option value="">Seleccione…</option>
+        @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
+          <option [value]="o.id">{{ o.codigo }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="campo">
+      <label class="campo__etiqueta" for="asg-facultad">Facultad</label>
+      <select id="asg-facultad" [ngModel]="facultadId()" (ngModelChange)="facultadId.set($event)">
+        <option value="">Todas</option>
+        @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+          <option [value]="o.id">{{ o.codigo }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="campo">
+      <label class="campo__etiqueta" for="asg-carrera">Carrera</label>
+      <select id="asg-carrera" [ngModel]="carreraId()" (ngModelChange)="carreraId.set($event)">
+        <option value="">Todas</option>
+        @for (o of catalogos.de(TipoCatalogo.CARRERA); track o.id) {
+          <option [value]="o.id">{{ o.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="campo">
+      <label class="campo__etiqueta" for="asg-texto">Docente</label>
+      <input
+        id="asg-texto"
+        type="search"
+        placeholder="Nombre o identificación"
+        [ngModel]="texto()"
+        (ngModelChange)="texto.set($event)"
+        (keyup.enter)="buscar()"
+      />
+    </div>
+
+    <div class="campo campo--acciones">
+      <label class="casilla">
+        <input
+          type="checkbox"
+          [ngModel]="soloPendientes()"
+          (ngModelChange)="soloPendientes.set($event)"
+        />
+        <span>Solo pendientes</span>
+      </label>
+      <button type="button" class="btn btn--primario" [disabled]="cargando()" (click)="buscar()">
+        {{ cargando() ? 'Buscando…' : 'Buscar' }}
+      </button>
+    </div>
+  </div>
+</section>
+
+@if (cargando()) {
+  <ute-cargando mensaje="Consultando el distributivo…" />
+} @else if (filas().length === 0) {
+  <section class="tarjeta">
+    <div class="tarjeta__cuerpo vacio">
+      @if (paoId()) {
+        <p class="negrita">No hay registros pendientes</p>
+        <p class="texto-sm texto-suave">
+          Con los filtros seleccionados no queda ninguna asignatura por capturar.
+        </p>
+      } @else {
+        <p class="texto-sm texto-suave">
+          Elija un periodo y pulse <span class="negrita">Buscar</span> para empezar.
+        </p>
+      }
+    </div>
+  </section>
+} @else {
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">
+        {{ filas().length | number }} de {{ total() | number }} registros
+      </h2>
+      @if (hayCambios()) {
+        <span class="marca-cambios">{{ pendientes().length }} sin guardar</span>
+      }
+    </div>
+
+    <div class="tabla-envoltura">
+      <table class="tabla tabla--captura">
+        <caption class="sr-solo">Asignaturas por registro del distributivo</caption>
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th>Docente</th>
+            <th>Carrera</th>
+            <th class="col-horas">Docencia</th>
+            <th>Asignatura que imparte</th>
+            <th class="col-copiar"><span class="sr-solo">Copiar de la fila anterior</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of filas(); track fila.id; let i = $index) {
+            <tr [class.fila--editada]="estaEditada(fila)">
+              <td class="col-num">{{ i + 1 }}</td>
+              <td>
+                <span class="negrita">{{ fila.docenteNombre }}</span>
+                <span class="texto-xs texto-tenue bloque">{{ fila.docenteIdentificacion }}</span>
+              </td>
+              <td class="texto-sm">
+                {{ fila.carrera }}
+                @if (fila.sede) {
+                  <span class="texto-xs texto-tenue bloque">{{ fila.sede }}</span>
+                }
+              </td>
+              <td class="col-horas">{{ fila.horas.totalDocencia | number: '1.0-2' }}</td>
+              <td>
+                <input
+                  type="text"
+                  class="entrada-asignatura"
+                  maxlength="400"
+                  [attr.aria-label]="'Asignatura de ' + fila.docenteNombre"
+                  [ngModel]="valorDe(fila)"
+                  (ngModelChange)="escribir(fila.id, $event)"
+                />
+              </td>
+              <td class="col-copiar">
+                @if (i > 0) {
+                  <button
+                    type="button"
+                    class="btn btn--fantasma btn--sm"
+                    title="Copiar la asignatura de la fila anterior"
+                    (click)="copiarDeArriba(i)"
+                  >
+                    ↑
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (total() > filas().length) {
+      <p class="pie-tabla texto-xs texto-tenue">
+        Se capturan de a {{ filas().length }} registros. Al guardar, la lista se
+        renueva con los siguientes pendientes.
+      </p>
+    }
+  </section>
+
+  <!-- Barra de guardado: acompaña al scroll porque la tabla es larga. -->
+  <div class="barra-guardado" [class.barra-guardado--activa]="hayCambios()">
+    <span class="texto-sm">
+      @if (hayCambios()) {
+        {{ pendientes().length }} registro(s) modificado(s)
+      } @else {
+        Sin cambios pendientes
+      }
+    </span>
+    <div class="fila hueco-sm">
+      <button
+        type="button"
+        class="btn btn--fantasma"
+        [disabled]="!hayCambios() || guardando()"
+        (click)="descartar()"
+      >
+        Descartar
+      </button>
+      <button
+        type="button"
+        class="btn btn--primario"
+        [disabled]="!hayCambios() || guardando()"
+        (click)="guardar()"
+      >
+        {{ guardando() ? 'Guardando…' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+}

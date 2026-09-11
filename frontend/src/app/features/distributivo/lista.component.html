@@ -1,0 +1,414 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Distributivo docente</h1>
+    <p class="texto-sm texto-suave">
+      Carga horaria del profesorado por periodo académico y carrera
+    </p>
+  </div>
+  <div class="fila hueco-sm no-imprimir">
+    <a
+      *utePermiso="Permiso.REPORTES_GENERAR"
+      routerLink="/distributivo/reporte"
+      class="btn btn--primario"
+    >
+      Generar reporte
+    </a>
+  </div>
+</header>
+
+<!-- ---------------------------------------------------------- indicadores --- -->
+@if (resumen(); as r) {
+  <section class="rejilla rejilla--4 seccion" aria-label="Totales del filtro aplicado">
+    <article class="metrica">
+      <p class="metrica__etiqueta">Registros</p>
+      <p class="metrica__valor">{{ r.totalFilas | number }}</p>
+    </article>
+    <article class="metrica">
+      <p class="metrica__etiqueta">Docentes</p>
+      <p class="metrica__valor">{{ r.totalDocentes | number }}</p>
+    </article>
+    <article class="metrica">
+      <p class="metrica__etiqueta">Horas totales</p>
+      <p class="metrica__valor">{{ r.totalHoras | number: '1.0-2' }}</p>
+    </article>
+    <article class="metrica" [class.metrica--alerta]="r.filasSinAsignatura > 0">
+      <p class="metrica__etiqueta">Sin asignatura</p>
+      <p class="metrica__valor">{{ r.filasSinAsignatura | number }}</p>
+      @if (r.filasSinAsignatura > 0) {
+        <button
+          type="button"
+          class="btn btn--fantasma btn--sm no-imprimir"
+          (click)="aplicar({ sinAsignatura: true })"
+        >
+          Ver pendientes
+        </button>
+      }
+    </article>
+  </section>
+}
+
+<section class="tarjeta">
+  <!-- ----------------------------------------------------------- filtros --- -->
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda-dist">Buscar docente</label>
+      <input
+        id="busqueda-dist"
+        type="search"
+        placeholder="Buscar por nombre o identificación…"
+        [ngModel]="texto()"
+        (ngModelChange)="buscar($event)"
+      />
+    </div>
+
+    <select
+      aria-label="Periodo académico"
+      [ngModel]="filtro().paoId ?? ''"
+      (ngModelChange)="aplicar({ paoId: $event || undefined })"
+    >
+      <option value="">Todos los periodos</option>
+      @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
+        <option [value]="o.id">{{ o.codigo }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Facultad"
+      [ngModel]="filtro().facultadId ?? ''"
+      (ngModelChange)="aplicar({ facultadId: $event || undefined })"
+    >
+      <option value="">Todas las facultades</option>
+      @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+        <option [value]="o.id">{{ o.codigo }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Carrera"
+      [ngModel]="filtro().carreraId ?? ''"
+      (ngModelChange)="aplicar({ carreraId: $event || undefined })"
+    >
+      <option value="">Todas las carreras</option>
+      @for (o of catalogos.de(TipoCatalogo.CARRERA); track o.id) {
+        <option [value]="o.id">{{ o.nombre }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Sede"
+      [ngModel]="filtro().sedeId ?? ''"
+      (ngModelChange)="aplicar({ sedeId: $event || undefined })"
+    >
+      <option value="">Todas las sedes</option>
+      @for (o of catalogos.de(TipoCatalogo.SEDE); track o.id) {
+        <option [value]="o.id">{{ o.nombre }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Categoría"
+      [ngModel]="filtro().categoriaId ?? ''"
+      (ngModelChange)="aplicar({ categoriaId: $event || undefined })"
+    >
+      <option value="">Toda categoría</option>
+      @for (o of catalogos.de(TipoCatalogo.CATEGORIA); track o.id) {
+        <option [value]="o.id">{{ o.nombre }}</option>
+      }
+    </select>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().sinAsignatura ?? false"
+        (ngModelChange)="aplicar({ sinAsignatura: $event || undefined })"
+      />
+      <span>Sin asignatura</span>
+    </label>
+
+    @if (hayFiltros()) {
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiar()">Limpiar</button>
+    }
+  </div>
+
+  <!-- ------------------------------------------------------------- tabla --- -->
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando distributivo…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="Sin registros"
+      [descripcion]="
+        hayFiltros()
+          ? 'Ninguna fila coincide con los filtros aplicados.'
+          : 'Aún no hay distributivo cargado. Impórtelo desde un consolidado con el comando importar-distributivo.'
+      "
+      icono="▤"
+    />
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <caption class="sr-solo">Filas del distributivo docente</caption>
+        <thead>
+          <tr>
+            <th role="button" tabindex="0" (click)="ordenar('docente')" (keydown.enter)="ordenar('docente')">
+              Docente
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('pao')" (keydown.enter)="ordenar('pao')">
+              Periodo
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('facultad')" (keydown.enter)="ordenar('facultad')">
+              Facultad
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('carrera')" (keydown.enter)="ordenar('carrera')">
+              Carrera
+            </th>
+            <th>Sede</th>
+            <th>Categoría</th>
+            <th>Asignatura</th>
+            <th class="num" role="button" tabindex="0" (click)="ordenar('total_horas')" (keydown.enter)="ordenar('total_horas')">
+              Horas
+            </th>
+            <th class="no-imprimir"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of datos().items; track fila.id) {
+            <tr>
+              <td>
+                <span class="negrita">{{ fila.docenteNombre }}</span>
+                <p class="texto-xs texto-tenue mono">{{ fila.docenteIdentificacion }}</p>
+              </td>
+              <td class="mono texto-sm">{{ fila.pao }}</td>
+              <td class="texto-sm">{{ fila.facultad }}</td>
+              <td class="truncar texto-sm texto-suave">{{ fila.carrera }}</td>
+              <td class="texto-sm">{{ fila.sede || '—' }}</td>
+              <td class="texto-sm">{{ fila.categoria || '—' }}</td>
+              <td class="texto-sm">
+                @if (fila.asignatura) {
+                  {{ fila.asignatura }}
+                } @else if (fila.requiereAsignatura) {
+                  <ute-insignia texto="Pendiente" tono="aviso" titulo="Dicta clase y no tiene asignatura registrada" />
+                } @else {
+                  <span class="texto-tenue">—</span>
+                }
+              </td>
+              <td class="num mono">{{ fila.totalHoras | number: '1.0-2' }}</td>
+              <td class="no-imprimir">
+                <div class="fila hueco-xs">
+                  <button
+                    *utePermiso="Permiso.DISTRIBUTIVO_ESCRIBIR"
+                    type="button"
+                    class="btn btn--secundario btn--sm"
+                    (click)="abrirEdicion(fila)"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    *utePermiso="Permiso.DISTRIBUTIVO_ELIMINAR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm texto-error"
+                    (click)="aEliminar.set(fila)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>
+
+<!-- ------------------------------------------------------------- edicion --- -->
+@if (editando(); as fila) {
+  <div class="velo" (click)="cerrarEdicion()">
+    <div class="editor" role="dialog" aria-modal="true" aria-labelledby="titulo-editor" (click)="$event.stopPropagation()">
+      <header class="editor__cabecera">
+        <div>
+          <h2 id="titulo-editor" class="editor__titulo">{{ fila.docenteNombre }}</h2>
+          <p class="texto-xs texto-tenue">
+            <span class="mono">{{ fila.docenteIdentificacion }}</span> ·
+            {{ fila.pao }} · {{ fila.carrera }}
+          </p>
+        </div>
+        <button type="button" class="editor__cerrar" (click)="cerrarEdicion()" aria-label="Cerrar">×</button>
+      </header>
+
+      <div class="editor__cuerpo">
+        <p class="texto-xs texto-tenue nota">
+          El docente, el periodo y la sede no se editan: junto con la carrera son la
+          identidad de la fila.
+        </p>
+
+        <!-- Asignatura -->
+        <div class="campo">
+          <label class="campo__etiqueta" for="ed-asignatura">Asignatura que imparte</label>
+          <input
+            id="ed-asignatura"
+            type="text"
+            placeholder="ANATOMÍA HUMANA I"
+            [ngModel]="asignatura()"
+            (ngModelChange)="asignatura.set($event)"
+          />
+          <p class="campo__ayuda">
+            No viene del consolidado: el distributivo reparte horas por tipo de actividad,
+            no por materia. El reporte institucional la exige, así que se captura aquí.
+          </p>
+        </div>
+
+        <!-- Selectores -->
+        <fieldset class="grupo">
+          <legend class="campo__etiqueta">Clasificación</legend>
+          <div class="rejilla rejilla--3">
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-facultad">Facultad</label>
+              <select id="ed-facultad" [ngModel]="selecciones()['facultadId']" (ngModelChange)="fijarSeleccion('facultadId', $event)">
+                @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+                  <option [value]="o.id">{{ o.codigo }} — {{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-carrera">Carrera</label>
+              <select id="ed-carrera" [ngModel]="selecciones()['carreraId']" (ngModelChange)="fijarSeleccion('carreraId', $event)">
+                @for (o of catalogos.de(TipoCatalogo.CARRERA); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-programa">Carrera / programa</label>
+              <select id="ed-programa" [ngModel]="selecciones()['programaId']" (ngModelChange)="fijarSeleccion('programaId', $event)">
+                <option value="">(sin programa)</option>
+                @for (o of catalogos.de(TipoCatalogo.PROGRAMA); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-sede">Sede</label>
+              <select id="ed-sede" [ngModel]="selecciones()['sedeId']" (ngModelChange)="fijarSeleccion('sedeId', $event)">
+                <option value="">(sin sede)</option>
+                @for (o of catalogos.de(TipoCatalogo.SEDE); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-nivel">Nivel</label>
+              <select id="ed-nivel" [ngModel]="selecciones()['nivelId']" (ngModelChange)="fijarSeleccion('nivelId', $event)">
+                <option value="">(sin nivel)</option>
+                @for (o of catalogos.de(TipoCatalogo.NIVEL); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-titularidad">Titularidad</label>
+              <select id="ed-titularidad" [ngModel]="selecciones()['titularidadId']" (ngModelChange)="fijarSeleccion('titularidadId', $event)">
+                <option value="">(sin titularidad)</option>
+                @for (o of catalogos.de(TipoCatalogo.TITULARIDAD); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-dedicacion">Dedicación</label>
+              <select id="ed-dedicacion" [ngModel]="selecciones()['dedicacionId']" (ngModelChange)="fijarSeleccion('dedicacionId', $event)">
+                <option value="">(sin dedicación)</option>
+                @for (o of catalogos.de(TipoCatalogo.DEDICACION); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-categoria">Categoría</label>
+              <select id="ed-categoria" [ngModel]="selecciones()['categoriaId']" (ngModelChange)="fijarSeleccion('categoriaId', $event)">
+                <option value="">(sin categoría)</option>
+                @for (o of catalogos.de(TipoCatalogo.CATEGORIA); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-tipotitulo">Tipo de título</label>
+              <select id="ed-tipotitulo" [ngModel]="selecciones()['tipoTituloId']" (ngModelChange)="fijarSeleccion('tipoTituloId', $event)">
+                <option value="">(sin dato)</option>
+                @for (o of catalogos.de(TipoCatalogo.TIPO_TITULO); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Horas -->
+        <fieldset class="grupo">
+          <legend class="fila entre">
+            <span class="campo__etiqueta">Distribución de horas</span>
+            <span class="total-horas mono">Total: {{ totalEditado() | number: '1.0-2' }} h</span>
+          </legend>
+
+          @for (bloque of bloques; track bloque) {
+            <details class="bloque" [open]="bloque === 'docencia'">
+              <summary class="bloque__titulo">{{ ETIQUETAS_BLOQUE[bloque] }}</summary>
+              <div class="bloque__campos">
+                @for (clave of CLAVES_HORAS[bloque]; track clave) {
+                  <label class="hora">
+                    <span class="hora__clave mono">{{ clave }}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.05"
+                      [value]="horas()[clave] ?? ''"
+                      (input)="fijarHora(clave, $any($event.target).value)"
+                      [attr.aria-label]="'Horas ' + clave"
+                    />
+                  </label>
+                }
+              </div>
+            </details>
+          }
+        </fieldset>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="ed-observaciones">Observaciones</label>
+          <textarea
+            id="ed-observaciones"
+            rows="2"
+            [ngModel]="observaciones()"
+            (ngModelChange)="observaciones.set($event)"
+          ></textarea>
+        </div>
+      </div>
+
+      <footer class="editor__acciones">
+        <button type="button" class="btn btn--secundario" (click)="cerrarEdicion()">Cancelar</button>
+        <button type="button" class="btn btn--primario" [disabled]="guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<ute-confirmar
+  [abierto]="aEliminar() !== null"
+  titulo="Eliminar fila del distributivo"
+  [mensaje]="'Se eliminará la carga de ' + (aEliminar()?.docenteNombre ?? '') + ' en ' + (aEliminar()?.carrera ?? '') + '.'"
+  advertencia="La acción es irreversible y afecta al historial del periodo."
+  textoConfirmar="Eliminar"
+  [peligroso]="true"
+  (confirmar)="eliminar()"
+  (cancelar)="aEliminar.set(null)"
+/>

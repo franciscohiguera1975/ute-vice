@@ -1,0 +1,114 @@
+.miga {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--texto-tenue);
+}
+
+.encabezado { margin-bottom: 1.25rem; }
+
+.disposicion {
+  grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+  align-items: start;
+}
+
+.grupo { margin: 0 0 1.25rem; padding: 0; border: none; }
+.grupo legend { width: 100%; padding: 0; margin-bottom: 0.5rem; }
+
+.acciones-seleccion { margin-bottom: 0.4rem; }
+.filtro-carrera { flex: 1 1 10rem; min-width: 8rem; padding: 0.3rem 0.5rem; font-size: 0.82rem; }
+
+.lista-carreras {
+  max-height: 15rem;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.35rem;
+}
+
+.carrera {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.8rem;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+.carrera:hover { background: var(--superficie-2); }
+.carrera--activa { background: var(--azul-50); font-weight: 500; }
+.carrera input { width: auto; margin-top: 0.15rem; flex-shrink: 0; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* Plantillas: una debajo de otra, porque la descripcion es lo que distingue
+   un formato del otro y en columna se lee. */
+.plantillas { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.plantilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+.plantilla:hover { background: var(--superficie-2); }
+.plantilla--activa { border-color: var(--azul-600); background: var(--azul-50); }
+.plantilla input { width: auto; margin-top: 0.2rem; flex-shrink: 0; }
+.plantilla__nombre { display: block; font-size: 0.85rem; font-weight: 600; }
+.plantilla__nota { display: block; font-size: 0.72rem; color: var(--texto-tenue); line-height: 1.4; }
+
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex: 1 1 7rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+.opcion:hover { background: var(--superficie-2); }
+.opcion--activa { border-color: var(--azul-600); background: var(--azul-50); }
+.opcion input { width: auto; margin-top: 0.2rem; flex-shrink: 0; }
+.opcion__titulo { display: block; font-size: 0.84rem; font-weight: 600; }
+.opcion__nota { display: block; font-size: 0.72rem; color: var(--texto-tenue); line-height: 1.35; }
+
+.acciones { margin-top: 1.25rem; }
+
+/* -------------------------------------------------------- vista previa --- */
+.aviso-incompleto {
+  padding: 0.75rem 1.15rem;
+  color: var(--aviso);
+  background: var(--aviso-suave);
+  border-bottom: 1px solid var(--borde);
+}
+.aviso-incompleto p { margin: 0 0 0.3rem; }
+.aviso-incompleto .btn { margin-top: 0.4rem; }
+
+.nota-menor {
+  margin: 0;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.78rem;
+  color: var(--texto-tenue);
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla--reporte { font-size: 0.75rem; }
+.tabla--reporte th { font-size: 0.65rem; }
+
+/* La cabecera se pinta con el color que declara la plantilla en el backend, el
+   mismo que lleva el Excel. Se atenua para no desentonar con el tema. */
+.th--plantilla { color: #1a1a1a; opacity: 0.85; }
+
+.celda-vacia { color: var(--texto-tenue); }
+.celda-numero { text-align: right; font-variant-numeric: tabular-nums; }
+.pie-tabla { margin: 0; padding: 0.6rem 1.15rem; }
+
+@media (width <= 1100px) {
+  .disposicion { grid-template-columns: 1fr; }
+}

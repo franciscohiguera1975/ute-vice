@@ -1,0 +1,247 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Catálogos del distributivo</h1>
+    <p class="texto-sm texto-suave">
+      Los valores que alimentan los selectores del distributivo docente
+    </p>
+  </div>
+  <button
+    *utePermiso="Permiso.CATALOGOS_ESCRIBIR"
+    type="button"
+    class="btn btn--primario no-imprimir"
+    (click)="abrirCreacion()"
+  >
+    Agregar {{ singular() }}
+  </button>
+</header>
+
+<!-- --------------------------------------------------- menu de catalogos --- -->
+<nav class="catalogos-menu no-imprimir" aria-label="Catálogos disponibles">
+  @for (t of tipos(); track t.tipo) {
+    <a
+      [routerLink]="['/catalogos', t.tipo]"
+      routerLinkActive="catalogos-menu__enlace--activo"
+      class="catalogos-menu__enlace"
+      (click)="sincronizar()"
+    >
+      {{ t.etiqueta }}
+    </a>
+  }
+</nav>
+
+<!-- ----------------------------------------------------------- formulario --- -->
+@if (formularioAbierto()) {
+  <section class="tarjeta seccion no-imprimir">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">
+        {{ editando() ? 'Editar' : 'Agregar' }} {{ singular() }}
+      </h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="cat-codigo">
+            Código <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cat-codigo"
+            type="text"
+            class="mono"
+            [ngModel]="codigo()"
+            (ngModelChange)="codigo.set($event)"
+            [disabled]="editando() !== null"
+          />
+          @if (editando()) {
+            <p class="campo__ayuda">
+              El código no se modifica: es la identidad del elemento y hay filas del
+              distributivo apuntando a él.
+            </p>
+          } @else if (tipo() === 'paos') {
+            <p class="campo__ayuda">Formato del periodo: <span class="mono">2026-1</span></p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="cat-nombre">
+            Nombre <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cat-nombre"
+            type="text"
+            [ngModel]="nombre()"
+            (ngModelChange)="nombre.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="cat-orden">Orden</label>
+          <input
+            id="cat-orden"
+            type="number"
+            [ngModel]="orden()"
+            (ngModelChange)="orden.set(+$event)"
+          />
+          <p class="campo__ayuda">Posición en los selectores.</p>
+        </div>
+
+        <div class="campo">
+          <label class="casilla">
+            <input type="checkbox" [ngModel]="activo()" (ngModelChange)="activo.set($event)" />
+            <span>
+              Activo
+              <span class="campo__ayuda">
+                Los inactivos no aparecen en los selectores, pero conservan su historial.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div class="campo campo--ancho">
+          <label class="campo__etiqueta" for="cat-descripcion">Descripción</label>
+          <textarea
+            id="cat-descripcion"
+            rows="2"
+            [ngModel]="descripcion()"
+            (ngModelChange)="descripcion.set($event)"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="fila hueco-sm" style="justify-content: flex-end">
+        <button type="button" class="btn btn--secundario" (click)="cerrarFormulario()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn--primario" [disabled]="guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </section>
+}
+
+<!-- --------------------------------------------------------------- tabla --- -->
+<section class="tarjeta">
+  <div class="tarjeta__cabecera">
+    <h2 class="tarjeta__titulo">
+      {{ etiqueta() }}
+      <span class="texto-sm texto-tenue">({{ datos().total }})</span>
+    </h2>
+  </div>
+
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda-catalogo">Buscar en el catálogo</label>
+      <input
+        id="busqueda-catalogo"
+        type="search"
+        placeholder="Buscar por código o nombre…"
+        [ngModel]="texto()"
+        (ngModelChange)="buscar($event)"
+      />
+    </div>
+    <select
+      aria-label="Filtrar por estado"
+      [ngModel]="soloActivos()"
+      (ngModelChange)="soloActivos.set($event); irAPagina(1)"
+    >
+      <option value="">Activos e inactivos</option>
+      <option value="true">Solo activos</option>
+      <option value="false">Solo inactivos</option>
+    </select>
+  </div>
+
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando catálogo…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="Catálogo vacío"
+      descripcion="No hay elementos que coincidan. Puede agregarlos a mano o cargarlos importando un consolidado."
+      icono="▤"
+    />
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <caption class="sr-solo">Elementos del catálogo {{ etiqueta() }}</caption>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th class="centro">Orden</th>
+            <th>Estado</th>
+            <th class="no-imprimir"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (elemento of datos().items; track elemento.id) {
+            <tr [class.fila--inactiva]="!elemento.activo">
+              <td class="mono texto-sm">{{ elemento.codigo }}</td>
+              <td>
+                {{ elemento.nombre }}
+                @if (atributosLegibles(elemento); as attrs) {
+                  <p class="texto-xs texto-tenue mono">{{ attrs }}</p>
+                }
+              </td>
+              <td class="truncar texto-sm texto-suave">{{ elemento.descripcion || '—' }}</td>
+              <td class="centro mono texto-sm">{{ elemento.orden }}</td>
+              <td>
+                <ute-insignia
+                  [texto]="elemento.activo ? 'Activo' : 'Inactivo'"
+                  [tono]="elemento.activo ? 'exito' : 'neutro'"
+                />
+              </td>
+              <td class="no-imprimir">
+                <div class="fila hueco-xs">
+                  <button
+                    *utePermiso="Permiso.CATALOGOS_ESCRIBIR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm"
+                    (click)="abrirEdicion(elemento)"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    *utePermiso="Permiso.CATALOGOS_ESCRIBIR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm"
+                    (click)="alternarEstado(elemento)"
+                  >
+                    {{ elemento.activo ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button
+                    *utePermiso="Permiso.CATALOGOS_ESCRIBIR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm texto-error"
+                    (click)="aEliminar.set(elemento)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>
+
+<ute-confirmar
+  [abierto]="aEliminar() !== null"
+  titulo="Eliminar elemento"
+  [mensaje]="'Se eliminará «' + (aEliminar()?.nombre ?? '') + '» del catálogo.'"
+  advertencia="Solo es posible si ninguna fila del distributivo lo está usando. Si está en uso, desactívelo: lo retira de los selectores sin tocar el historial."
+  textoConfirmar="Eliminar"
+  [peligroso]="true"
+  (confirmar)="eliminar()"
+  (cancelar)="aEliminar.set(null)"
+/>

@@ -1,0 +1,100 @@
+<header class="encabezado">
+  <h1>Roles y permisos</h1>
+  <p class="texto-sm texto-suave">
+    La autorizacion se resuelve siempre por permiso, nunca por rol. Un rol es
+    solo una agrupacion con nombre.
+  </p>
+</header>
+
+<nav class="submenu no-imprimir" aria-label="Secciones de administracion">
+  <a routerLink="/administracion/usuarios" routerLinkActive="submenu__enlace--activo" class="submenu__enlace">
+    Usuarios
+  </a>
+  <a routerLink="/administracion/roles" routerLinkActive="submenu__enlace--activo" class="submenu__enlace">
+    Roles y permisos
+  </a>
+</nav>
+
+@if (cargando()) {
+  <ute-cargando mensaje="Cargando matriz de permisos…" />
+} @else {
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Matriz de permisos</h2>
+      <span class="texto-xs texto-tenue">
+        {{ permisos().length }} permisos · {{ roles().length }} roles
+      </span>
+    </div>
+
+    <div class="aviso-admin">
+      El rol <span class="negrita">ADMIN</span> conserva todos los permisos y no
+      es modificable: vaciarlo dejaria el sistema sin forma de recuperar el
+      control.
+    </div>
+
+    <div class="tabla-envoltura">
+      <table class="tabla matriz">
+        <caption class="sr-solo">Permisos asignados a cada rol</caption>
+        <thead>
+          <tr>
+            <th class="matriz__permiso">Permiso</th>
+            @for (rol of roles(); track rol.codigo) {
+              <th class="centro">
+                {{ rol.nombre }}
+                @if (guardando() === rol.codigo) {
+                  <span class="texto-xs texto-tenue"> guardando…</span>
+                }
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (grupo of porModulo(); track grupo.modulo) {
+            <tr class="matriz__grupo">
+              <td [attr.colspan]="roles().length + 1">{{ etiquetaModulo(grupo.modulo) }}</td>
+            </tr>
+            @for (permiso of grupo.permisos; track permiso.codigo) {
+              <tr>
+                <td class="matriz__permiso">
+                  <span class="mono texto-xs">{{ permiso.codigo }}</span>
+                </td>
+                @for (rol of roles(); track rol.codigo) {
+                  <td class="centro">
+                    <input
+                      type="checkbox"
+                      class="casilla-rol"
+                      [checked]="tienePermiso(rol, permiso.codigo)"
+                      [disabled]="!editable(rol) || guardando() !== null"
+                      [attr.aria-label]="permiso.codigo + ' para ' + rol.nombre"
+                      (change)="alternar(rol, permiso.codigo, $any($event.target).checked)"
+                    />
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Descripcion de los roles</h2>
+    </div>
+    <dl class="roles-descripcion">
+      @for (rol of roles(); track rol.codigo) {
+        <div class="rol">
+          <dt>
+            {{ rol.nombre }}
+            <span class="mono texto-xs texto-tenue">{{ rol.codigo }}</span>
+          </dt>
+          <dd>
+            {{ rol.descripcion || 'Sin descripcion' }}
+            <span class="texto-xs texto-tenue">{{ rol.permisos.length }} permisos</span>
+          </dd>
+        </div>
+      }
+    </dl>
+  </section>
+}

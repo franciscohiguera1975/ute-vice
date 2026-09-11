@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>UTE Vice — Gestión Académica</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Plataforma de gestion y validacion de titulos universitarios del personal de la Universidad Tecnologica Equinoccial"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231F3864'/><text x='16' y='22' font-family='sans-serif' font-size='15' font-weight='700' fill='white' text-anchor='middle'>U</text></svg>" />
+    <script>
+      // Configuracion inyectable en despliegue: permite apuntar la misma
+      // imagen a otro backend sin reconstruir el paquete.
+      window.__env = window.__env || {};
+
+      // El tema se aplica antes de pintar para evitar el destello de tema claro
+      // en quien tiene preferencia oscura.
+      (function () {
+        try {
+          var guardado = localStorage.getItem('ute_vice_tema');
+          var oscuro =
+            guardado === 'oscuro' ||
+            (!guardado && matchMedia('(prefers-color-scheme: dark)').matches);
+          if (oscuro) document.documentElement.setAttribute('data-tema', 'oscuro');
+        } catch (e) {
+          /* almacenamiento bloqueado: se usa el tema claro */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <ute-raiz></ute-raiz>
+  </body>
+</html>

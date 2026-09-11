@@ -1,0 +1,15 @@
+.encabezado { margin-bottom: 1.25rem; }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.filtros__busqueda { flex: 1 1 18rem; min-width: 14rem; }
+.filtros select { width: auto; min-width: 10rem; font-size: 0.82rem; }
+
+.fila--inactiva { opacity: 0.6; }

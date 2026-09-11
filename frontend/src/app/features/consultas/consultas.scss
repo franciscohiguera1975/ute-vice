@@ -1,0 +1,97 @@
+.encabezado { margin-bottom: 1.25rem; }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+.filtros select { width: auto; min-width: 11rem; font-size: 0.82rem; }
+
+.fila--con-cambios { background: var(--azul-50); }
+
+.detalle td { background: var(--superficie-2); padding: 0.85rem 1.15rem; }
+.detalle__mensaje { margin: 0 0 0.6rem; font-size: 0.82rem; }
+
+.cambio { margin-bottom: 0.75rem; }
+.cambio:last-child { margin-bottom: 0; }
+
+.cambio__titulo { margin: 0 0 0.35rem; font-size: 0.82rem; }
+
+.cambio__tipo {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin-right: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--azul-800);
+  background: var(--azul-100);
+  border-radius: var(--radio-sm);
+}
+
+.cambio__tabla {
+  width: 100%;
+  max-width: 46rem;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.cambio__tabla th,
+.cambio__tabla td {
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--borde);
+}
+.cambio__tabla th { color: var(--texto-tenue); font-weight: 600; font-size: 0.72rem; }
+
+/* ------------------------------------------------ resolucion de desafios --- */
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(12 16 26 / 55%);
+}
+
+.desafio {
+  width: min(30rem, 100%);
+  padding: 1.35rem;
+  background: var(--superficie);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-3);
+}
+
+.desafio__titulo { margin: 0 0 0.5rem; font-size: 1.05rem; }
+
+.desafio__explicacion {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--info);
+  background: var(--info-suave);
+  border-radius: var(--radio);
+}
+
+.desafio__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+}
+.desafio__datos div { display: flex; gap: 0.35rem; }
+.desafio__datos dt { color: var(--texto-tenue); }
+.desafio__datos dt::after { content: ':'; }
+.desafio__datos dd { margin: 0; }
+
+.desafio__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}

@@ -1,0 +1,166 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Planificador de consultas</h1>
+    <p class="texto-sm texto-suave">
+      Politica de ritmo con la que el sistema reparte las consultas en el tiempo
+    </p>
+  </div>
+  <button type="button" class="btn btn--secundario btn--sm no-imprimir" (click)="cargar()">
+    Actualizar
+  </button>
+</header>
+
+<ute-submenu-consultas />
+
+@if (cargando()) {
+  <ute-cargando mensaje="Consultando estado…" />
+} @else if (estado(); as e) {
+  <!-- ---------------------------------------------------- estado actual --- -->
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Situacion en este momento</h2>
+      <ute-insignia
+        [texto]="e.habilitado ? 'Automatico activo' : 'Operacion manual'"
+        [tono]="e.habilitado ? 'exito' : 'neutro'"
+      />
+    </div>
+
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--3">
+        <div class="dato">
+          <p class="dato__etiqueta">Hora local</p>
+          <p class="dato__valor">{{ e.horaLocal | fechaLocal: true }}</p>
+        </div>
+        <div class="dato">
+          <p class="dato__etiqueta">Franja horaria</p>
+          <p class="dato__valor">
+            <ute-insignia
+              [texto]="etiquetaFranja(e.franjaActual)"
+              [tono]="tonoFranja(e.franjaActual)"
+            />
+          </p>
+          <p class="dato__pie texto-xs texto-tenue">peso {{ e.pesoFranja }}</p>
+        </div>
+        <div class="dato">
+          <p class="dato__etiqueta">Capacidad estimada</p>
+          <p class="dato__valor">{{ e.capacidadDiariaEstimada | number }}</p>
+          <p class="dato__pie texto-xs texto-tenue">consultas por dia</p>
+        </div>
+      </div>
+
+      @if (!e.enHorarioOperativo) {
+        <div class="fuera-horario">
+          <p class="negrita">El sistema no esta consultando ahora</p>
+          <p>
+            La hora actual queda fuera de las franjas configuradas. La actividad
+            se reanuda el {{ e.proximaApertura | fechaLocal: true }}.
+          </p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------- configuracion --- -->
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Politica de ritmo vigente</h2>
+    </div>
+    <dl class="parametros">
+      <div class="parametro">
+        <dt>Periodo de cobertura</dt>
+        <dd>
+          {{ e.configuracion.periodoDias }} dias
+          <span class="parametro__nota">
+            Ventana durante la cual nadie se vuelve a consultar. Es lo que
+            garantiza que el padron se cubra entero antes de repetir a nadie.
+          </span>
+        </dd>
+      </div>
+
+      <div class="parametro">
+        <dt>Presupuesto por hora</dt>
+        <dd>
+          {{ e.configuracion.maxConsultasPorHora }} consultas
+          <span class="parametro__nota">
+            Tope duro. Ningun calculo puede superarlo, ni siquiera si la campana
+            va atrasada.
+          </span>
+        </dd>
+      </div>
+
+      <div class="parametro">
+        <dt>Horario de mayor actividad</dt>
+        <dd>
+          {{ e.configuracion.franjaPico }}
+          <span class="parametro__nota">Franja de oficina, con el ritmo maximo.</span>
+        </dd>
+      </div>
+
+      <div class="parametro">
+        <dt>Horario de menor actividad</dt>
+        <dd>
+          {{ e.configuracion.franjaValle }}
+          <span class="parametro__nota">
+            Tarde-noche, con esperas mas largas entre consultas.
+          </span>
+        </dd>
+      </div>
+
+      <div class="parametro">
+        <dt>Separacion entre consultas</dt>
+        <dd>
+          {{ e.configuracion.demoraSegundos[0] }} – {{ e.configuracion.demoraSegundos[1] }} s
+          <span class="parametro__nota">
+            Sorteada al azar dentro de ese rango. Una cadencia constante seria a
+            la vez fragil y poco realista.
+          </span>
+        </dd>
+      </div>
+
+      <div class="parametro">
+        <dt>Cortacircuitos</dt>
+        <dd>
+          {{ e.configuracion.umbralCortacircuitos }} fallos seguidos
+          <span class="parametro__nota">
+            Al alcanzarlo, la campana se pausa sola. Insistir sobre un proveedor
+            que esta fallando o rechazando peticiones solo empeora la situacion.
+          </span>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- --------------------------------------------------------- proveedor --- -->
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Proveedor de consulta</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <p class="fila hueco-sm">
+        <span class="mono negrita">{{ e.proveedor }}</span>
+        @if (e.requiereVerificacionHumana) {
+          <ute-insignia texto="Requiere verificacion humana" tono="aviso" />
+        }
+      </p>
+
+      @if (e.requiereVerificacionHumana) {
+        <div class="nota-verificacion">
+          <p class="negrita">Sobre la verificacion humana</p>
+          <p>
+            Este proveedor solicita desafios que debe resolver una persona. El
+            sistema <strong>no los resuelve por su cuenta</strong>: los encola y
+            un operador con el permiso correspondiente los atiende desde el
+            historico de consultas.
+          </p>
+          <p class="texto-xs">
+            Fue una decision de diseno, no una limitacion tecnica. Automatizar la
+            resolucion de un control antibot es evadirlo, con independencia de
+            que el fin sea legitimo. La via recomendada es el convenio
+            institucional, que habilita el proveedor oficial y elimina los
+            desafios.
+          </p>
+        </div>
+      }
+    </div>
+  </section>
+}

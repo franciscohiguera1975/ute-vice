@@ -1,0 +1,156 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Tablero</h1>
+    <p class="texto-sm texto-suave">
+      Estado de la validacion de titulos del personal
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <div class="periodo" role="group" aria-label="Ventana de analisis">
+      @for (opcion of opcionesDias; track opcion) {
+        <button
+          type="button"
+          class="periodo__opcion"
+          [class.periodo__opcion--activa]="dias() === opcion"
+          (click)="cambiarPeriodo(opcion)"
+        >
+          {{ opcion }}d
+        </button>
+      }
+    </div>
+    <button type="button" class="btn btn--secundario btn--sm" (click)="cargar()">
+      Actualizar
+    </button>
+  </div>
+</header>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando indicadores…" />
+} @else if (datos(); as d) {
+  <!-- ----------------------------------------------------- indicadores --- -->
+  <section class="rejilla rejilla--4 seccion" aria-label="Indicadores principales">
+    <article class="metrica">
+      <p class="metrica__etiqueta">Personal activo</p>
+      <p class="metrica__valor">{{ d.cobertura.personasActivas | number }}</p>
+      <p class="metrica__pie texto-xs texto-tenue">
+        de {{ d.cobertura.totalPersonas | number }} registradas
+      </p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Cobertura del periodo</p>
+      <p class="metrica__valor">{{ d.cobertura.porcentajeCobertura }}%</p>
+      <div class="barra metrica__barra">
+        <div class="barra__relleno" [style.width.%]="d.cobertura.porcentajeCobertura"></div>
+      </div>
+      <p class="metrica__pie texto-xs texto-tenue">
+        {{ d.cobertura.consultadasEnPeriodo | number }} consultadas con exito
+      </p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Titulos registrados</p>
+      <p class="metrica__valor">{{ d.titulos.total | number }}</p>
+      <p class="metrica__pie texto-xs texto-tenue">
+        {{ d.titulos.posgrados | number }} de posgrado
+      </p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Consultas ({{ dias() }} dias)</p>
+      <p class="metrica__valor">{{ d.consultas.totalPeriodo | number }}</p>
+      <p class="metrica__pie texto-xs texto-tenue">
+        {{ d.consultas.tasaExito }}% completadas correctamente
+      </p>
+    </article>
+  </section>
+
+  <!-- ---------------------------------------------------------- alertas --- -->
+  @if (alertas().length > 0) {
+    <section class="tarjeta seccion" aria-label="Situaciones que requieren atencion">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Requiere atencion</h2>
+      </div>
+      <ul class="alertas">
+        @for (alerta of alertas(); track alerta.texto) {
+          <li class="alertas__item">
+            <span class="alertas__marca" aria-hidden="true">!</span>
+            <a [routerLink]="alerta.ruta" [queryParams]="alerta.parametros ?? {}">
+              {{ alerta.texto }}
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- --------------------------------------------------------- graficos --- -->
+  <div class="rejilla rejilla--2 seccion">
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Titulos por nivel academico</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-anillo
+          [datos]="nivelesConEtiqueta()"
+          titulo="Titulos por nivel academico"
+          unidad="titulos"
+        />
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Resultado de las consultas</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-anillo
+          [datos]="estadosConEtiqueta()"
+          titulo="Resultado de las consultas"
+          unidad="consultas"
+        />
+      </div>
+    </section>
+  </div>
+
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Consultas por dia</h2>
+      <span class="texto-xs texto-tenue">ultimos {{ dias() }} dias</span>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <ute-grafico-linea
+        [puntos]="d.consultas.tendenciaDiaria"
+        titulo="Consultas realizadas por dia"
+      />
+    </div>
+  </section>
+
+  <div class="rejilla rejilla--2 seccion">
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Personal por unidad</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-barras [datos]="d.personasPorUnidad" titulo="Personal por unidad" />
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Instituciones de procedencia</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-barras
+          [datos]="d.titulos.porInstitucion"
+          titulo="Instituciones de procedencia"
+        />
+      </div>
+    </section>
+  </div>
+
+  <p class="texto-xs texto-tenue seccion">
+    Datos calculados el {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}
+  </p>
+}

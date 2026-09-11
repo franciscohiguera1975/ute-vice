@@ -1,0 +1,249 @@
+<header class="encabezado">
+  <h1>Historico de consultas</h1>
+  <p class="texto-sm texto-suave">
+    Bitacora de todo intento de consulta al registro nacional, exitoso o no.
+    Es la fuente para auditar por que el dato de una persona esta desfasado.
+  </p>
+</header>
+
+<ute-submenu-consultas />
+
+<section class="tarjeta">
+  <div class="filtros no-imprimir">
+    <select
+      aria-label="Filtrar por estado"
+      [ngModel]="filtro().estado ?? ''"
+      (ngModelChange)="aplicarFiltro({ estado: $event || undefined })"
+    >
+      <option value="">Todos los resultados</option>
+      @for (estado of estados; track estado) {
+        <option [value]="estado">{{ ETIQUETAS_ESTADO_CONSULTA[estado] }}</option>
+      }
+    </select>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().soloErrores ?? false"
+        (ngModelChange)="aplicarFiltro({ soloErrores: $event || undefined })"
+      />
+      <span>Solo errores</span>
+    </label>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().soloConCambios ?? false"
+        (ngModelChange)="aplicarFiltro({ soloConCambios: $event || undefined })"
+      />
+      <span>Solo con cambios detectados</span>
+    </label>
+
+    @if (hayFiltrosActivos) {
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+    }
+  </div>
+
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando historico…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="Sin registros"
+      [descripcion]="
+        hayFiltrosActivos
+          ? 'Ninguna consulta coincide con los filtros aplicados.'
+          : 'Todavia no se ha ejecutado ninguna consulta al registro nacional.'
+      "
+      icono="⟳"
+    />
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <caption class="sr-solo">Historico de consultas al registro nacional</caption>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cedula</th>
+            <th>Resultado</th>
+            <th class="centro">Encontrados</th>
+            <th>Cambios</th>
+            <th class="num">Duracion</th>
+            <th class="no-imprimir"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (registro of datos().items; track registro.id) {
+            <tr [class.fila--con-cambios]="registro.huboCambios">
+              <td class="texto-sm">{{ registro.iniciadoEn | fechaLocal: true }}</td>
+              <td>
+                <a [routerLink]="['/personas', registro.personaId]" class="mono">
+                  {{ registro.cedula }}
+                </a>
+                @if (registro.intento > 1) {
+                  <span class="texto-xs texto-tenue"> · intento {{ registro.intento }}</span>
+                }
+              </td>
+              <td>
+                <ute-insignia
+                  [texto]="ETIQUETAS_ESTADO_CONSULTA[registro.estado]"
+                  [tono]="TONO_ESTADO_CONSULTA[registro.estado]"
+                />
+              </td>
+              <td class="centro mono">{{ registro.titulosEncontrados }}</td>
+              <td class="texto-sm">
+                @if (registro.huboCambios) {
+                  <span class="negrita">{{ registro.resumen }}</span>
+                } @else {
+                  <span class="texto-tenue">{{ registro.resumen }}</span>
+                }
+              </td>
+              <td class="num texto-sm texto-suave">{{ registro.duracionMs | duracion }}</td>
+              <td class="no-imprimir">
+                <div class="fila hueco-xs">
+                  @if (registro.desafioId) {
+                    <button
+                      *utePermiso="Permiso.CONSULTAS_RESOLVER"
+                      type="button"
+                      class="btn btn--primario btn--sm"
+                      (click)="abrirDesafio(registro)"
+                    >
+                      Resolver
+                    </button>
+                  }
+                  @if (registro.cambios.length > 0 || registro.mensaje) {
+                    <button
+                      type="button"
+                      class="btn btn--fantasma btn--sm"
+                      (click)="alternarDetalle(registro)"
+                      [attr.aria-expanded]="expandido() === registro.id"
+                    >
+                      {{ expandido() === registro.id ? 'Ocultar' : 'Detalle' }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+
+            @if (expandido() === registro.id) {
+              <tr class="detalle">
+                <td colspan="7">
+                  @if (registro.mensaje) {
+                    <p class="detalle__mensaje">
+                      <span class="negrita">Mensaje:</span> {{ registro.mensaje }}
+                      @if (registro.codigoHttp) {
+                        <span class="texto-tenue"> (HTTP {{ registro.codigoHttp }})</span>
+                      }
+                    </p>
+                  }
+
+                  @for (cambio of registro.cambios; track $index) {
+                    <div class="cambio">
+                      <p class="cambio__titulo">
+                        <span class="cambio__tipo">{{ cambio.tipo }}</span>
+                        {{ cambio.denominacion }}
+                      </p>
+
+                      @if (camposDe(cambio.detalle).length > 0) {
+                        <table class="cambio__tabla">
+                          <thead>
+                            <tr>
+                              <th>Campo</th>
+                              <th>Antes</th>
+                              <th>Ahora</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (campo of camposDe(cambio.detalle); track campo.campo) {
+                              <tr>
+                                <td class="negrita">{{ campo.campo }}</td>
+                                <td class="texto-tenue">{{ campo.anterior }}</td>
+                                <td>{{ campo.nuevo }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>
+
+<!-- --------------------------------------------- resolucion de desafios --- -->
+@if (desafioActivo(); as registro) {
+  <div class="velo" (click)="desafioActivo.set(null)">
+    <div
+      class="desafio"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-desafio"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="titulo-desafio" class="desafio__titulo">Verificacion humana requerida</h2>
+
+      <p class="desafio__explicacion">
+        El proveedor solicito una verificacion que debe resolver una persona. El
+        sistema no la resuelve por su cuenta: usted lee el desafio y transcribe
+        la respuesta.
+      </p>
+
+      <dl class="desafio__datos">
+        <div><dt>Cedula</dt><dd class="mono">{{ registro.cedula }}</dd></div>
+        <div><dt>Solicitado</dt><dd>{{ registro.iniciadoEn | fechaLocal: true }}</dd></div>
+        <div><dt>Proveedor</dt><dd>{{ registro.proveedor }}</dd></div>
+      </dl>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="respuesta-desafio">
+          Respuesta al desafio
+        </label>
+        <input
+          id="respuesta-desafio"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="Transcriba el codigo mostrado"
+          [ngModel]="respuestaDesafio()"
+          (ngModelChange)="respuestaDesafio.set($event)"
+          (keydown.enter)="resolverDesafio()"
+        />
+        <p class="campo__ayuda">
+          El desafio se muestra en la sesion abierta con el proveedor. Si expiro,
+          la consulta se reintentara desde el inicio.
+        </p>
+      </div>
+
+      <div class="desafio__acciones">
+        <button type="button" class="btn btn--secundario" (click)="desafioActivo.set(null)">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn--primario"
+          [disabled]="resolviendo() || !respuestaDesafio().trim()"
+          (click)="resolverDesafio()"
+        >
+          {{ resolviendo() ? 'Enviando…' : 'Enviar respuesta' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

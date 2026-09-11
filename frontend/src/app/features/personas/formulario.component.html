@@ -1,0 +1,193 @@
+<nav class="miga no-imprimir" aria-label="Ruta de navegacion">
+  <a routerLink="/personas">Personas</a>
+  <span aria-hidden="true">/</span>
+  <span>{{ esEdicion() ? 'Editar' : 'Nueva persona' }}</span>
+</nav>
+
+<header class="encabezado">
+  <h1>{{ esEdicion() ? 'Editar persona' : 'Nueva persona' }}</h1>
+  <p class="texto-sm texto-suave">
+    Los datos marcados con
+    <span class="campo__requerido" aria-hidden="true">*</span> son obligatorios
+  </p>
+</header>
+
+@if (cargando()) {
+  <ute-cargando mensaje="Cargando datos…" />
+} @else {
+  <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate class="formulario">
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Identificacion</h2>
+      </div>
+      <div class="tarjeta__cuerpo rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="cedula">
+            Cedula <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cedula"
+            formControlName="cedula"
+            type="text"
+            inputmode="numeric"
+            maxlength="13"
+            placeholder="1710034065"
+            class="mono"
+            [class.campo__control--error]="error('cedula')"
+          />
+          @if (error('cedula'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          } @else if (esEdicion()) {
+            <p class="campo__ayuda">
+              La cedula no es modificable: identifica a la persona ante el registro
+              nacional y cambiarla invalidaria su historico.
+            </p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="codigoEmpleado">Codigo de empleado</label>
+          <input id="codigoEmpleado" formControlName="codigoEmpleado" type="text" />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nombres">
+            Nombres <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nombres"
+            formControlName="nombres"
+            type="text"
+            [class.campo__control--error]="error('nombres')"
+          />
+          @if (error('nombres'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="apellidos">
+            Apellidos <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="apellidos"
+            formControlName="apellidos"
+            type="text"
+            [class.campo__control--error]="error('apellidos')"
+          />
+          @if (error('apellidos'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          }
+        </div>
+
+        @if (!esEdicion()) {
+          <div class="campo">
+            <label class="campo__etiqueta" for="fechaNacimiento">Fecha de nacimiento</label>
+            <input id="fechaNacimiento" formControlName="fechaNacimiento" type="date" />
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Contacto</h2>
+      </div>
+      <div class="tarjeta__cuerpo rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="emailInstitucional">Correo institucional</label>
+          <input
+            id="emailInstitucional"
+            formControlName="emailInstitucional"
+            type="email"
+            placeholder="nombre.apellido@ute.edu.ec"
+            [class.campo__control--error]="error('emailInstitucional')"
+          />
+          @if (error('emailInstitucional'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="emailPersonal">Correo personal</label>
+          <input
+            id="emailPersonal"
+            formControlName="emailPersonal"
+            type="email"
+            [class.campo__control--error]="error('emailPersonal')"
+          />
+          @if (error('emailPersonal'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="telefono">Telefono</label>
+          <input id="telefono" formControlName="telefono" type="text" inputmode="tel" />
+        </div>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Vinculacion laboral</h2>
+      </div>
+      <div class="tarjeta__cuerpo rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="tipoVinculacion">Tipo de vinculacion</label>
+          <select id="tipoVinculacion" formControlName="tipoVinculacion">
+            @for (tipo of vinculaciones; track tipo) {
+              <option [value]="tipo">{{ ETIQUETAS_VINCULACION[tipo] }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="fechaIngreso">Fecha de ingreso</label>
+          <input id="fechaIngreso" formControlName="fechaIngreso" type="date" />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="unidad">Unidad o dependencia</label>
+          <input
+            id="unidad"
+            formControlName="unidad"
+            type="text"
+            placeholder="Facultad de Ciencias de la Ingenieria"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="cargo">Cargo</label>
+          <input id="cargo" formControlName="cargo" type="text" />
+        </div>
+
+        <div class="campo campo--ancho">
+          <label class="campo__etiqueta" for="observaciones">Observaciones</label>
+          <textarea id="observaciones" formControlName="observaciones" rows="3"></textarea>
+        </div>
+
+        @if (esEdicion()) {
+          <div class="campo campo--ancho">
+            <label class="casilla">
+              <input type="checkbox" formControlName="activo" />
+              <span>
+                Persona activa
+                <span class="campo__ayuda">
+                  Las personas inactivas se excluyen de las campanas de consulta.
+                </span>
+              </span>
+            </label>
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="acciones no-imprimir">
+      <a routerLink="/personas" class="btn btn--secundario">Cancelar</a>
+      <button type="submit" class="btn btn--primario" [disabled]="enviando()">
+        {{ enviando() ? 'Guardando…' : esEdicion() ? 'Guardar cambios' : 'Registrar persona' }}
+      </button>
+    </div>
+  </form>
+}

@@ -1,0 +1,163 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Personas</h1>
+    <p class="texto-sm texto-suave">
+      Padron del personal y estado de validacion de sus titulos
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <a
+      *utePermiso="Permiso.PERSONAS_ESCRIBIR"
+      routerLink="/personas/nueva"
+      class="btn btn--primario"
+    >
+      Nueva persona
+    </a>
+  </div>
+</header>
+
+<section class="tarjeta">
+  <!-- ---------------------------------------------------------- filtros --- -->
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda">Buscar personas</label>
+      <input
+        id="busqueda"
+        type="search"
+        placeholder="Buscar por nombre, cedula, unidad o codigo…"
+        [ngModel]="texto()"
+        (ngModelChange)="buscar($event)"
+      />
+    </div>
+
+    <select
+      aria-label="Filtrar por vinculacion"
+      [ngModel]="filtro().tipoVinculacion ?? ''"
+      (ngModelChange)="aplicarFiltro({ tipoVinculacion: $event || undefined })"
+    >
+      <option value="">Toda vinculacion</option>
+      @for (tipo of vinculaciones; track tipo) {
+        <option [value]="tipo">{{ ETIQUETAS_VINCULACION[tipo] }}</option>
+      }
+    </select>
+
+    <select
+      aria-label="Filtrar por titulos"
+      [ngModel]="filtro().conTitulos ?? ''"
+      (ngModelChange)="aplicarFiltro({ conTitulos: $event === '' ? undefined : $event === 'true' })"
+    >
+      <option value="">Con y sin titulos</option>
+      <option value="true">Con titulos</option>
+      <option value="false">Sin titulos registrados</option>
+    </select>
+
+    <select
+      aria-label="Filtrar por estado"
+      [ngModel]="filtro().activo ?? ''"
+      (ngModelChange)="aplicarFiltro({ activo: $event === '' ? undefined : $event === 'true' })"
+    >
+      <option value="">Activos e inactivos</option>
+      <option value="true">Solo activos</option>
+      <option value="false">Solo inactivos</option>
+    </select>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().nuncaConsultadas ?? false"
+        (ngModelChange)="aplicarFiltro({ nuncaConsultadas: $event || undefined })"
+      />
+      <span>Nunca consultadas</span>
+    </label>
+
+    @if (hayFiltrosActivos) {
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+    }
+  </div>
+
+  <!-- ------------------------------------------------------------ tabla --- -->
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando personas…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="No hay resultados"
+      [descripcion]="
+        hayFiltrosActivos
+          ? 'Ninguna persona coincide con los filtros aplicados.'
+          : 'Aun no hay personas registradas en el sistema.'
+      "
+    >
+      @if (hayFiltrosActivos) {
+        <button type="button" class="btn btn--secundario" (click)="limpiarFiltros()">
+          Quitar filtros
+        </button>
+      }
+    </ute-vacio>
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla tabla--clicable">
+        <caption class="sr-solo">
+          Listado de personas con su estado de validacion
+        </caption>
+        <thead>
+          <tr>
+            <th role="button" tabindex="0" (click)="ordenar('cedula')" (keydown.enter)="ordenar('cedula')">
+              Cedula
+            </th>
+            <th role="button" tabindex="0" (click)="ordenar('apellidos')" (keydown.enter)="ordenar('apellidos')">
+              Nombre
+            </th>
+            <th>Vinculacion</th>
+            <th role="button" tabindex="0" (click)="ordenar('unidad')" (keydown.enter)="ordenar('unidad')">
+              Unidad
+            </th>
+            <th class="centro" role="button" tabindex="0" (click)="ordenar('titulos')" (keydown.enter)="ordenar('titulos')">
+              Titulos
+            </th>
+            <th>Ultima consulta</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (persona of datos().items; track persona.id) {
+            <tr (click)="abrir(persona)" [class.fila--inactiva]="!persona.activo">
+              <td class="mono">{{ persona.cedula }}</td>
+              <td>
+                <span class="negrita">{{ persona.apellidos }}</span>,
+                {{ persona.nombres }}
+                @if (!persona.activo) {
+                  <span class="texto-xs texto-tenue"> · inactiva</span>
+                }
+              </td>
+              <td class="texto-sm">{{ ETIQUETAS_VINCULACION[persona.tipoVinculacion] }}</td>
+              <td class="truncar texto-sm texto-suave">{{ persona.unidad || '—' }}</td>
+              <td class="centro">
+                @if (persona.titulosRegistrados === 0) {
+                  <span class="texto-tenue">0</span>
+                } @else {
+                  <span class="negrita">{{ persona.titulosRegistrados }}</span>
+                }
+              </td>
+              <td class="texto-sm texto-suave">{{ persona.ultimaConsultaEn | desdeHace }}</td>
+              <td>
+                <ute-insignia [texto]="etiquetaEstado(persona)" [tono]="tonoEstado(persona)" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>

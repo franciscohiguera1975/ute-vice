@@ -1,0 +1,82 @@
+.miga {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--texto-tenue);
+}
+
+.encabezado { align-items: flex-start; margin-bottom: 1.25rem; }
+.encabezado p { max-width: 60ch; }
+
+.filtros { margin-bottom: 1rem; }
+
+.rejilla--filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+.campo--acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vacio { text-align: center; padding: 2.5rem 1rem; }
+
+.marca-cambios {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--aviso);
+  background: var(--aviso-suave);
+  border-radius: 999px;
+}
+
+.tabla--captura { font-size: 0.82rem; }
+.tabla--captura td { vertical-align: top; }
+.bloque { display: block; }
+
+.col-num { width: 3rem; text-align: right; color: var(--texto-tenue); }
+.col-horas { width: 5.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.col-copiar { width: 3rem; text-align: center; }
+
+.entrada-asignatura {
+  width: 100%;
+  min-width: 14rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.fila--editada { background: var(--azul-50); }
+.fila--editada .entrada-asignatura { border-color: var(--azul-600); }
+
+.pie-tabla { margin: 0; padding: 0.6rem 1.15rem; }
+
+/* La tabla es larga: el guardado viaja con el scroll para no tener que volver
+   arriba después de capturar cincuenta filas. */
+.barra-guardado {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.7rem 1.15rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-2);
+}
+.barra-guardado--activa { border-color: var(--azul-600); }
+
+@media (width <= 700px) {
+  .col-horas,
+  .col-copiar { display: none; }
+}

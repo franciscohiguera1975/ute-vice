@@ -1,0 +1,258 @@
+@if (cargando()) {
+  <ute-cargando mensaje="Cargando expediente…" />
+} @else if (detalle(); as d) {
+  <!-- ------------------------------------------------------- encabezado --- -->
+  <nav class="miga no-imprimir" aria-label="Ruta de navegacion">
+    <a routerLink="/personas">Personas</a>
+    <span aria-hidden="true">/</span>
+    <span>{{ d.persona.nombreCompleto }}</span>
+  </nav>
+
+  <header class="fila entre envolver hueco encabezado">
+    <div>
+      <h1>{{ d.persona.nombreCompleto }}</h1>
+      <p class="fila hueco-sm envolver texto-sm texto-suave">
+        <span class="mono">{{ d.persona.cedula }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ ETIQUETAS.vinculacion[d.persona.tipoVinculacion] }}</span>
+        @if (d.persona.unidad) {
+          <span aria-hidden="true">·</span>
+          <span>{{ d.persona.unidad }}</span>
+        }
+        @if (!d.persona.activo) {
+          <ute-insignia texto="Inactiva" tono="neutro" />
+        }
+      </p>
+    </div>
+
+    <div class="fila hueco-sm envolver no-imprimir">
+      <button
+        *utePermiso="Permiso.CONSULTAS_EJECUTAR"
+        type="button"
+        class="btn btn--primario"
+        [disabled]="consultando() || !d.persona.activo"
+        (click)="consultar()"
+      >
+        {{ consultando() ? 'Consultando…' : 'Consultar al registro nacional' }}
+      </button>
+      <a
+        *utePermiso="Permiso.PERSONAS_ESCRIBIR"
+        [routerLink]="['/personas', d.persona.id, 'editar']"
+        class="btn btn--secundario"
+      >
+        Editar
+      </a>
+      <button
+        *utePermiso="Permiso.PERSONAS_ELIMINAR"
+        type="button"
+        class="btn btn--fantasma"
+        (click)="confirmarEliminar.set(true)"
+      >
+        Eliminar
+      </button>
+    </div>
+  </header>
+
+  <div class="rejilla disposicion">
+    <!-- --------------------------------------------------------- datos --- -->
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Datos personales</h2>
+      </div>
+      <dl class="datos">
+        <div class="datos__par">
+          <dt>Cedula</dt>
+          <dd class="mono">{{ d.persona.cedula }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Correo institucional</dt>
+          <dd>{{ d.persona.emailInstitucional || '—' }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Correo personal</dt>
+          <dd>{{ d.persona.emailPersonal || '—' }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Telefono</dt>
+          <dd>{{ d.persona.telefono || '—' }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Cargo</dt>
+          <dd>{{ d.persona.cargo || '—' }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Codigo de empleado</dt>
+          <dd class="mono">{{ d.persona.codigoEmpleado || '—' }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Fecha de ingreso</dt>
+          <dd>{{ d.persona.fechaIngreso | fechaLocal }}</dd>
+        </div>
+        @if (d.persona.observaciones) {
+          <div class="datos__par datos__par--ancho">
+            <dt>Observaciones</dt>
+            <dd>{{ d.persona.observaciones }}</dd>
+          </div>
+        }
+      </dl>
+    </section>
+
+    <!-- ------------------------------------------------------ consultas --- -->
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Estado de validacion</h2>
+      </div>
+      <dl class="datos">
+        <div class="datos__par">
+          <dt>Ultima consulta</dt>
+          <dd>
+            {{ d.persona.ultimaConsultaEn | fechaLocal: true }}
+            <span class="texto-xs texto-tenue">
+              ({{ d.persona.ultimaConsultaEn | desdeHace }})
+            </span>
+          </dd>
+        </div>
+        <div class="datos__par">
+          <dt>Resultado</dt>
+          <dd>
+            @if (d.persona.ultimaConsultaEstado; as estado) {
+              {{ ETIQUETAS.estadoConsulta[estado] }}
+            } @else {
+              <span class="texto-tenue">Nunca consultada</span>
+            }
+          </dd>
+        </div>
+        <div class="datos__par">
+          <dt>Ultima consulta exitosa</dt>
+          <dd>{{ d.persona.ultimaConsultaExitosaEn | fechaLocal: true }}</dd>
+        </div>
+        <div class="datos__par">
+          <dt>Total de consultas</dt>
+          <dd class="mono">{{ d.persona.totalConsultas }}</dd>
+        </div>
+      </dl>
+
+      <div class="tarjeta__cuerpo">
+        <a
+          [routerLink]="['/consultas/logs']"
+          [queryParams]="{ personaId: d.persona.id }"
+          class="btn btn--secundario btn--sm btn--bloque"
+        >
+          Ver historico completo de consultas
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <!-- --------------------------------------------------------- titulos --- -->
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">
+        Titulos vigentes
+        <span class="texto-sm texto-tenue">({{ titulosVigentes().length }})</span>
+      </h2>
+    </div>
+
+    @if (titulosVigentes().length === 0) {
+      <ute-vacio
+        titulo="Sin titulos registrados"
+        descripcion="No se han obtenido titulos para esta persona. Ejecute una consulta al registro nacional o registrelos manualmente."
+        icono="◇"
+      />
+    } @else {
+      <ul class="titulos">
+        @for (titulo of titulosVigentes(); track titulo.id) {
+          <li class="titulo">
+            <div class="titulo__principal">
+              <p class="titulo__denominacion">{{ titulo.denominacion }}</p>
+              <p class="titulo__institucion texto-sm texto-suave">{{ titulo.institucion }}</p>
+              <div class="fila hueco-sm envolver titulo__meta texto-xs texto-tenue">
+                <span>{{ ETIQUETAS.nivel[titulo.nivel] }}</span>
+                @if (titulo.numeroRegistro) {
+                  <span aria-hidden="true">·</span>
+                  <span class="mono">Reg. {{ titulo.numeroRegistro }}</span>
+                }
+                @if (titulo.fechaRegistro) {
+                  <span aria-hidden="true">·</span>
+                  <span>{{ titulo.fechaRegistro | fechaLocal }}</span>
+                }
+                <span aria-hidden="true">·</span>
+                <span>{{ ETIQUETAS.origen[titulo.origen] }}</span>
+              </div>
+            </div>
+
+            <div class="titulo__acciones fila hueco-sm">
+              <ute-insignia
+                [texto]="ETIQUETAS.estadoTitulo[titulo.estado]"
+                [tono]="TONO_ESTADO_TITULO[titulo.estado]"
+              />
+              @if (titulo.verificado) {
+                <ute-insignia texto="Verificado" tono="info" titulo="Revisado por un funcionario" />
+              } @else if (titulo.origen === OrigenTitulo.MANUAL) {
+                <button
+                  *utePermiso="Permiso.TITULOS_VERIFICAR"
+                  type="button"
+                  class="btn btn--secundario btn--sm no-imprimir"
+                  (click)="verificarTitulo(titulo)"
+                >
+                  Verificar
+                </button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  @if (titulosRetirados().length > 0) {
+    <section class="tarjeta tarjeta--alerta seccion">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">
+          Titulos retirados
+          <span class="texto-sm texto-tenue">({{ titulosRetirados().length }})</span>
+        </h2>
+      </div>
+      <p class="aviso-retirados">
+        Estos titulos figuraban en consultas anteriores y ya no aparecen en el
+        registro nacional. No se eliminan: quedan como evidencia para revision.
+      </p>
+      <ul class="titulos">
+        @for (titulo of titulosRetirados(); track titulo.id) {
+          <li class="titulo">
+            <div class="titulo__principal">
+              <p class="titulo__denominacion">{{ titulo.denominacion }}</p>
+              <p class="titulo__institucion texto-sm texto-suave">{{ titulo.institucion }}</p>
+              <p class="texto-xs texto-tenue">
+                Retirado el {{ titulo.retiradoEn | fechaLocal: true }}
+              </p>
+            </div>
+            <ute-insignia texto="Retirado" tono="error" />
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}
+
+<!-- ------------------------------------------------------------ dialogos --- -->
+<ute-confirmar
+  [abierto]="confirmarConsultaForzada()"
+  titulo="Esta persona ya fue consultada"
+  mensaje="Ya se consulto dentro del periodo de cobertura vigente. Repetirla consume presupuesto de consultas y altera el reparto de carga que calculo el planificador."
+  advertencia="Use esta opcion solo si tiene un motivo concreto, por ejemplo una correccion reciente en el registro nacional."
+  textoConfirmar="Consultar de todos modos"
+  (confirmar)="consultar(true)"
+  (cancelar)="confirmarConsultaForzada.set(false)"
+/>
+
+<ute-confirmar
+  [abierto]="confirmarEliminar()"
+  titulo="Eliminar persona"
+  mensaje="Esta accion es irreversible. Solo es posible si la persona no tiene titulos ni historico de consultas."
+  advertencia="Si tiene expediente, desactivela en lugar de eliminarla para conservar la trazabilidad."
+  textoConfirmar="Eliminar"
+  [peligroso]="true"
+  (confirmar)="eliminar()"
+  (cancelar)="confirmarEliminar.set(false)"
+/>

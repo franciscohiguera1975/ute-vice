@@ -1,0 +1,262 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Administracion</h1>
+    <p class="texto-sm texto-suave">Cuentas de acceso y asignacion de roles</p>
+  </div>
+  <button
+    *utePermiso="Permiso.USUARIOS_ESCRIBIR"
+    type="button"
+    class="btn btn--primario no-imprimir"
+    (click)="mostrarFormulario.set(!mostrarFormulario())"
+  >
+    Nuevo usuario
+  </button>
+</header>
+
+<nav class="submenu no-imprimir" aria-label="Secciones de administracion">
+  <a routerLink="/administracion/usuarios" routerLinkActive="submenu__enlace--activo" class="submenu__enlace">
+    Usuarios
+  </a>
+  <a routerLink="/administracion/roles" routerLinkActive="submenu__enlace--activo" class="submenu__enlace">
+    Roles y permisos
+  </a>
+</nav>
+
+@if (mostrarFormulario()) {
+  <section class="tarjeta seccion no-imprimir">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Nuevo usuario</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="u-email">Correo institucional</label>
+          <input id="u-email" type="email" [ngModel]="nuevoEmail()" (ngModelChange)="nuevoEmail.set($event)" />
+        </div>
+        <div class="campo">
+          <label class="campo__etiqueta" for="u-nombre">Nombre completo</label>
+          <input id="u-nombre" type="text" [ngModel]="nuevoNombre()" (ngModelChange)="nuevoNombre.set($event)" />
+        </div>
+        <div class="campo">
+          <label class="campo__etiqueta" for="u-clave">Contrasena provisional</label>
+          <input id="u-clave" type="password" autocomplete="new-password" [ngModel]="nuevaContrasena()" (ngModelChange)="nuevaContrasena.set($event)" />
+          <p class="campo__ayuda">
+            Minimo 10 caracteres con mayuscula, minuscula, digito y caracter
+            especial. El usuario debera cambiarla al ingresar.
+          </p>
+        </div>
+        <div class="campo">
+          <span class="campo__etiqueta">Roles</span>
+          @for (rol of roles(); track rol.codigo) {
+            <label class="casilla">
+              <input
+                type="checkbox"
+                [checked]="nuevosRoles().includes(rol.codigo)"
+                (change)="alternarRolNuevo(rol.codigo, $any($event.target).checked)"
+              />
+              <span>
+                {{ rol.nombre }}
+                <span class="campo__ayuda">{{ rol.descripcion }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="fila hueco-sm" style="justify-content: flex-end">
+        <button type="button" class="btn btn--secundario" (click)="mostrarFormulario.set(false)">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn--primario" [disabled]="guardando()" (click)="crear()">
+          {{ guardando() ? 'Creando…' : 'Crear usuario' }}
+        </button>
+      </div>
+    </div>
+  </section>
+}
+
+<section class="tarjeta">
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda-usuarios">Buscar usuarios</label>
+      <input
+        id="busqueda-usuarios"
+        type="search"
+        placeholder="Buscar por nombre o correo…"
+        [ngModel]="texto()"
+        (ngModelChange)="texto.set($event)"
+        (keydown.enter)="buscar()"
+      />
+    </div>
+
+    <select aria-label="Filtrar por rol" [ngModel]="filtroRol()" (ngModelChange)="filtroRol.set($event); buscar()">
+      <option value="">Todos los roles</option>
+      @for (rol of roles(); track rol.codigo) {
+        <option [value]="rol.codigo">{{ rol.nombre }}</option>
+      }
+    </select>
+
+    <select aria-label="Filtrar por estado" [ngModel]="filtroActivo()" (ngModelChange)="filtroActivo.set($event); buscar()">
+      <option value="">Activos e inactivos</option>
+      <option value="true">Solo activos</option>
+      <option value="false">Solo inactivos</option>
+    </select>
+
+    <button type="button" class="btn btn--secundario btn--sm" (click)="buscar()">Buscar</button>
+  </div>
+
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando usuarios…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio titulo="Sin usuarios" descripcion="No hay cuentas que coincidan con los filtros." icono="☰" />
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <caption class="sr-solo">Cuentas de usuario del sistema</caption>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Acceso</th>
+            @for (rol of roles(); track rol.codigo) {
+              <th class="centro">{{ rol.codigo }}</th>
+            }
+            <th>Ultimo acceso</th>
+            <th class="no-imprimir"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of datos().items; track usuario.id) {
+            <tr [class.fila--inactiva]="!usuario.activo">
+              <td>
+                <span class="negrita">{{ usuario.nombreCompleto }}</span>
+                @if (esUsuarioPropio(usuario)) {
+                  <span class="texto-xs texto-tenue"> · usted</span>
+                }
+                <p class="texto-xs texto-tenue">{{ usuario.email }}</p>
+              </td>
+              <td>
+                <div class="fila hueco-xs envolver">
+                  <ute-insignia [texto]="usuario.proveedor" tono="neutro" />
+                  @if (usuario.esSuperusuario) {
+                    <ute-insignia texto="Superusuario" tono="info" />
+                  }
+                  @if (!usuario.activo) {
+                    <ute-insignia texto="Inactiva" tono="error" />
+                  }
+                </div>
+              </td>
+
+              @for (rol of roles(); track rol.codigo) {
+                <td class="centro">
+                  <input
+                    type="checkbox"
+                    class="casilla-rol"
+                    [checked]="tieneRol(usuario, rol.codigo)"
+                    [disabled]="usuario.esSuperusuario || !sesion.puede(Permiso.USUARIOS_ESCRIBIR)"
+                    [attr.aria-label]="'Rol ' + rol.nombre + ' para ' + usuario.nombreCompleto"
+                    (change)="cambiarRoles(usuario, rol.codigo, $any($event.target).checked)"
+                  />
+                </td>
+              }
+
+              <td class="texto-sm texto-suave">{{ usuario.ultimoAcceso | desdeHace }}</td>
+              <td class="no-imprimir">
+                <div class="fila hueco-xs">
+                  <button
+                    *utePermiso="Permiso.USUARIOS_ESCRIBIR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm"
+                    [disabled]="usuario.proveedor !== 'LOCAL'"
+                    [title]="usuario.proveedor !== 'LOCAL' ? 'La contrasena se gestiona en el proveedor externo' : ''"
+                    (click)="usuarioAResetear.set(usuario)"
+                  >
+                    Contrasena
+                  </button>
+                  <button
+                    *utePermiso="Permiso.USUARIOS_ESCRIBIR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm"
+                    [disabled]="esUsuarioPropio(usuario) || usuario.esSuperusuario"
+                    (click)="alternarEstado(usuario)"
+                  >
+                    {{ usuario.activo ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button
+                    *utePermiso="Permiso.USUARIOS_ELIMINAR"
+                    type="button"
+                    class="btn btn--fantasma btn--sm texto-error"
+                    [disabled]="esUsuarioPropio(usuario) || usuario.esSuperusuario"
+                    (click)="usuarioAEliminar.set(usuario)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>
+
+<!-- ------------------------------------------------ restablecer contrasena --- -->
+@if (usuarioAResetear(); as usuario) {
+  <div class="velo" (click)="usuarioAResetear.set(null)">
+    <div class="dialogo" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2 class="dialogo__titulo">Restablecer contrasena</h2>
+      <p class="texto-sm texto-suave">
+        Se fijara una contrasena nueva para <span class="negrita">{{ usuario.nombreCompleto }}</span>,
+        se levantara cualquier bloqueo y se cerraran todas sus sesiones abiertas.
+      </p>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="clave-reset">Contrasena provisional</label>
+        <input
+          id="clave-reset"
+          type="password"
+          autocomplete="new-password"
+          [ngModel]="contrasenaNueva()"
+          (ngModelChange)="contrasenaNueva.set($event)"
+        />
+        <p class="campo__ayuda">
+          Minimo 10 caracteres con mayuscula, minuscula, digito y caracter especial.
+        </p>
+      </div>
+
+      <div class="dialogo__acciones">
+        <button type="button" class="btn btn--secundario" (click)="usuarioAResetear.set(null)">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn--primario"
+          [disabled]="contrasenaNueva().length < 10"
+          (click)="restablecer()"
+        >
+          Restablecer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<ute-confirmar
+  [abierto]="usuarioAEliminar() !== null"
+  titulo="Eliminar usuario"
+  mensaje="La cuenta se eliminara definitivamente."
+  advertencia="Prefiera desactivarla: los registros de auditoria referencian al usuario que ejecuto cada accion."
+  textoConfirmar="Eliminar"
+  [peligroso]="true"
+  (confirmar)="eliminar()"
+  (cancelar)="usuarioAEliminar.set(null)"
+/>
