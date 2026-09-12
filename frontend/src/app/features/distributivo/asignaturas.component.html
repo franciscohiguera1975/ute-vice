@@ -10,7 +10,8 @@
     <p class="texto-sm texto-suave">
       Este dato no viene del distributivo: el consolidado reparte horas por tipo de
       actividad, no por materia. Se captura aquí y de aquí lo toma el reporte
-      institucional.
+      institucional. Si un docente imparte <span class="negrita">varias materias</span>
+      en el mismo registro, sepárelas por comas: así salen luego en el reporte.
     </p>
   </div>
   <a routerLink="/distributivo/reporte" class="btn btn--fantasma btn--sm">Ir a exportar</a>
@@ -146,8 +147,9 @@
                 <input
                   type="text"
                   class="entrada-asignatura"
-                  maxlength="320"
+                  maxlength="800"
                   list="asignaturas-conocidas"
+                  placeholder="Cálculo I, Álgebra Lineal"
                   [attr.aria-label]="'Asignatura de ' + fila.docenteNombre"
                   [ngModel]="valorDe(fila)"
                   (ngModelChange)="escribir(fila.id, $event)"

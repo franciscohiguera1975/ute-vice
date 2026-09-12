@@ -17,6 +17,7 @@ Dos entidades:
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -145,11 +146,16 @@ class FilaDistributivo:
     #: porque el reporte institucional la exige; mientras nadie la complete,
     #: viaja vacia al Excel en lugar de rellenarse con un dato inventado.
     #:
-    #: Apunta al catalogo y no es texto libre: el mismo nombre escrito de dos
+    #: Apuntan al catalogo y no son texto libre: el mismo nombre escrito de dos
     #: formas en cien filas se corrige una sola vez, en el catalogo, en lugar
     #: de cien. La pantalla de captura sigue admitiendo texto y crea el
     #: elemento cuando no existe, para no volver lenta la carga masiva.
-    asignatura_id: UUID | None = None
+    #:
+    #: Son **varias**: un docente puede dictar mas de una materia en la misma
+    #: carrera y periodo, y el consolidado no las distingue —reparte horas por
+    #: tipo de actividad, no por materia—, asi que la fila es una sola y las
+    #: asignaturas, muchas. El orden se conserva: es el que se escribio.
+    asignaturas_ids: list[UUID] = field(default_factory=list)
 
     horas: DistribucionHoras = field(default_factory=DistribucionHoras.vacia)
 
@@ -183,17 +189,26 @@ class FilaDistributivo:
         Es lo que el reporte institucional deja en blanco, asi que sirve para
         saber cuanto falta por completar antes de emitirlo.
         """
-        return self.horas.total_docencia > 0 and self.asignatura_id is None
+        return self.horas.total_docencia > 0 and not self.asignaturas_ids
 
     # ------------------------------------------------------------ mutaciones
-    def definir_asignatura(self, asignatura_id: UUID | None) -> None:
-        """Fija la asignatura, o la retira con `None`.
+    def definir_asignaturas(self, asignaturas_ids: Iterable[UUID]) -> None:
+        """Reemplaza las asignaturas. Una lista vacia las retira todas.
 
-        Va aparte de `actualizar` porque alli un `None` significa «no lo
-        cambies», y aqui tiene que significar «borralo»: sin este metodo no
-        habria forma de quitar una asignatura mal asignada.
+        Va aparte de `actualizar` porque alli un valor ausente significa «no lo
+        cambies», y aqui una lista vacia tiene que significar «quitalas»: sin
+        este metodo no habria forma de corregir una asignacion equivocada.
+
+        Conserva el orden y descarta repetidas: escribir «Calculo, Calculo» no
+        deja la materia dos veces en la misma fila.
         """
-        self.asignatura_id = asignatura_id
+        vistas: set[UUID] = set()
+        unicas: list[UUID] = []
+        for asignatura_id in asignaturas_ids:
+            if asignatura_id not in vistas:
+                vistas.add(asignatura_id)
+                unicas.append(asignatura_id)
+        self.asignaturas_ids = unicas
         self.actualizado_en = ahora_utc()
 
     def actualizar(
@@ -207,7 +222,7 @@ class FilaDistributivo:
         dedicacion_id: UUID | None = None,
         categoria_id: UUID | None = None,
         tipo_titulo_id: UUID | None = None,
-        asignatura_id: UUID | None = None,
+        asignaturas_ids: Iterable[UUID] | None = None,
         horas: DistribucionHoras | None = None,
         medida: str | None = None,
         observaciones: str | None = None,
@@ -233,8 +248,8 @@ class FilaDistributivo:
             self.categoria_id = categoria_id
         if tipo_titulo_id is not None:
             self.tipo_titulo_id = tipo_titulo_id
-        if asignatura_id is not None:
-            self.asignatura_id = asignatura_id
+        if asignaturas_ids is not None:
+            self.definir_asignaturas(asignaturas_ids)
         if horas is not None:
             self.horas = horas
         if medida is not None:
@@ -250,6 +265,35 @@ class FilaDistributivo:
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+
+def separar_asignaturas(crudo: str | None) -> list[str]:
+    """Parte «Calculo I, Algebra Lineal» en materias individuales.
+
+    La coma es el separador porque es el que pide el reporte: cuando una fila
+    tiene varias materias, salen todas en la misma celda separadas por comas.
+    Usar el mismo signo para entrar y para salir evita que quien captura tenga
+    que recordar dos convenciones.
+
+    **El limite de esto**: una materia cuyo nombre lleve una coma se parte en
+    dos. Para esos casos esta el selector del formulario, que elige del
+    catalogo y no interpreta el texto.
+    """
+    if not crudo:
+        return []
+
+    limpias: list[str] = []
+    vistas: set[str] = set()
+    for parte in str(crudo).split(","):
+        normalizada = " ".join(parte.split())
+        if not normalizada:
+            continue
+        clave = normalizar_texto(normalizada)
+        if clave in vistas:
+            continue
+        vistas.add(clave)
+        limpias.append(normalizada)
+    return limpias
 
 
 def separar_titulos(crudo: str | None) -> list[str]:

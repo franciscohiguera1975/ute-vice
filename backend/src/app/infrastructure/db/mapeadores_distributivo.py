@@ -103,7 +103,6 @@ def fila_a_dominio(modelo: FilaDistributivoModel) -> FilaDistributivo:
         dedicacion_id=modelo.dedicacion_id,
         categoria_id=modelo.categoria_id,
         tipo_titulo_id=modelo.tipo_titulo_id,
-        asignatura_id=modelo.asignatura_id,
         horas=DistribucionHoras(
             docencia=dict(modelo.horas_docencia or {}),
             gestion=dict(modelo.horas_gestion or {}),
@@ -132,7 +131,6 @@ def fila_a_modelo(
     modelo.dedicacion_id = entidad.dedicacion_id
     modelo.categoria_id = entidad.categoria_id
     modelo.tipo_titulo_id = entidad.tipo_titulo_id
-    modelo.asignatura_id = entidad.asignatura_id
 
     modelo.horas_docencia = entidad.horas.docencia
     modelo.horas_gestion = entidad.horas.gestion

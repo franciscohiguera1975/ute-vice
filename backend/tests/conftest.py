@@ -496,6 +496,10 @@ class RepoDistributivo:
     async def obtener(self, fila_id: UUID):  # type: ignore[no-untyped-def]
         return self.datos.get(fila_id)
 
+    async def _guardar_asignaturas(self, filas):  # type: ignore[no-untyped-def]
+        """En memoria la lista ya viaja en la entidad: no hay nada que enlazar."""
+        return None
+
     async def obtener_resuelta(self, fila_id: UUID):  # type: ignore[no-untyped-def]
         from app.domain.ports.distributivo import FilaDistributivoResuelta
 

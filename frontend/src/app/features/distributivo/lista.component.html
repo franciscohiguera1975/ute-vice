@@ -183,8 +183,8 @@
               <td class="texto-sm">{{ fila.sede || '—' }}</td>
               <td class="texto-sm">{{ fila.categoria || '—' }}</td>
               <td class="texto-sm">
-                @if (fila.asignatura) {
-                  {{ fila.asignatura }}
+                @if (fila.asignaturas.length) {
+                  {{ fila.asignaturas.join(', ') }}
                 } @else if (fila.requiereAsignatura) {
                   <ute-insignia texto="Pendiente" tono="aviso" titulo="Dicta clase y no tiene asignatura registrada" />
                 } @else {
@@ -250,27 +250,47 @@
           identidad de la fila.
         </p>
 
-        <!-- Asignatura -->
-        <div class="campo">
-          <label class="campo__etiqueta" for="ed-asignatura">Asignatura que imparte</label>
-          <select
-            id="ed-asignatura"
-            [ngModel]="selecciones()['asignaturaId'] ?? ''"
-            (ngModelChange)="fijarSeleccion('asignaturaId', $event)"
-          >
-            <option value="">— Sin asignatura —</option>
-            @for (o of catalogos.de(TipoCatalogo.ASIGNATURA); track o.id) {
-              <option [value]="o.id">{{ o.nombre }}</option>
-            }
-          </select>
+        <!-- Asignaturas: una fila puede tener varias -->
+        <fieldset class="campo">
+          <legend class="fila entre envolver hueco-sm">
+            <span class="campo__etiqueta">Asignaturas que imparte</span>
+            <span class="texto-xs texto-tenue">
+              {{ asignaturasEditadas().length }} seleccionada(s)
+            </span>
+          </legend>
           <p class="campo__ayuda">
             No viene del consolidado: el distributivo reparte horas por tipo de actividad,
-            no por materia. El reporte institucional la exige, así que se captura aparte.
-            Para agregar una que no esté en la lista, use
-            <a routerLink="/distributivo/asignaturas">Asignaturas</a>: allí se escribe y
-            se crea sola en el catálogo.
+            no por materia. Puede marcar <span class="negrita">varias</span>; en el reporte
+            salen todas en una celda, separadas por comas. Para agregar una que no esté en
+            la lista, use <a routerLink="/distributivo/asignaturas">Asignaturas</a>: allí se
+            escribe y se crea sola en el catálogo.
           </p>
-        </div>
+          <input
+            type="search"
+            class="filtro-asignatura"
+            placeholder="Filtrar materias…"
+            [ngModel]="filtroAsignatura()"
+            (ngModelChange)="filtroAsignatura.set($event)"
+            aria-label="Filtrar la lista de materias"
+          />
+          <div class="lista-asignaturas" role="group" aria-label="Materias de la fila">
+            @for (o of asignaturasOfrecidas(); track o.id) {
+              <label class="opcion-asignatura" [class.opcion-asignatura--activa]="asignaturasEditadas().includes(o.id)">
+                <input
+                  type="checkbox"
+                  [checked]="asignaturasEditadas().includes(o.id)"
+                  (change)="alternarAsignatura(o.id, $any($event.target).checked)"
+                />
+                <span>{{ o.nombre }}</span>
+              </label>
+            } @empty {
+              <p class="texto-sm texto-tenue">
+                El catálogo de materias está vacío. Se llena al capturarlas en
+                <a routerLink="/distributivo/asignaturas">Asignaturas</a>.
+              </p>
+            }
+          </div>
+        </fieldset>
 
         <!-- Selectores -->
         <fieldset class="grupo">

@@ -15,6 +15,17 @@ import { CargandoComponent } from '@shared/componentes/cargando.component';
 
 import { CatalogosStore } from '@core/catalogos.store';
 
+/**
+ * Las materias de una fila como una sola cadena.
+ *
+ * Es la forma en que se escriben y la misma con que salen en el reporte: una
+ * celda con todas separadas por comas. Usar el mismo signo para entrar y para
+ * salir evita tener que recordar dos convenciones.
+ */
+function textoDe(fila: FilaDistributivo): string {
+  return fila.asignaturas.join(', ');
+}
+
 /** Cuántas filas se capturan de una vez. El backend admite hasta 500. */
 const TAMANO_TANDA = 100;
 
@@ -61,7 +72,7 @@ export class AsignaturasComponent {
     const cambios = this.editado();
     return this.filas().filter((f) => {
       const valor = cambios[f.id];
-      return valor !== undefined && valor !== (f.asignatura ?? '');
+      return valor !== undefined && valor !== textoDe(f);
     });
   });
 
@@ -115,12 +126,12 @@ export class AsignaturasComponent {
   }
 
   protected valorDe(fila: FilaDistributivo): string {
-    return this.editado()[fila.id] ?? fila.asignatura ?? '';
+    return this.editado()[fila.id] ?? textoDe(fila);
   }
 
   protected estaEditada(fila: FilaDistributivo): boolean {
     const valor = this.editado()[fila.id];
-    return valor !== undefined && valor !== (fila.asignatura ?? '');
+    return valor !== undefined && valor !== textoDe(fila);
   }
 
   /**

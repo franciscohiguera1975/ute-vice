@@ -251,7 +251,7 @@ class TestFilaDistributivo:
     ) -> None:
         """Es lo que el reporte institucional deja en blanco."""
         assert fila.requiere_asignatura
-        fila.definir_asignatura(uuid4())
+        fila.definir_asignaturas([uuid4()])
         assert not fila.requiere_asignatura
 
     def test_una_fila_sin_docencia_no_requiere_asignatura(self) -> None:
@@ -266,22 +266,33 @@ class TestFilaDistributivo:
         )
         assert not fila.requiere_asignatura
 
-    def test_definir_asignatura_con_none_la_retira(self, fila: FilaDistributivo) -> None:
-        """`actualizar` no puede hacerlo: alli `None` significa «no cambies»."""
-        asignatura = uuid4()
-        fila.definir_asignatura(asignatura)
-        assert fila.asignatura_id == asignatura
+    def test_una_fila_admite_varias_asignaturas(self, fila: FilaDistributivo) -> None:
+        """Un docente dicta mas de una materia en la misma carrera y periodo."""
+        a, b = uuid4(), uuid4()
+        fila.definir_asignaturas([a, b])
+        assert fila.asignaturas_ids == [a, b]
+        assert not fila.requiere_asignatura
 
-        fila.definir_asignatura(None)
-        assert fila.asignatura_id is None
+    def test_definir_asignaturas_conserva_el_orden_y_descarta_repetidas(
+        self, fila: FilaDistributivo
+    ) -> None:
+        """El orden es el que se escribio, y es el que sale en el reporte."""
+        a, b = uuid4(), uuid4()
+        fila.definir_asignaturas([b, a, b])
+        assert fila.asignaturas_ids == [b, a]
+
+    def test_una_lista_vacia_retira_todas(self, fila: FilaDistributivo) -> None:
+        """`actualizar` no puede hacerlo: alli lo ausente significa «no cambies»."""
+        fila.definir_asignaturas([uuid4()])
+        fila.definir_asignaturas([])
+        assert fila.asignaturas_ids == []
         assert fila.requiere_asignatura
 
-    def test_actualizar_no_retira_la_asignatura(self, fila: FilaDistributivo) -> None:
-        """Un `None` en `actualizar` deja el campo como estaba, no lo borra."""
+    def test_actualizar_no_retira_las_asignaturas(self, fila: FilaDistributivo) -> None:
         asignatura = uuid4()
-        fila.definir_asignatura(asignatura)
+        fila.definir_asignaturas([asignatura])
         fila.actualizar(medida="NO APLICA")
-        assert fila.asignatura_id == asignatura
+        assert fila.asignaturas_ids == [asignatura]
 
     def test_actualizar_recalcula_los_totales(self, fila: FilaDistributivo) -> None:
         fila.actualizar(horas=DistribucionHoras.desde_plano({"Da": 1.0}))

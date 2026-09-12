@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Integer, Select, cast, delete, func, or_, select
+from sqlalchemy import Integer, Select, cast, delete, func, literal_column, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -39,6 +39,7 @@ from app.infrastructure.db.modelos_distributivo import (
     TipoTituloModel,
     TitularidadModel,
     TituloProfesionalModel,
+    distributivo_asignaturas,
     docente_titulos,
 )
 
@@ -66,7 +67,6 @@ _CODIGOS_ORIGEN: tuple[Any, ...] = (
     CategoriaModel.codigo,
     TipoTituloModel.codigo,
     GeneroModel.codigo,
-    AsignaturaModel.codigo,
 )
 
 _NOMBRES_CODIGOS_ORIGEN: tuple[str, ...] = (
@@ -78,8 +78,51 @@ _NOMBRES_CODIGOS_ORIGEN: tuple[str, ...] = (
     "codigo_categoria",
     "codigo_tipo_titulo",
     "codigo_genero",
-    "codigo_asignatura",
 )
+
+
+def _ids_de_asignaturas() -> Any:
+    """Identificadores de las asignaturas de la fila, en su orden.
+
+    Van ademas de los nombres porque la entidad los necesita: sin ellos,
+    `requiere_asignatura` diria que falta la materia en una fila que si la
+    tiene, y guardar esa entidad borraria los enlaces.
+    """
+    return (
+        select(
+            func.array_agg(
+                aggregate_order_by(
+                    distributivo_asignaturas.c.asignatura_id,
+                    distributivo_asignaturas.c.orden,
+                )
+            )
+        )
+        .select_from(distributivo_asignaturas)
+        .where(distributivo_asignaturas.c.fila_id == FilaDistributivoModel.id)
+        .correlate(FilaDistributivoModel)
+        .scalar_subquery()
+    )
+
+
+def _asignaturas_de_la_fila() -> Any:
+    """Asignaturas de una fila como arreglo, en el orden en que se escribieron.
+
+    Subconsulta correlacionada y no `JOIN`: una fila con tres materias
+    multiplicaria por tres las filas del distributivo y habria que reagruparlas
+    despues.
+    """
+    return (
+        select(
+            func.array_agg(
+                aggregate_order_by(AsignaturaModel.nombre, distributivo_asignaturas.c.orden)
+            )
+        )
+        .select_from(distributivo_asignaturas)
+        .join(AsignaturaModel, AsignaturaModel.id == distributivo_asignaturas.c.asignatura_id)
+        .where(distributivo_asignaturas.c.fila_id == FilaDistributivoModel.id)
+        .correlate(FilaDistributivoModel)
+        .scalar_subquery()
+    )
 
 
 def _titulos_del_docente() -> Any:
@@ -415,7 +458,8 @@ class RepositorioDistributivoSQL:
                 CategoriaModel.nombre,
                 TipoTituloModel.nombre,
                 GeneroModel.nombre,
-                AsignaturaModel.nombre,
+                _asignaturas_de_la_fila(),
+                _ids_de_asignaturas(),
                 _titulos_del_docente(),
             )
             .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
@@ -431,7 +475,6 @@ class RepositorioDistributivoSQL:
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
             .outerjoin(GeneroModel, GeneroModel.id == DocenteModel.genero_id)
-            .outerjoin(AsignaturaModel, AsignaturaModel.id == FilaDistributivoModel.asignatura_id)
         )
 
     def _filtrar(self, consulta: Select[Any], filtro: FiltroDistributivo) -> Select[Any]:
@@ -470,7 +513,15 @@ class RepositorioDistributivoSQL:
         if filtro.sin_asignatura:
             # Filas que dictan clase pero nadie registro que asignatura: es lo
             # que queda en blanco en el reporte institucional.
-            consulta = consulta.where(f.total_docencia > 0, f.asignatura_id.is_(None))
+            # Sin ninguna asignatura enlazada. `NOT EXISTS` y no un `LEFT JOIN`
+            # con `IS NULL`: la fila puede tener varias y basta con que no
+            # tenga ninguna.
+            consulta = consulta.where(
+                f.total_docencia > 0,
+                ~select(distributivo_asignaturas.c.fila_id)
+                .where(distributivo_asignaturas.c.fila_id == f.id)
+                .exists(),
+            )
         if filtro.con_carga is not None:
             consulta = consulta.where(f.total_horas > 0 if filtro.con_carga else f.total_horas == 0)
 
@@ -488,13 +539,16 @@ class RepositorioDistributivoSQL:
 
     @staticmethod
     def _a_resuelta(fila: Any, *, con_codigos: bool = False) -> FilaDistributivoResuelta:
+        entidad = m.fila_a_dominio(fila[0])
+        # La entidad no las trae del modelo: viven en la tabla de union.
+        entidad.asignaturas_ids = list(fila[14] or ())
         codigos: dict[str, Any] = {}
         if con_codigos:
             # Las anaden `add_columns` en `filas_resueltas`, despues de las
-            # quince de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
-            codigos = {nombre: fila[15 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
+            # dieciseis de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
+            codigos = {nombre: fila[16 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
         return FilaDistributivoResuelta(
-            fila=m.fila_a_dominio(fila[0]),
+            fila=entidad,
             docente_identificacion=fila[1],
             docente_nombre=fila[2],
             pao=fila[3],
@@ -507,15 +561,28 @@ class RepositorioDistributivoSQL:
             categoria=fila[10],
             tipo_titulo=fila[11],
             genero=fila[12],
-            asignatura=fila[13],
-            titulos=tuple(fila[14] or ()),
+            asignaturas=tuple(fila[13] or ()),
+            titulos=tuple(fila[15] or ()),
             **codigos,
         )
 
     # ------------------------------------------------------------- lectura
     async def obtener(self, fila_id: UUID) -> FilaDistributivo | None:
-        fila = await self._s.get(FilaDistributivoModel, fila_id)
-        return m.fila_a_dominio(fila) if fila else None
+        modelo = await self._s.get(FilaDistributivoModel, fila_id)
+        if modelo is None:
+            return None
+
+        fila = m.fila_a_dominio(modelo)
+        # Las asignaturas viven en la tabla de union: sin esta consulta, la
+        # entidad saldria sin ellas y guardarla las borraria.
+        fila.asignaturas_ids = list(
+            await self._s.scalars(
+                select(distributivo_asignaturas.c.asignatura_id)
+                .where(distributivo_asignaturas.c.fila_id == fila_id)
+                .order_by(distributivo_asignaturas.c.orden)
+            )
+        )
+        return fila
 
     async def obtener_resuelta(self, fila_id: UUID) -> FilaDistributivoResuelta | None:
         resultado = (
@@ -554,9 +621,32 @@ class RepositorioDistributivoSQL:
         )
 
     # ------------------------------------------------------------ escritura
+    async def _guardar_asignaturas(self, filas: list[FilaDistributivo]) -> None:
+        """Reemplaza las asignaturas enlazadas por las de las entidades.
+
+        Se borra y se vuelve a insertar en lugar de comparar: la lista tiene
+        dos o tres elementos y el orden importa, asi que reconstruirla sale mas
+        barato y mas claro que averiguar que cambio.
+        """
+        ids = [f.id for f in filas]
+        if not ids:
+            return
+
+        await self._s.execute(
+            delete(distributivo_asignaturas).where(distributivo_asignaturas.c.fila_id.in_(ids))
+        )
+        enlaces = [
+            {"fila_id": fila.id, "asignatura_id": asignatura_id, "orden": orden}
+            for fila in filas
+            for orden, asignatura_id in enumerate(fila.asignaturas_ids)
+        ]
+        if enlaces:
+            await self._s.execute(distributivo_asignaturas.insert(), enlaces)
+
     async def agregar(self, fila: FilaDistributivo) -> FilaDistributivo:
         self._s.add(m.fila_a_modelo(fila))
         await self._s.flush()
+        await self._guardar_asignaturas([fila])
         return fila
 
     async def agregar_muchas(self, filas: list[FilaDistributivo]) -> int:
@@ -564,6 +654,7 @@ class RepositorioDistributivoSQL:
             return 0
         self._s.add_all([m.fila_a_modelo(f) for f in filas])
         await self._s.flush()
+        await self._guardar_asignaturas(filas)
         return len(filas)
 
     async def actualizar(self, fila: FilaDistributivo) -> FilaDistributivo:
@@ -572,6 +663,7 @@ class RepositorioDistributivoSQL:
             raise ValueError(f"Fila de distributivo inexistente: {fila.id}")
         m.fila_a_modelo(fila, modelo)
         await self._s.flush()
+        await self._guardar_asignaturas([fila])
         return fila
 
     async def eliminar(self, fila_id: UUID) -> None:
@@ -620,7 +712,11 @@ class RepositorioDistributivoSQL:
                         func.sum(
                             func.cast(
                                 (FilaDistributivoModel.total_docencia > 0)
-                                & (FilaDistributivoModel.asignatura_id.is_(None)),
+                                & ~select(distributivo_asignaturas.c.fila_id)
+                                .where(
+                                    distributivo_asignaturas.c.fila_id == FilaDistributivoModel.id
+                                )
+                                .exists(),
                                 Integer,
                             )
                         ).label("sin_asignatura"),
@@ -776,7 +872,28 @@ class RepositorioDistributivoSQL:
                 DocenteModel.identificacion,
                 primer_titulo.label("titulo_profesional"),
                 func.coalesce(TipoTituloModel.nombre, ultimo_grado).label("grado"),
-                AsignaturaModel.nombre.label("asignatura"),
+                # Todas las materias de la fila en una sola celda, separadas por
+                # comas: es lo que pide la columna «Asignatura que imparte» del
+                # reporte institucional.
+                func.coalesce(
+                    select(
+                        func.string_agg(
+                            AsignaturaModel.nombre,
+                            aggregate_order_by(
+                                literal_column("', '"), distributivo_asignaturas.c.orden
+                            ),
+                        )
+                    )
+                    .select_from(distributivo_asignaturas)
+                    .join(
+                        AsignaturaModel,
+                        AsignaturaModel.id == distributivo_asignaturas.c.asignatura_id,
+                    )
+                    .where(distributivo_asignaturas.c.fila_id == FilaDistributivoModel.id)
+                    .correlate(FilaDistributivoModel)
+                    .scalar_subquery(),
+                    "",
+                ).label("asignatura"),
                 anio_inicio.label("anio_inicio"),
                 CategoriaModel.nombre.label("categoria"),
                 DedicacionModel.nombre.label("dedicacion"),
@@ -799,7 +916,6 @@ class RepositorioDistributivoSQL:
             .outerjoin(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
-            .outerjoin(AsignaturaModel, AsignaturaModel.id == FilaDistributivoModel.asignatura_id)
         )
         consulta = self._filtrar(consulta, filtro).order_by(
             CarreraModel.nombre, DocenteModel.nombre_completo

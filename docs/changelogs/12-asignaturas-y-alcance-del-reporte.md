@@ -4,12 +4,27 @@
 
 Cinco cambios pedidos tras revisar la aplicacion ya publicada.
 
-## 1. «Asignatura que imparte» es un catalogo
+## 1. «Asignatura que imparte» es un catalogo, y son varias por fila
 
 Era texto libre en cada fila. Escrita a mano sobre cientos de registros, la
 misma materia acababa con tres grafias y corregirlas obligaba a tocar fila por
-fila. Ahora es el catalogo numero trece, con clave foranea: se corrige una vez
-y cambia en todas.
+fila. Ahora es un catalogo con tabla de union: se corrige una vez y cambia en
+todas.
+
+**Una fila admite varias materias.** Un docente dicta mas de una en la misma
+carrera y periodo, y el consolidado no las distingue —reparte horas por tipo de
+actividad, no por materia—, asi que la fila sigue siendo una y las asignaturas
+pasan a ser muchas. El orden se conserva: es el que se escribio, y es el que
+sale despues en el reporte.
+
+En la columna «Asignatura que imparte» del reporte, una fila con varias materias
+las lleva **todas en la misma celda, separadas por comas**. El mismo signo sirve
+para entrar y para salir, de modo que quien captura no tiene que recordar dos
+convenciones.
+
+> **El limite de eso**: una materia cuyo nombre lleve una coma se partiria en
+> dos al escribirla. Para esos casos esta el formulario del distributivo, que
+> marca de una lista y no interpreta el texto.
 
 **La captura masiva sigue siendo por texto.** Obligar a elegir de una lista que
 empieza vacia no seria capturar nada: la pantalla manda el nombre, el caso de

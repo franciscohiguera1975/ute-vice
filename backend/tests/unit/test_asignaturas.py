@@ -7,6 +7,9 @@ captura a mano sobre cientos de filas. De ahi que se guarde por tandas.
 La pantalla manda **texto** y el caso de uso lo resuelve contra el catalogo,
 creando el elemento si no existe: obligar a elegir de una lista que empieza
 vacia no seria capturar nada.
+
+Una fila admite **varias** materias, separadas por comas: es el mismo signo con
+que salen despues en la celda del reporte.
 """
 
 from __future__ import annotations
@@ -33,12 +36,10 @@ def contexto_admin(roles):  # type: ignore[no-untyped-def]
     )
 
 
-def _nombre_asignatura(uow, fila_id):  # type: ignore[no-untyped-def]
-    """El texto de la asignatura enlazada, o `None` si no tiene."""
-    asignatura_id = uow.distributivo.datos[fila_id].asignatura_id
-    if asignatura_id is None:
-        return None
-    return uow.catalogos.datos[TipoCatalogo.ASIGNATURA][asignatura_id].nombre
+def _nombres_asignaturas(uow, fila_id):  # type: ignore[no-untyped-def]
+    """Los textos de las asignaturas enlazadas, en orden."""
+    catalogo = uow.catalogos.datos[TipoCatalogo.ASIGNATURA]
+    return [catalogo[i].nombre for i in uow.distributivo.datos[fila_id].asignaturas_ids]
 
 
 def _con_asignatura(uow, texto):  # type: ignore[no-untyped-def]
@@ -73,8 +74,8 @@ async def test_guarda_la_tanda_completa(uow, contexto_admin) -> None:  # type: i
     )
 
     assert resultado.actualizadas == 2
-    assert _nombre_asignatura(uow, a.id) == "CALCULO I"
-    assert _nombre_asignatura(uow, b.id) == "FISICA"
+    assert _nombres_asignaturas(uow, a.id) == ["CALCULO I"]
+    assert _nombres_asignaturas(uow, b.id) == ["FISICA"]
     assert uow.commits == 1
 
     # Ninguna de las dos existia: el catalogo se poblo solo.
@@ -84,7 +85,7 @@ async def test_guarda_la_tanda_completa(uow, contexto_admin) -> None:  # type: i
 async def test_no_toca_lo_que_no_cambia(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
     """El texto resuelve al mismo elemento: no hay nada que guardar."""
     asignatura_id = _con_asignatura(uow, "CALCULO I")
-    fila = _fila(uow, asignatura_id=asignatura_id)
+    fila = _fila(uow, asignaturas_ids=[asignatura_id])
 
     resultado = await CapturarAsignaturas(uow)(
         [AsignaturaDeFila(fila_id=fila.id, asignatura="  CALCULO   I ")],
@@ -110,7 +111,9 @@ async def test_dos_grafias_del_mismo_nombre_son_una_sola(uow, contexto_admin) ->
 
     assert resultado.actualizadas == 2
     assert resultado.asignaturas_creadas == 1
-    assert uow.distributivo.datos[a.id].asignatura_id == uow.distributivo.datos[b.id].asignatura_id
+    assert (
+        uow.distributivo.datos[a.id].asignaturas_ids == uow.distributivo.datos[b.id].asignaturas_ids
+    )
     assert len(uow.catalogos.datos[TipoCatalogo.ASIGNATURA]) == 1
 
 
@@ -124,13 +127,13 @@ async def test_reutiliza_lo_que_ya_esta_en_el_catalogo(uow, contexto_admin) -> N
     )
 
     assert resultado.asignaturas_creadas == 0
-    assert uow.distributivo.datos[fila.id].asignatura_id == existente
+    assert uow.distributivo.datos[fila.id].asignaturas_ids == [existente]
 
 
-async def test_texto_vacio_retira_la_asignatura(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
-    """Retira el enlace, sin borrar la asignatura del catalogo."""
+async def test_texto_vacio_retira_las_asignaturas(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]
+    """Retira los enlaces, sin borrar la asignatura del catalogo."""
     asignatura_id = _con_asignatura(uow, "CALCULO I")
-    fila = _fila(uow, asignatura_id=asignatura_id)
+    fila = _fila(uow, asignaturas_ids=[asignatura_id])
 
     resultado = await CapturarAsignaturas(uow)(
         [AsignaturaDeFila(fila_id=fila.id, asignatura="")],
@@ -138,8 +141,37 @@ async def test_texto_vacio_retira_la_asignatura(uow, contexto_admin) -> None:  #
     )
 
     assert resultado.actualizadas == 1
-    assert uow.distributivo.datos[fila.id].asignatura_id is None
+    assert uow.distributivo.datos[fila.id].asignaturas_ids == []
     assert len(uow.catalogos.datos[TipoCatalogo.ASIGNATURA]) == 1
+
+
+async def test_una_fila_admite_varias_materias_separadas_por_comas(  # type: ignore[no-untyped-def]
+    uow, contexto_admin
+) -> None:
+    """Es el mismo signo con que salen despues en la celda del reporte."""
+    fila = _fila(uow)
+
+    resultado = await CapturarAsignaturas(uow)(
+        [AsignaturaDeFila(fila_id=fila.id, asignatura="Calculo I, Algebra Lineal, Fisica")],
+        contexto_admin,
+    )
+
+    assert resultado.actualizadas == 1
+    assert resultado.asignaturas_creadas == 3
+    assert _nombres_asignaturas(uow, fila.id) == ["Calculo I", "Algebra Lineal", "Fisica"]
+
+
+async def test_la_misma_materia_repetida_en_el_texto_entra_una_vez(  # type: ignore[no-untyped-def]
+    uow, contexto_admin
+) -> None:
+    fila = _fila(uow)
+
+    await CapturarAsignaturas(uow)(
+        [AsignaturaDeFila(fila_id=fila.id, asignatura="Calculo I, CALCULO   I, Fisica")],
+        contexto_admin,
+    )
+
+    assert _nombres_asignaturas(uow, fila.id) == ["Calculo I", "Fisica"]
 
 
 async def test_aborta_entera_si_una_fila_no_existe(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]

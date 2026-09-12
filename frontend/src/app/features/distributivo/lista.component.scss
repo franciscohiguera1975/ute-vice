@@ -142,3 +142,35 @@
 @media (width <= 640px) {
   .filtros select { max-width: none; flex: 1 1 100%; }
 }
+
+
+/* ------------------------------------------- materias de la fila --- */
+/* Una fila puede tener varias: casillas y no un desplegable, porque hay que
+   ver de un vistazo cuales estan marcadas. */
+.filtro-asignatura {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+
+.lista-asignaturas {
+  max-height: 13rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.opcion-asignatura {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.82rem;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+}
+.opcion-asignatura:hover { background: var(--superficie-2); }
+.opcion-asignatura--activa { background: var(--azul-50); font-weight: 500; }
+.opcion-asignatura input { width: auto; margin-top: 0.15rem; flex-shrink: 0; }

@@ -91,7 +91,9 @@ class FilaDistributivoResuelta:
     categoria: str | None = None
     tipo_titulo: str | None = None
     genero: str | None = None
-    asignatura: str | None = None
+
+    #: Nombres de las asignaturas de la fila, en el orden en que se escribieron.
+    asignaturas: tuple[str, ...] = ()
 
     #: Titulos profesionales del docente, en el orden del origen. Van en la fila
     #: y no en el docente porque quien exporta el consolidado necesita la fila
@@ -109,7 +111,6 @@ class FilaDistributivoResuelta:
     codigo_categoria: str | None = None
     codigo_tipo_titulo: str | None = None
     codigo_genero: str | None = None
-    codigo_asignatura: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -208,6 +208,30 @@ usuario_facultades = _tabla_alcance("usuario_facultades", "facultad_id", "cat_fa
 usuario_carreras = _tabla_alcance("usuario_carreras", "carrera_id", "cat_carreras")
 
 
+#: Asignaturas de una fila del distributivo.
+#:
+#: Es una tabla de union y no una columna porque un docente dicta mas de una
+#: materia en la misma carrera y periodo. `orden` conserva como se escribieron,
+#: que es como salen despues en la celda del reporte.
+distributivo_asignaturas = Table(
+    "distributivo_asignaturas",
+    Base.metadata,
+    Column(
+        "fila_id",
+        PgUUID(as_uuid=True),
+        ForeignKey("distributivo.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "asignatura_id",
+        PgUUID(as_uuid=True),
+        ForeignKey("cat_asignaturas.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("orden", Integer, nullable=False, default=0),
+)
+
+
 docente_titulos = Table(
     "docente_titulos",
     Base.metadata,
@@ -342,16 +366,6 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     )
     tipo_titulo_id: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("cat_tipos_titulo.id", ondelete="SET NULL")
-    )
-
-    #: No viene del consolidado: el distributivo reparte horas por tipo de
-    #: actividad, no por materia. Se captura a mano porque el reporte
-    #: institucional la exige.
-    #:
-    #: `SET NULL` como el resto de catalogos: borrar una asignatura del
-    #: catalogo no debe llevarse por delante la carga horaria de nadie.
-    asignatura_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("cat_asignaturas.id", ondelete="SET NULL")
     )
 
     #: Detalle de horas por subactividad, en cuatro bloques. Va en JSONB y no en

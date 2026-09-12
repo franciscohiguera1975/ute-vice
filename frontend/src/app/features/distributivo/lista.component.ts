@@ -77,6 +77,10 @@ export class ListaDistributivoComponent {
   protected readonly horas = signal<Record<string, number>>({});
   protected readonly selecciones = signal<Record<string, string>>({});
 
+  /** Materias de la fila en edicion. Van aparte porque son varias. */
+  protected readonly asignaturasEditadas = signal<readonly string[]>([]);
+  protected readonly filtroAsignatura = signal('');
+
   protected readonly aEliminar = signal<FilaDistributivo | null>(null);
 
   /** Total en vivo mientras se editan las horas. */
@@ -188,6 +192,8 @@ export class ListaDistributivoComponent {
   protected abrirEdicion(fila: FilaDistributivo): void {
     this.editando.set(fila);
     this.observaciones.set(fila.observaciones ?? '');
+    this.asignaturasEditadas.set([...fila.asignaturasIds]);
+    this.filtroAsignatura.set('');
     this.horas.set({
       ...fila.horas.docencia,
       ...fila.horas.gestion,
@@ -203,8 +209,20 @@ export class ListaDistributivoComponent {
       dedicacionId: fila.dedicacionId ?? '',
       categoriaId: fila.categoriaId ?? '',
       tipoTituloId: fila.tipoTituloId ?? '',
-      asignaturaId: fila.asignaturaId ?? '',
     });
+  }
+
+  protected alternarAsignatura(id: string, marcada: boolean): void {
+    this.asignaturasEditadas.update((lista) =>
+      marcada ? [...new Set([...lista, id])] : lista.filter((a) => a !== id),
+    );
+  }
+
+  /** Catalogo de materias, acotado por el buscador del formulario. */
+  protected asignaturasOfrecidas(): readonly { id: string; nombre: string }[] {
+    const patron = this.filtroAsignatura().trim().toLowerCase();
+    const todas = this.catalogos.de(TipoCatalogo.ASIGNATURA);
+    return patron ? todas.filter((a) => a.nombre.toLowerCase().includes(patron)) : todas;
   }
 
   protected cerrarEdicion(): void {
@@ -240,7 +258,7 @@ export class ListaDistributivoComponent {
         dedicacionId: opcional('dedicacionId'),
         categoriaId: opcional('categoriaId'),
         tipoTituloId: opcional('tipoTituloId'),
-        asignaturaId: opcional('asignaturaId'),
+        asignaturasIds: this.asignaturasEditadas(),
         observaciones: this.observaciones().trim() || null,
         horas: this.horas(),
       })

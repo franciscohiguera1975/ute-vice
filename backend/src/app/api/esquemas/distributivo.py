@@ -212,8 +212,8 @@ class FilaDistributivoSalida(EsquemaBase):
     tipo_titulo_id: UUID | None
     tipo_titulo: str | None
 
-    asignatura_id: UUID | None
-    asignatura: str | None
+    asignaturas_ids: list[UUID]
+    asignaturas: list[str]
     requiere_asignatura: bool
     horas: HorasSalida
     total_horas: float
@@ -247,8 +247,8 @@ class FilaDistributivoSalida(EsquemaBase):
             categoria=r.categoria,
             tipo_titulo_id=f.tipo_titulo_id,
             tipo_titulo=r.tipo_titulo,
-            asignatura_id=f.asignatura_id,
-            asignatura=r.asignatura,
+            asignaturas_ids=list(f.asignaturas_ids),
+            asignaturas=list(r.asignaturas),
             requiere_asignatura=f.requiere_asignatura,
             horas=HorasSalida.desde(f.horas),
             total_horas=f.total_horas,
@@ -269,7 +269,7 @@ class FilaDistributivoCrear(EsquemaBase):
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura_id: UUID | None = None
+    asignaturas_ids: list[UUID] = Field(default_factory=list)
     horas: dict[str, float] = Field(
         default_factory=dict,
         description="Horas por subactividad: Da..Dn, Ga..Gn, Ia..Ij, Va..Vi",
@@ -287,7 +287,7 @@ class FilaDistributivoActualizar(EsquemaBase):
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura_id: UUID | None = None
+    asignaturas_ids: list[UUID] | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None
     observaciones: str | None = None
@@ -329,10 +329,12 @@ class AsignaturaCapturada(EsquemaBase):
     fila_id: UUID
     asignatura: str = Field(
         default="",
-        max_length=400,
+        # Varias materias en una sola cadena: 400 se quedaba corto en cuanto
+        # una fila tiene tres o cuatro.
+        max_length=800,
         description=(
-            "Nombre de la asignatura. Se resuelve contra el catalogo y se agrega "
-            "si no existe. Texto vacio retira la asignatura registrada."
+            "Una o varias asignaturas separadas por comas. Se resuelven contra el "
+            "catalogo y se agregan las que no existan. Texto vacio las retira."
         ),
     )
 

@@ -170,8 +170,9 @@ export interface FilaDistributivo {
   readonly tipoTituloId: string | null;
   readonly tipoTitulo: string | null;
 
-  readonly asignaturaId: string | null;
-  readonly asignatura: string | null;
+  readonly asignaturasIds: readonly string[];
+  /** Nombres de las materias, en el orden en que se escribieron. */
+  readonly asignaturas: readonly string[];
   /** `true` si dicta clase pero nadie registro que asignatura. */
   readonly requiereAsignatura: boolean;
   readonly horas: Horas;
@@ -210,7 +211,7 @@ export interface DatosFilaDistributivo {
   readonly dedicacionId?: string | null;
   readonly categoriaId?: string | null;
   readonly tipoTituloId?: string | null;
-  readonly asignaturaId?: string | null;
+  readonly asignaturasIds?: readonly string[];
   readonly horas?: Record<string, number>;
   readonly medida?: string | null;
   readonly observaciones?: string | null;
@@ -298,7 +299,7 @@ export interface VistaPreviaReporte {
 /** Una asignatura capturada para una fila del distributivo. */
 export interface AsignaturaCapturada {
   readonly filaId: string;
-  /** Texto vacio borra la asignatura registrada. */
+  /** Una o varias materias separadas por comas. Vacio las retira todas. */
   readonly asignatura: string;
 }
 

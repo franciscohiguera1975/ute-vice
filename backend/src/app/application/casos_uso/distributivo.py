@@ -7,7 +7,7 @@ from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
-from app.domain.entities.distributivo import FilaDistributivo
+from app.domain.entities.distributivo import FilaDistributivo, separar_asignaturas
 from app.domain.enums import Permiso
 from app.domain.errors import ErrorValidacion, FueraDeAlcance, NoEncontrado, YaExiste
 from app.domain.ports.distributivo import (
@@ -38,7 +38,7 @@ class EntradaCrearFila:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura_id: UUID | None = None
+    asignaturas_ids: list[UUID] = field(default_factory=list)
     horas: dict[str, float] = field(default_factory=dict)
     medida: str | None = None
     observaciones: str | None = None
@@ -55,7 +55,7 @@ class EntradaActualizarFila:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
-    asignatura_id: UUID | None = None
+    asignaturas_ids: list[UUID] | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None
     observaciones: str | None = None
@@ -78,7 +78,6 @@ _REFERENCIAS_OPCIONALES: tuple[tuple[str, TipoCatalogo], ...] = (
     ("dedicacion_id", TipoCatalogo.DEDICACION),
     ("categoria_id", TipoCatalogo.CATEGORIA),
     ("tipo_titulo_id", TipoCatalogo.TIPO_TITULO),
-    ("asignatura_id", TipoCatalogo.ASIGNATURA),
 )
 
 
@@ -251,7 +250,7 @@ class CrearFilaDistributivo(CasoDeUso[EntradaCrearFila, FilaDistributivo]):
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
-                asignatura_id=entrada.asignatura_id,
+                asignaturas_ids=list(entrada.asignaturas_ids),
                 horas=horas,
                 medida=entrada.medida,
                 observaciones=entrada.observaciones,
@@ -315,7 +314,7 @@ class ActualizarFilaDistributivo(CasoDeUso[EntradaActualizarFila, FilaDistributi
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
-                asignatura_id=entrada.asignatura_id,
+                asignaturas_ids=entrada.asignaturas_ids,
                 horas=horas,
                 medida=entrada.medida,
                 observaciones=entrada.observaciones,
@@ -454,12 +453,12 @@ class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsig
                 # cientos de filas obligando a elegir de una lista que empieza
                 # vacia no seria capturar nada. El texto se resuelve contra el
                 # catalogo y, si no existe, se agrega.
-                asignatura_id = await self._resolver(item.asignatura)
-                if asignatura_id == fila.asignatura_id:
+                asignaturas_ids = await self._resolver(item.asignatura)
+                if asignaturas_ids == fila.asignaturas_ids:
                     sin_cambios += 1
                     continue
 
-                fila.definir_asignatura(asignatura_id)
+                fila.definir_asignaturas(asignaturas_ids)
                 await self._uow.distributivo.actualizar(fila)
                 actualizadas += 1
 
@@ -471,23 +470,25 @@ class CapturarAsignaturas(CasoDeUso[list[AsignaturaDeFila], ResultadoCapturaAsig
             asignaturas_creadas=len(self._creadas),
         )
 
-    async def _resolver(self, texto: str) -> UUID | None:
-        """Texto → elemento del catalogo. Vacio retira la asignatura.
+    async def _resolver(self, texto: str) -> list[UUID]:
+        """«Calculo I, Algebra» → los elementos del catalogo. Vacio las retira.
 
         Busca por codigo, que es el texto en mayusculas: asi «Calculo I» y
         «CALCULO I» son la misma asignatura y no dos entradas distintas.
         """
-        limpio = " ".join(texto.split())
-        if not limpio:
-            return None
+        ids: list[UUID] = []
+        for nombre in separar_asignaturas(texto):
+            codigo = nombre.upper()
+            existente = await self._uow.catalogos.obtener_por_codigo(
+                TipoCatalogo.ASIGNATURA, codigo
+            )
+            if existente is not None:
+                ids.append(existente.id)
+                continue
 
-        codigo = limpio.upper()
-        existente = await self._uow.catalogos.obtener_por_codigo(TipoCatalogo.ASIGNATURA, codigo)
-        if existente is not None:
-            return existente.id
-
-        creada = await self._uow.catalogos.agregar(
-            ElementoCatalogo(tipo=TipoCatalogo.ASIGNATURA, codigo=codigo, nombre=limpio)
-        )
-        self._creadas.add(creada.id)
-        return creada.id
+            creada = await self._uow.catalogos.agregar(
+                ElementoCatalogo(tipo=TipoCatalogo.ASIGNATURA, codigo=codigo, nombre=nombre)
+            )
+            self._creadas.add(creada.id)
+            ids.append(creada.id)
+        return ids
