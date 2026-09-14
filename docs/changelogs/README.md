@@ -32,3 +32,4 @@ pendiente.
 | [12](12-asignaturas-y-alcance-del-reporte.md) | Catalogo de asignaturas, seleccion multiple y personas | ✅ |
 | [13](13-periodos-academicos-por-nivel.md) | Cada semestre son tres periodos academicos | ✅ |
 | [14](14-sesion-expirada.md) | La sesion expirada vuelve al acceso | ✅ |
+| [15](15-materias-por-docente.md) | Las materias que imparte cada docente | ✅ |

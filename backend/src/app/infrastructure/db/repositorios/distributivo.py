@@ -773,6 +773,52 @@ class RepositorioDistributivoSQL:
         )
         return dict((await self._s.execute(consulta)).all())  # type: ignore[arg-type]
 
+    async def indice_para_materias(self) -> list[tuple[UUID, str, str]]:
+        """`(fila_id, identificacion, codigo_del_periodo)` de todas las filas.
+
+        Se devuelve plano y sin agrupar: quien importa materias necesita
+        indexarlo por docente y semestre, pero esa decision es suya. Aqui solo
+        se evita hacer quince mil consultas —una por fila— para lo que cabe en
+        una.
+        """
+        consulta = (
+            select(FilaDistributivoModel.id, DocenteModel.identificacion, PaoModel.codigo)
+            .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
+            .join(PaoModel, PaoModel.id == FilaDistributivoModel.pao_id)
+        )
+        return [(f[0], f[1], f[2]) for f in (await self._s.execute(consulta)).all()]
+
+    async def enlazar_asignaturas(self, enlaces: dict[UUID, list[UUID]]) -> int:
+        """Reemplaza las asignaturas de las filas indicadas.
+
+        Reemplaza y no agrega: volver a cargar el mismo reporte tiene que dejar
+        el mismo resultado, no duplicar los enlaces. Las filas que no aparecen
+        en `enlaces` no se tocan.
+        """
+        if not enlaces:
+            return 0
+
+        ids = list(enlaces)
+        # En lotes: `IN` con quince mil parametros supera el limite del
+        # protocolo de PostgreSQL, que admite 65.535 por sentencia.
+        for inicio in range(0, len(ids), 5_000):
+            await self._s.execute(
+                delete(distributivo_asignaturas).where(
+                    distributivo_asignaturas.c.fila_id.in_(ids[inicio : inicio + 5_000])
+                )
+            )
+
+        registros = [
+            {"fila_id": fila_id, "asignatura_id": asignatura_id, "orden": orden}
+            for fila_id, asignaturas in enlaces.items()
+            for orden, asignatura_id in enumerate(asignaturas)
+        ]
+        for inicio in range(0, len(registros), 5_000):
+            await self._s.execute(
+                distributivo_asignaturas.insert(), registros[inicio : inicio + 5_000]
+            )
+        return len(registros)
+
     async def carreras_presentes(self, filtro: FiltroDistributivo) -> list[ElementoCatalogo]:
         consulta = (
             select(CarreraModel)

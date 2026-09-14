@@ -91,3 +91,58 @@ class LectorDistributivo(Protocol):
     def leer(self, ruta: str, *, hoja: str | None = None) -> list[FilaCrudaDistributivo]:
         """Lanza `ErrorValidacion` si el archivo no tiene la estructura esperada."""
         ...
+
+
+# ---------------------------------------------------------------------------
+# Materias que imparte cada docente
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class FilaCrudaMateria:
+    """Una materia dictada por un docente en un periodo, tal como viene.
+
+    El origen es el reporte del SICAF agregado por docente: no trae carrera ni
+    sede, solo el semestre. Por eso `semestre` es el grano de union con el
+    distributivo, y la ambiguedad —un docente con filas en varias carreras el
+    mismo semestre— se resuelve en el caso de uso.
+    """
+
+    numero_fila: int
+    semestre: str
+    codigo_periodo: str
+    identificacion: str
+    nombre_docente: str
+    materia: str
+
+
+@dataclass(frozen=True, slots=True)
+class MateriaSinDestino:
+    """Una materia que no encontro fila del distributivo a la que enlazarse.
+
+    Se informa en lugar de descartarse en silencio: que un docente aparezca
+    dictando y no conste en el distributivo del periodo es justamente lo que
+    interesa detectar.
+    """
+
+    identificacion: str
+    nombre_docente: str
+    semestre: str
+    materias: int
+
+
+@dataclass(slots=True)
+class ResultadoImportacionMaterias:
+    """Informe de la carga de materias."""
+
+    total_filas_leidas: int = 0
+    asignaturas_creadas: int = 0
+    asignaturas_existentes: int = 0
+    filas_enlazadas: int = 0
+    enlaces_creados: int = 0
+    semestres_sin_periodo: dict[str, int] = field(default_factory=dict)
+    sin_destino: list[MateriaSinDestino] = field(default_factory=list)
+
+    @property
+    def materias_sin_destino(self) -> int:
+        return sum(m.materias for m in self.sin_destino)

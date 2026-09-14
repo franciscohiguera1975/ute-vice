@@ -19,6 +19,7 @@ Tres decisiones de normalizacion, tomadas al contrastar el consolidado historico
 
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from uuid import UUID
@@ -133,7 +134,7 @@ def _codigo_de_periodo(fila: FilaCrudaDistributivo) -> str:
     return PeriodoAcademico(semestre.anio, semestre.periodo, nivel).codigo
 
 
-class _Catalogos:
+class CacheDeCatalogos:
     """Cache de los doce catalogos durante una importacion.
 
     Resuelve codigo → id en memoria. Sin ella, una carga de 15.000 filas haria
@@ -175,6 +176,10 @@ class _Catalogos:
         self.creados[tipo.value] += 1
         return elemento.id
 
+    def conocidas(self, tipo: TipoCatalogo) -> int:
+        """Cuantos elementos de ese catalogo existian al cargar."""
+        return len(self._por_tipo[tipo]) - self.creados[tipo.value]
+
     def conoce(self, tipo: TipoCatalogo, codigo: str | None) -> bool:
         if not codigo:
             return True
@@ -186,15 +191,41 @@ class _Catalogos:
             self._nuevos = []
 
 
+#: Palabras del titulo que van en minuscula salvo al principio.
+_MENORES = {"DE", "EN", "Y", "DEL", "LA", "EL", "LOS", "LAS", "CON", "A", "POR"}
+
+#: Numerales romanos hasta XXXIX, que es de sobra para niveles de asignatura.
+#: Se limita a `IVX` a proposito: con `LCDM` entrarian siglas como `CD` o `MD`.
+_ROMANO = re.compile(r"^[IVX]{1,6}$")
+
+#: Rachas de letras. Se opera sobre ellas y no sobre palabras separadas por
+#: espacios porque el origen escribe `II-AZOTEMIA AGUDA`, y capitalizar la
+#: palabra entera deja `Ii-azotemia`.
+_LETRAS = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+
 def _titulo_legible(codigo: str) -> str:
-    """`MAESTRÍA EN X` → `Maestría en X`, respetando las siglas cortas."""
+    """`MAESTRÍA EN X` → `Maestría en X`, respetando siglas y romanos.
+
+    Los numerales quedan como estan: una asignatura `CLINICA III` se lee mal
+    como `Clinica Iii`, y el reporte de materias trae cuatrocientas asi.
+    """
     if len(codigo) <= 6 and " " not in codigo:
         return codigo  # siglas de facultad: FCSEE, PEL, FO
-    menores = {"DE", "EN", "Y", "DEL", "LA", "EL", "LOS", "LAS", "CON", "A", "POR"}
-    palabras = codigo.split()
-    return " ".join(
-        p.capitalize() if i == 0 or p not in menores else p.lower() for i, p in enumerate(palabras)
-    )
+
+    primera = True
+
+    def convertir(encontrado: re.Match[str]) -> str:
+        nonlocal primera
+        palabra = encontrado.group(0)
+        al_principio, primera = primera, False
+        if _ROMANO.match(palabra):
+            return palabra
+        if not al_principio and palabra in _MENORES:
+            return palabra.lower()
+        return palabra.capitalize()
+
+    return _LETRAS.sub(convertir, codigo)
 
 
 class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDistributivo]):
@@ -221,7 +252,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         resultado = ResultadoImportacionDistributivo(total_filas_leidas=len(entrada.filas))
 
         async with self._uow:
-            catalogos = _Catalogos(self._uow)
+            catalogos = CacheDeCatalogos(self._uow)
             await catalogos.cargar()
 
             validas = self._validar(entrada, catalogos, resultado)
@@ -241,7 +272,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
     def _validar(
         self,
         entrada: EntradaImportacion,
-        catalogos: _Catalogos,
+        catalogos: CacheDeCatalogos,
         resultado: ResultadoImportacionDistributivo,
     ) -> list[FilaCrudaDistributivo]:
         validas: list[FilaCrudaDistributivo] = []
@@ -296,7 +327,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         return validas
 
     @staticmethod
-    def _primer_desconocido(fila: FilaCrudaDistributivo, catalogos: _Catalogos) -> str | None:
+    def _primer_desconocido(fila: FilaCrudaDistributivo, catalogos: CacheDeCatalogos) -> str | None:
         comprobaciones = (
             (TipoCatalogo.PAO, _codigo_de_periodo(fila)),
             (TipoCatalogo.FACULTAD, _normalizar(fila.facultad)),
@@ -313,7 +344,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
     async def _sincronizar_docentes(
         self,
         filas: list[FilaCrudaDistributivo],
-        catalogos: _Catalogos,
+        catalogos: CacheDeCatalogos,
         resultado: ResultadoImportacionDistributivo,
     ) -> dict[str, UUID]:
         """Crea los docentes que faltan y devuelve identificacion → id."""
@@ -369,7 +400,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         return por_identificacion
 
     @staticmethod
-    def _resolver_genero(catalogos: _Catalogos, codigo: str | None) -> UUID | None:
+    def _resolver_genero(catalogos: CacheDeCatalogos, codigo: str | None) -> UUID | None:
         if not codigo:
             return None
         return catalogos.resolver(
@@ -396,7 +427,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
     async def _crear_filas(
         self,
         filas: list[FilaCrudaDistributivo],
-        catalogos: _Catalogos,
+        catalogos: CacheDeCatalogos,
         docentes: dict[str, UUID],
         entrada: EntradaImportacion,
         contexto: ContextoEjecucion,
@@ -481,7 +512,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
             resultado.filas_creadas += await self._uow.distributivo.agregar_muchas(lote)
 
     @staticmethod
-    def _resolver_sede(catalogos: _Catalogos, sede: str | None) -> UUID | None:
+    def _resolver_sede(catalogos: CacheDeCatalogos, sede: str | None) -> UUID | None:
         codigo = _normalizar_sede(sede)
         if not codigo:
             return None

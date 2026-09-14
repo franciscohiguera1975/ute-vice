@@ -3,6 +3,7 @@
     python -m app.cli seed        # roles, permisos y superusuario inicial
     python -m app.cli seed-demo   # datos ficticios para probar la aplicacion
     python -m app.cli importar-distributivo <archivo.xlsx>   # consolidado real
+    python -m app.cli importar-materias <archivo.xlsx>       # materias por docente
     python -m app.cli limpiar     # mantenimiento: purga tokens vencidos
     python -m app.cli info        # configuracion efectiva, sin secretos
 
@@ -512,12 +513,78 @@ async def info() -> None:
 
 # ---------------------------------------------------------------------------
 
+
+async def importar_materias() -> None:
+    """Carga las materias que imparte cada docente desde un Excel.
+
+        python -m app.cli importar-materias ../data/materias/materias_docentes.xlsx [hoja]
+
+    Es idempotente: reemplaza las materias de cada fila que aparezca en el
+    reporte, de modo que volver a cargar el mismo archivo deja el mismo
+    resultado. Las filas que el reporte no menciona no se tocan.
+    """
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.importar_materias import (
+        EntradaImportacionMaterias,
+        ImportarMaterias,
+    )
+    from app.infrastructure.importadores.materias_excel import LectorMateriasExcel
+
+    if len(sys.argv) < 3:
+        print("  Uso: python -m app.cli importar-materias <archivo.xlsx> [hoja]")
+        sys.exit(1)
+
+    ruta = sys.argv[2]
+    hoja = sys.argv[3] if len(sys.argv) > 3 else None
+
+    contenedor = Contenedor(get_settings())
+    print(f"  leyendo {ruta}…")
+    filas = LectorMateriasExcel().leer(ruta, hoja=hoja)
+    print(f"  {len(filas):,} filas leidas".replace(",", "."))
+
+    caso = ImportarMaterias(contenedor.unidad_de_trabajo())
+    resultado = await caso(
+        EntradaImportacionMaterias(filas=tuple(filas)), ContextoEjecucion.sistema()
+    )
+
+    print()
+    print(f"  asignaturas nuevas       : {resultado.asignaturas_creadas:,}".replace(",", "."))
+    print(f"  asignaturas ya existentes: {resultado.asignaturas_existentes:,}".replace(",", "."))
+    print(f"  filas del distributivo   : {resultado.filas_enlazadas:,}".replace(",", "."))
+    print(f"  enlaces creados          : {resultado.enlaces_creados:,}".replace(",", "."))
+
+    if resultado.semestres_sin_periodo:
+        print("\n  sin periodo academico (no son un semestre):")
+        for semestre, cuantas in sorted(resultado.semestres_sin_periodo.items()):
+            print(f"      {semestre:12s} {cuantas:>6}")
+
+    if resultado.sin_destino:
+        total = f"{resultado.materias_sin_destino:,}".replace(",", ".")
+        print(
+            f"\n  SIN DESTINO: {total} materia(s) de {len(resultado.sin_destino)} "
+            "docente(s) que no constan en el distributivo de ese periodo"
+        )
+        for aviso in resultado.sin_destino[:10]:
+            print(
+                f"      {aviso.identificacion:12s} {aviso.semestre:8s} "
+                f"{aviso.nombre_docente[:34]:36s} {aviso.materias:>3} materia(s)"
+            )
+        if len(resultado.sin_destino) > 10:
+            print(f"      … y {len(resultado.sin_destino) - 10} mas")
+
+    await contenedor.cerrar()
+
+
 _COMANDOS = {
     "seed": (sembrar, "Crea permisos, roles y el superusuario inicial"),
     "seed-demo": (sembrar_demo, "Carga personas ficticias para pruebas"),
     "importar-distributivo": (
         importar_distributivo,
         "Carga un consolidado de distributivo desde un Excel",
+    ),
+    "importar-materias": (
+        importar_materias,
+        "Carga las materias que imparte cada docente desde un Excel",
     ),
     "vaciar-distributivo": (
         vaciar_distributivo,
@@ -542,7 +609,7 @@ def main() -> None:
     if len(sys.argv) < 2 or sys.argv[1] in {"-h", "--help", "help"}:
         print("\nComandos disponibles:\n")
         for nombre, (_, descripcion) in _COMANDOS.items():
-            print(f"  {nombre:12s} {descripcion}")
+            print(f"  {nombre:24s} {descripcion}")
         print("\nUso: python -m app.cli <comando>\n")
         sys.exit(0)
 

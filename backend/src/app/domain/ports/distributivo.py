@@ -261,6 +261,14 @@ class RepositorioDistributivo(Protocol):
 
     async def eliminar(self, fila_id: UUID) -> None: ...
 
+    async def indice_para_materias(self) -> list[tuple[UUID, str, str]]:
+        """`(fila_id, identificacion, codigo_del_periodo)` de todas las filas."""
+        ...
+
+    async def enlazar_asignaturas(self, enlaces: dict[UUID, list[UUID]]) -> int:
+        """Reemplaza las asignaturas de las filas indicadas. Devuelve enlaces creados."""
+        ...
+
     async def existe_combinacion(
         self,
         *,

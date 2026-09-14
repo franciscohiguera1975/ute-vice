@@ -492,6 +492,12 @@ class RepoDistributivo:
         self.ultimo_filtro: Any = None
         self.carreras: list[Any] = []
         self.unidades: dict[UUID, str] = {}
+        # Enlaces fila -> asignaturas, tal como los dejo `enlazar_asignaturas`.
+        self.asignaturas_enlazadas: dict[UUID, list[UUID]] = {}
+        # La unidad de trabajo se inyecta despues de construir los repositorios:
+        # el indice de materias necesita resolver docente y periodo, que viven
+        # en otros dos.
+        self.uow: Any = None
 
     async def obtener(self, fila_id: UUID):  # type: ignore[no-untyped-def]
         return self.datos.get(fila_id)
@@ -567,6 +573,23 @@ class RepoDistributivo:
     async def filas_resueltas(self, filtro):  # type: ignore[no-untyped-def]
         return list(self.resueltas)
 
+    async def indice_para_materias(self):  # type: ignore[no-untyped-def]
+        from app.domain.entities.catalogo import TipoCatalogo
+
+        indice = []
+        for fila in self.datos.values():
+            docente = self.uow.docentes.datos.get(fila.docente_id)
+            pao = self.uow.catalogos.datos[TipoCatalogo.PAO].get(fila.pao_id)
+            if docente is None or pao is None:
+                continue
+            indice.append((fila.id, docente.identificacion.valor, pao.codigo))
+        return indice
+
+    async def enlazar_asignaturas(self, enlaces) -> int:  # type: ignore[no-untyped-def]
+        for fila_id, asignaturas in enlaces.items():
+            self.asignaturas_enlazadas[fila_id] = list(asignaturas)
+        return sum(len(a) for a in enlaces.values())
+
 
 class UowFalsa:
     """Unidad de trabajo en memoria.
@@ -586,6 +609,7 @@ class UowFalsa:
         self.catalogos = RepoCatalogos()
         self.docentes = RepoDocentes()
         self.distributivo = RepoDistributivo()
+        self.distributivo.uow = self
         self.commits = 0
         self.rollbacks = 0
 

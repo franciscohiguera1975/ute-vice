@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12, 13 y 14 — cerradas
+### Fases 12 a 15 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -202,6 +202,17 @@ la renovacion automatica de sesion funciona por primera vez
 pruebas del frontend**; el orden de los interceptores vive en `INTERCEPTORES`
 —no en `app.config.ts`— porque es parte de su comportamiento y alli las pruebas
 lo cubren.
+
+**15**: las materias que imparte cada docente se cargan desde el reporte del
+SICAF ([changelog](changelogs/15-materias-por-docente.md)).
+
+> El origen agrupa por **docente y semestre**; el distributivo, por docente,
+> periodo, carrera y sede. Las materias se enlazan a **todas** las filas del
+> docente en ese semestre: el archivo no dice a que carrera pertenece cada una,
+> y repartirlas seria inventar la atribucion.
+>
+> Ojo con el **codigo de tecnologia**: el SICAF usa `55` y el sistema `15`. El
+> importador admite los dos; cual es el correcto sigue sin decidirse.
 
 ### Fase 14 — espera confirmacion funcional
 
