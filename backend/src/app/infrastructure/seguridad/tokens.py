@@ -58,7 +58,10 @@ class ServicioTokensJWT:
                 options={"require": ["exp", "iat", "sub"]},
             )
         except InvalidTokenError as exc:
-            raise TokenInvalido(str(exc)) from exc
+            # El texto de PyJWT —«Signature has expired»— no se propaga: acaba
+            # en la pantalla del usuario, en ingles y sin decirle que hacer. El
+            # motivo tecnico queda en el `raise ... from` para la traza.
+            raise TokenInvalido() from exc
 
         if cuerpo.get("tipo") != "access":
             # Un token de refresco no debe servir para autorizar peticiones.

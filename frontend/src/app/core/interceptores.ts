@@ -30,6 +30,24 @@ const RUTAS_PUBLICAS = ['/auth/login', '/auth/refrescar', '/auth/metodos', '/aut
 
 const esRutaPublica = (url: string): boolean => RUTAS_PUBLICAS.some((r) => url.includes(r));
 
+/**
+ * Reconoce un 401 venga como venga.
+ *
+ * Normalmente llega el `HttpErrorResponse` crudo, porque este interceptor va
+ * por dentro del de errores. Se admite tambien la forma ya normalizada porque
+ * lo contrario depende de un orden de registro que no se ve desde aqui: si
+ * alguien lo invierte, la sesion dejaria de renovarse y de redirigir al acceso
+ * **en silencio**, sin que fallara ninguna comprobacion.
+ */
+function esNoAutenticado(error: unknown): boolean {
+  if (error instanceof HttpErrorResponse) return error.status === 401;
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as Partial<ErrorApi>).estado === 401
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Renovacion de sesion
 // ---------------------------------------------------------------------------
@@ -62,8 +80,7 @@ export const interceptorAutenticacion: HttpInterceptorFn = (peticion, siguiente)
 
   return siguiente(conToken).pipe(
     catchError((error: unknown) => {
-      const es401 = error instanceof HttpErrorResponse && error.status === 401;
-      if (!es401) {
+      if (!esNoAutenticado(error)) {
         return throwError(() => error);
       }
 
@@ -197,3 +214,25 @@ function mensajePorEstado(estado: number): string {
   };
   return mensajes[estado] ?? `Error del servidor (${estado}).`;
 }
+
+// ---------------------------------------------------------------------------
+// Registro
+// ---------------------------------------------------------------------------
+
+/**
+ * Los interceptores, en el orden en que deben registrarse.
+ *
+ * El orden es parte del comportamiento y por eso vive junto a ellos: Angular
+ * aplica el arreglo al *salir* la peticion, asi que el primero queda por fuera
+ * y es el ultimo en ver el error al volver.
+ *
+ * `interceptorErrores` va primero para envolver al de autenticacion, que asi
+ * recibe el `HttpErrorResponse` original y puede reconocer el 401. Invertidos,
+ * le llegaba un objeto ya normalizado y ni la renovacion de sesion ni el
+ * redirigir al acceso se ejecutaban nunca —sin error visible: solo pantallas
+ * vacias con avisos tecnicos—.
+ */
+export const INTERCEPTORES: readonly HttpInterceptorFn[] = [
+  interceptorErrores,
+  interceptorAutenticacion,
+];

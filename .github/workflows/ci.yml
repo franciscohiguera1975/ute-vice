@@ -101,7 +101,7 @@ jobs:
 
   # -------------------------------------------------------------------
   frontend:
-    name: Frontend · compilacion
+    name: Frontend · pruebas y compilacion
     runs-on: ubuntu-latest
 
     steps:
@@ -116,6 +116,13 @@ jobs:
       - name: Dependencias
         working-directory: frontend
         run: npm ci --no-audit --no-fund
+
+      # Chrome ya viene en el runner de GitHub; solo hay que senalarlo.
+      - name: Pruebas
+        working-directory: frontend
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: npm run test:ci
 
       - name: Compilar
         working-directory: frontend

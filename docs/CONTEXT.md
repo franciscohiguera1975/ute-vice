@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 y 13 — cerradas
+### Fases 12, 13 y 14 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -195,6 +195,13 @@ posgrado—, con codigo institucional de seis digitos
 > Al tocar los periodos, recuerde que **`orden` no distingue el nivel** a
 > proposito: el reporte deriva el anio dividiendolo entre diez, y los tres
 > periodos de un semestre deben seguir dando el mismo anio.
+
+**14**: al caducar el token la aplicacion vuelve al acceso con un solo aviso, y
+la renovacion automatica de sesion funciona por primera vez
+([changelog](changelogs/14-sesion-expirada.md)). Trae ademas las **primeras
+pruebas del frontend**; el orden de los interceptores vive en `INTERCEPTORES`
+—no en `app.config.ts`— porque es parte de su comportamiento y alli las pruebas
+lo cubren.
 
 ### Fase 14 — espera confirmacion funcional
 
@@ -242,11 +249,19 @@ No los reintroduzcas. Estan documentados en el changelog de su fase:
     repetir el parametro, que es lo que espera FastAPI (Fase 12)
 21. Un `INSERT` de migracion reutilizando el mismo parametro en columnas de
     tipos distintos: el driver no puede deducir uno solo (Fase 13)
+22. Los interceptores HTTP registrados al reves: el de autenticacion recibia el
+    error ya normalizado, no reconocia el 401, y ni la renovacion de sesion ni
+    el redirigir al acceso se ejecutaron nunca (Fase 14)
 
 El octavo es el mas ilustrativo: un fallo en la ruta feliz de la configuracion
-de ejemplo, que solo aparecio al arrancar con un `.env` realista. Los dos
-ultimos son del mismo tipo: pruebas que pasaban por una razon distinta de la
-que se creia.
+de ejemplo, que solo aparecio al arrancar con un `.env` realista. El noveno, el
+decimo y el 18 son del mismo tipo: pruebas que pasaban por una razon distinta
+de la que se creia.
+
+El 22 es el unico que no producia sintoma alguno donde estaba el error —ni
+excepcion, ni aviso en consola, ni prueba en rojo—, solo pantallas vacias tres
+capas mas arriba. Codigo correcto, cableado al reves. Cuando algo «no hace
+nada», sospeche del cableado antes que de la logica.
 
 ## 9. Antes de dar algo por terminado
 
@@ -254,7 +269,8 @@ que se creia.
   Son dos objetivos: las de integracion recrean el esquema y se niegan a correr
   contra una base que no termine en `_test`.
 - `make lint` sin errores.
-- El frontend compila sin avisos.
+- El frontend compila sin avisos y sus pruebas pasan: `npm run test:ci` desde
+  `frontend/`, con `CHROME_BIN` apuntando a un Chrome instalado.
 - **Levantar la aplicacion y abrirla.** Tres de los ocho fallos de la lista
   anterior no los habria encontrado ninguna prueba unitaria.
 - Registrar la fase en `docs/changelogs/` y actualizar este documento.

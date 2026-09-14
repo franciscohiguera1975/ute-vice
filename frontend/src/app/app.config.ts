@@ -21,7 +21,7 @@ import { PROVEEDORES_DATOS } from '@data/repositorios';
 import { PROVEEDORES_DISTRIBUTIVO } from '@data/repositorios-distributivo';
 
 import { rutas } from './app.routes';
-import { interceptorAutenticacion, interceptorErrores } from './core/interceptores';
+import { INTERCEPTORES } from './core/interceptores';
 import { ManejadorDeErrores, limpiarCerrojoDeRecarga } from './core/recarga-por-despliegue';
 
 // `LOCALE_ID` por si solo no basta: los pipes de formato necesitan los datos de
@@ -44,9 +44,9 @@ export const configuracionApp: ApplicationConfig = {
       }),
     ),
 
-    // El orden importa: el de autenticacion adjunta el token y puede reintentar
-    // tras renovar la sesion; el de errores normaliza lo que salga de ahi.
-    provideHttpClient(withInterceptors([interceptorAutenticacion, interceptorErrores])),
+    // El orden de los interceptores vive en `INTERCEPTORES` porque es parte de
+    // su comportamiento, y alli esta cubierto por pruebas.
+    provideHttpClient(withInterceptors([...INTERCEPTORES])),
 
     { provide: LOCALE_ID, useValue: 'es-EC' },
 

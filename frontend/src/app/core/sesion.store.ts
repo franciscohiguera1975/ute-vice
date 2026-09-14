@@ -19,6 +19,8 @@ import { type Observable, tap } from 'rxjs';
 
 import type { Permiso, Sesion, Usuario } from '@domain/modelos';
 
+import { NotificacionesService } from './notificaciones.service';
+
 const CLAVE_ACCESO = 'ute_vice_acceso';
 const CLAVE_REFRESCO = 'ute_vice_refresco';
 const CLAVE_USUARIO = 'ute_vice_usuario';
@@ -26,11 +28,18 @@ const CLAVE_USUARIO = 'ute_vice_usuario';
 @Injectable({ providedIn: 'root' })
 export class SesionStore {
   private readonly router = inject(Router);
+  private readonly notificaciones = inject(NotificacionesService);
 
   private readonly _usuario = signal<Usuario | null>(this.leerUsuarioGuardado());
   private readonly _tokenAcceso = signal<string | null>(this.leer(CLAVE_ACCESO));
   private readonly _tokenRefresco = signal<string | null>(this.leer(CLAVE_REFRESCO));
   private readonly _cargando = signal(false);
+
+  /**
+   * Cerrojo de `expirar`. Se levanta al establecer una sesion nueva y no al
+   * terminar de navegar: los 401 de las demas peticiones llegan despues.
+   */
+  private expirando = false;
 
   /** Usuario autenticado, o `null`. */
   readonly usuario = this._usuario.asReadonly();
@@ -86,6 +95,7 @@ export class SesionStore {
   }
 
   establecer(sesion: Sesion): void {
+    this.expirando = false;
     this._usuario.set(sesion.usuario);
     this._tokenAcceso.set(sesion.tokens.acceso);
     this._tokenRefresco.set(sesion.tokens.refresco);
@@ -115,9 +125,25 @@ export class SesionStore {
     }
   }
 
-  /** Cierra la sesion y envia al acceso, recordando a donde volver. */
+  /**
+   * Cierra la sesion y envia al acceso, recordando a donde volver.
+   *
+   * Es reentrante a proposito: cuando caduca el token fallan de golpe todas
+   * las peticiones en vuelo y cada una llama aqui. Sin el cerrojo se lanzaban
+   * varias navegaciones simultaneas al acceso y el parametro `retorno` acababa
+   * apuntando a `/acceso` —la ruta ya cambiada por la primera—, de modo que
+   * tras reautenticar el usuario no volvia a donde estaba.
+   */
   expirar(rutaDeRetorno?: string): void {
+    if (this.expirando) return;
+    this.expirando = true;
+
     this.limpiar();
+    this.notificaciones.anunciarYSilenciar(
+      'aviso',
+      'Su sesión expiró',
+      'Vuelva a ingresar para continuar donde estaba.',
+    );
     void this.router.navigate(['/acceso'], {
       queryParams: rutaDeRetorno ? { retorno: rutaDeRetorno } : undefined,
     });

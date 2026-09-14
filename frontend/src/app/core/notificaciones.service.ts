@@ -28,6 +28,8 @@ const DURACION_MS: Record<TipoAviso, number> = {
 @Injectable({ providedIn: 'root' })
 export class NotificacionesService {
   private siguienteId = 1;
+  /** Momento hasta el que se descartan errores y avisos. */
+  private silencioHasta = 0;
   private readonly _avisos = signal<readonly Aviso[]>([]);
   readonly avisos = this._avisos.asReadonly();
 
@@ -55,7 +57,38 @@ export class NotificacionesService {
     this._avisos.set([]);
   }
 
-  private emitir(tipo: TipoAviso, mensaje: string, detalle?: string): void {
+  /**
+   * Deja un unico aviso en pantalla y descarta los fallos que lleguen despues.
+   *
+   * Hace falta cuando una sola causa —la sesion que caduca— tumba a la vez
+   * todas las peticiones en vuelo: sin esto el usuario veia un aviso por cada
+   * pantalla abierta, cada uno con su texto tecnico, y ninguno le decia que
+   * hacer.
+   */
+  anunciarYSilenciar(
+    tipo: TipoAviso,
+    mensaje: string,
+    detalle?: string,
+    ms = 4000,
+  ): void {
+    this.limpiar();
+    this.silencioHasta = Date.now() + ms;
+    this.emitir(tipo, mensaje, detalle, true);
+  }
+
+  private emitir(
+    tipo: TipoAviso,
+    mensaje: string,
+    detalle?: string,
+    forzar = false,
+  ): void {
+    // Solo se callan los fallos: un «guardado» o un «listo» que ocurra en esa
+    // ventana sigue siendo informacion util y no ruido derivado del mismo
+    // problema.
+    const esFallo = tipo === 'error' || tipo === 'aviso';
+    if (!forzar && esFallo && Date.now() < this.silencioHasta) {
+      return;
+    }
     const aviso: Aviso = { id: this.siguienteId++, tipo, mensaje, detalle };
     this._avisos.update((lista) => [...lista, aviso]);
     setTimeout(() => this.descartar(aviso.id), DURACION_MS[tipo]);
