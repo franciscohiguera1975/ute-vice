@@ -298,7 +298,7 @@ async def sembrar_demo(cantidad: int = 60) -> None:
 async def importar_distributivo() -> None:
     """Carga un consolidado de distributivo docente desde un Excel.
 
-        python -m app.cli importar-distributivo docs/distributivo/distributivo.xlsx [hoja]
+        python -m app.cli importar-distributivo ../data/distributivo/distributivo.xlsx [hoja]
 
     Es idempotente en lo que importa: los docentes y los catalogos que ya
     existen se reutilizan. Las filas, en cambio, chocarian con la clave natural,

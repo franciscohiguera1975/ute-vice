@@ -32,6 +32,17 @@ reports/out/
 postgres-data/
 *.log
 
+# ---- Datos de trabajo ----
+# Los consolidados, padrones y reportes de origen viven **fuera** del
+# repositorio, en `../data/`. Entraron aqui una vez —un zip de 82 MB que sigue
+# en la historia— y basta un `git add -A` distraido para repetirlo.
+docs/**/*.xlsx
+docs/**/*.xls
+docs/**/*.csv
+docs/**/*.zip
+# Archivos de bloqueo que deja LibreOffice mientras un libro esta abierto.
+.~lock.*#
+
 # ---- Editor / SO ----
 .idea/
 .vscode/*
