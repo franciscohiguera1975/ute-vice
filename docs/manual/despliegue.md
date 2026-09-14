@@ -179,6 +179,11 @@ exigir una aprobacion manual antes de publicar: *Required reviewers*.
 **Actions › Despliegue › Run workflow**. No hace falta empujar nada: el flujo
 admite ejecucion manual. Si termina en verde, ya esta.
 
+> **Si falta alguno, el flujo lo dice.** Antes de intentar conectarse comprueba
+> los tres y, si alguno esta vacio, termina con un mensaje que los nombra. Sin
+> esa comprobacion el fallo aparecia como un `ssh-keyscan` sin explicacion, con
+> el registro mostrando `MAQUINA:` en blanco.
+
 ### Que hacer si el despliegue falla
 
 | Sintoma | Causa casi siempre |

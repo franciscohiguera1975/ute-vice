@@ -56,6 +56,46 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
 
+      # Sin esto, la falta de un secreto se manifiesta como un `ssh-keyscan`
+      # que falla sin decir por que: el registro solo muestra `MAQUINA:` vacia.
+      - name: Comprobar que los secretos estan configurados
+        env:
+          CLAVE: ${{ secrets.VPS_SSH_KEY }}
+          MAQUINA: ${{ secrets.VPS_HOST }}
+          USUARIO: ${{ secrets.VPS_USER }}
+        run: |
+          # Con `if` y no con `[ … ] && …`: el flujo corre bajo `bash -e`, donde
+          # una lista `&&` cuya condicion es falsa devuelve 1 y aborta el paso.
+          # Es decir, fallaria justo cuando los tres secretos estan puestos.
+          faltan=""
+          if [ -z "$MAQUINA" ]; then faltan="$faltan VPS_HOST"; fi
+          if [ -z "$USUARIO" ]; then faltan="$faltan VPS_USER"; fi
+          if [ -z "$CLAVE" ];   then faltan="$faltan VPS_SSH_KEY"; fi
+
+          if [ -n "$faltan" ]; then
+            {
+              echo "## Faltan secretos del repositorio"
+              echo
+              echo "Sin configurar:$faltan"
+              echo
+              echo 'Se agregan en **Settings › Secrets and variables › Actions**.'
+              echo 'El detalle, en docs/manual/despliegue.md'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            echo "::error::Faltan secretos del repositorio:$faltan — vea el resumen de la ejecucion."
+            exit 1
+          fi
+
+          # La privada entera, no la `.pub`: es el error mas frecuente y el
+          # mensaje que da `ssh` despues no lo sugiere.
+          case "$CLAVE" in
+            *"BEGIN"*"PRIVATE KEY"*) ;;
+            *)
+              echo "::error::VPS_SSH_KEY no parece una clave privada. Debe incluir las lineas BEGIN y END, y no ser el archivo .pub."
+              exit 1
+              ;;
+          esac
+
       - name: Preparar el acceso SSH
         env:
           CLAVE: ${{ secrets.VPS_SSH_KEY }}
