@@ -35,9 +35,13 @@ from app.domain.ports.uow import UnidadDeTrabajo
 
 log = get_logger(__name__)
 
-#: Los dos digitos del codigo institucional que nombran el nivel. El SICAF usa
-#: `55` para tecnologia; el sistema, `15`. Se admiten los dos para que el mismo
-#: reporte sirva con cualquiera de las dos convenciones.
+#: Los dos digitos del codigo institucional que nombran el nivel.
+#:
+#: El SICAF numera la tecnologia con `55` y el sistema con `15`. La diferencia
+#: es una decision tomada, no un error: se conserva el `15` del Vicerrectorado
+#: porque es el de los periodos ya emitidos y los informes que ya circularon
+#: (ver `_DIGITOS_NIVEL`). Aqui se traduce, que es el unico sitio donde entran
+#: codigos ajenos.
 _NIVELES = {"55": "15", "15": "15", "65": "65", "75": "75"}
 
 

@@ -211,8 +211,10 @@ SICAF ([changelog](changelogs/15-materias-por-docente.md)).
 > docente en ese semestre: el archivo no dice a que carrera pertenece cada una,
 > y repartirlas seria inventar la atribucion.
 >
-> Ojo con el **codigo de tecnologia**: el SICAF usa `55` y el sistema `15`. El
-> importador admite los dos; cual es el correcto sigue sin decidirse.
+> Ojo con el **codigo de tecnologia**: el SICAF usa `55` y el sistema `15`.
+> **Se decidio conservar el `15`** —es el de los periodos ya emitidos y los
+> informes que ya circularon—, asi que la traduccion ocurre al importar, en
+> `_NIVELES`. No es una errata: no lo «corrija».
 
 **16**: los catalogos guardan `codigo_erp`, el nombre del mismo elemento en el
 ERP academico ([changelog](changelogs/16-codigo-del-erp.md)).

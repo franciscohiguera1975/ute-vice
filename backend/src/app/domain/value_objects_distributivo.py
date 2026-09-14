@@ -112,6 +112,16 @@ class NivelPeriodo(StrEnum):
         return _ETIQUETAS_NIVEL[self]
 
 
+#: Los dos digitos centrales del codigo institucional.
+#:
+#: **`15` para tecnologia es deliberado.** El ERP academico usa `55` —sus
+#: periodos son `261551`, no `261151`— y al cargar las materias del SICAF se
+#: comprobo la discrepancia. Se decidio conservar el `15` del Vicerrectorado:
+#: es el que esta en los trece periodos ya emitidos y en los informes que ya
+#: circularon. Los `65` y `75` coinciden en ambos sistemas.
+#:
+#: Quien lea un codigo del SICAF debe traducirlo; lo hace `_NIVELES` en
+#: `importar_materias`. No se cambie esto por parecer un error tipografico.
 _DIGITOS_NIVEL: dict[NivelPeriodo, str] = {
     NivelPeriodo.TECNOLOGIA: "15",
     NivelPeriodo.GRADO: "65",

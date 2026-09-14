@@ -90,10 +90,16 @@ El SICAF numera la tecnología con **55**, no con 15:
 | `261651` | 2026-1 GRADO |
 | `261751` | 2026-1 POSGRADO |
 
-La fase 13 implementó `15` siguiendo la indicación recibida, y producción tiene
-hoy `261151`. **No se cambió nada**: el importador admite las dos convenciones
-para que el mismo reporte sirva con cualquiera de ellas. Queda pendiente decidir
-cuál es la correcta.
+La fase 13 implementó `15`, y producción tiene hoy `261151`.
+
+**Decisión (2026-09-14): se conserva el `15`.** No se alinea con el ERP. Los
+trece períodos ya están emitidos con ese código y los informes que salieron del
+sistema ya lo llevan; cambiarlo obligaría a reemitirlos para ganar una
+coincidencia que nadie consulta. `65` y `75` sí coinciden en ambos sistemas, así
+que la divergencia se limita a un dígito de un nivel.
+
+La traducción ocurre en un solo sitio —`_NIVELES`, en `importar_materias`—, que
+es por donde entran los códigos ajenos. No es una errata: no lo «corrija».
 
 ## Archivos
 
