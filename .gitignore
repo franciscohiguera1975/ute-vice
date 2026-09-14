@@ -43,6 +43,12 @@ docs/**/*.zip
 # Archivos de bloqueo que deja LibreOffice mientras un libro esta abierto.
 .~lock.*#
 
+# Insumos de trabajo: consolidados, padrones del SICAF y lo que se descomprima
+# de ellos. Son cientos de megas y cambian a diario; el repositorio guarda el
+# codigo que los lee, no los archivos. La barra inicial ancla la regla a la
+# raiz, para no ocultar ningun `data/` que apareciera dentro del codigo.
+/data/
+
 # ---- Editor / SO ----
 .idea/
 .vscode/*
