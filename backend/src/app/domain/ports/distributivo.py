@@ -82,6 +82,13 @@ class FilaDistributivoResuelta:
     docente_identificacion: str
     docente_nombre: str
     pao: str
+    """Nombre legible del periodo: `2026-1 GRADO`."""
+    pao_semestre: str
+    """El semestre calendario sin el nivel: `2026-1`.
+
+    Es lo que traia el consolidado en su columna `PAO`, y lo que vuelve a salir
+    al exportarlo en su formato de origen.
+    """
     facultad: str
     carrera: str
     sede: str | None = None

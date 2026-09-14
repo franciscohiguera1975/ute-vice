@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from decimal import ROUND_HALF_EVEN, Decimal
+from enum import StrEnum
 from typing import ClassVar, Self
 
 from app.domain.errors import ErrorValidacion
@@ -84,10 +85,60 @@ class Identificacion:
 
 _PATRON_PAO = re.compile(r"^(\d{4})\s*-\s*([12])$")
 
+#: El codigo institucional: anio (2), periodo (1), nivel (2) y una constante.
+_PATRON_PAO_LARGO = re.compile(r"^(\d{2})([12])(15|65|75)1$")
 
-@dataclass(frozen=True, slots=True)
+
+class NivelPeriodo(StrEnum):
+    """Los tres periodos en que se divide cada semestre.
+
+    La institucion planifica por separado la oferta tecnologica, la de grado y
+    la de posgrado: un mismo semestre calendario son tres periodos academicos
+    distintos, con su propio codigo.
+    """
+
+    TECNOLOGIA = "TECNOLOGIA"
+    GRADO = "GRADO"
+    POSGRADO = "POSGRADO"
+
+    @property
+    def digitos(self) -> str:
+        """Los dos digitos centrales del codigo."""
+        return _DIGITOS_NIVEL[self]
+
+    @property
+    def etiqueta(self) -> str:
+        """Como se nombra en pantalla, con tilde."""
+        return _ETIQUETAS_NIVEL[self]
+
+
+_DIGITOS_NIVEL: dict[NivelPeriodo, str] = {
+    NivelPeriodo.TECNOLOGIA: "15",
+    NivelPeriodo.GRADO: "65",
+    NivelPeriodo.POSGRADO: "75",
+}
+
+_ETIQUETAS_NIVEL: dict[NivelPeriodo, str] = {
+    NivelPeriodo.TECNOLOGIA: "TECNOLOGÍA",
+    NivelPeriodo.GRADO: "GRADO",
+    NivelPeriodo.POSGRADO: "POSGRADO",
+}
+
+_POR_DIGITOS: dict[str, NivelPeriodo] = {v: k for k, v in _DIGITOS_NIVEL.items()}
+
+
+@dataclass(frozen=True, slots=True, order=False)
 class PeriodoAcademico:
-    """Periodo Academico Ordinario, en la forma `2026-1`.
+    """Periodo Academico Ordinario, con su codigo institucional de seis digitos.
+
+    Un semestre calendario —`2026-1`— son **tres** periodos: tecnologia, grado
+    y posgrado, que se planifican por separado. El codigo los distingue:
+
+        2 6 1 65 1
+        │ │ │ │  └─ constante
+        │ │ │ └──── nivel: 15 tecnologia · 65 grado · 75 posgrado
+        │ │ └────── periodo del anio (1 o 2)
+        └─┴──────── dos ultimos digitos del anio
 
     Se modela como objeto y no como texto porque hay que **ordenarlo**: el
     reporte deriva el «anio de inicio de actividades en la carrera» del periodo
@@ -97,6 +148,7 @@ class PeriodoAcademico:
 
     anio: int
     periodo: int
+    nivel: NivelPeriodo = NivelPeriodo.GRADO
 
     def __post_init__(self) -> None:
         if not 2000 <= self.anio <= 2100:
@@ -106,29 +158,67 @@ class PeriodoAcademico:
 
     @classmethod
     def desde_codigo(cls, codigo: str) -> Self:
-        coincidencia = _PATRON_PAO.match((codigo or "").strip())
-        if not coincidencia:
-            raise ErrorValidacion(
-                f"Codigo de PAO invalido: '{codigo}'. Se espera la forma 'AAAA-N', "
-                "por ejemplo '2026-1'.",
-                campo="pao",
+        """Acepta el codigo de seis digitos y tambien la forma antigua `2026-1`.
+
+        La forma antigua se sigue admitiendo porque es como viene el PAO en el
+        consolidado: quien importa escribe `2026-1` y el nivel sale de las
+        columnas FACULTAD y NIVEL de la propia fila.
+        """
+        limpio = "".join((codigo or "").split())
+
+        largo = _PATRON_PAO_LARGO.match(limpio)
+        if largo:
+            return cls(
+                anio=2000 + int(largo.group(1)),
+                periodo=int(largo.group(2)),
+                nivel=_POR_DIGITOS[largo.group(3)],
             )
-        return cls(anio=int(coincidencia.group(1)), periodo=int(coincidencia.group(2)))
+
+        corto = _PATRON_PAO.match((codigo or "").strip())
+        if corto:
+            return cls(anio=int(corto.group(1)), periodo=int(corto.group(2)))
+
+        raise ErrorValidacion(
+            f"Codigo de PAO invalido: '{codigo}'. Se espera la forma '261651' "
+            "—anio, periodo, nivel y constante— o la antigua 'AAAA-N'.",
+            campo="pao",
+        )
 
     @property
     def codigo(self) -> str:
+        """El codigo institucional: `2026-1` de grado → `261651`."""
+        return f"{self.anio % 100:02d}{self.periodo}{self.nivel.digitos}1"
+
+    @property
+    def semestre(self) -> str:
+        """El semestre calendario, sin el nivel: `2026-1`.
+
+        Es lo que traia el consolidado y lo que vuelve a salir al exportarlo en
+        su formato de origen.
+        """
         return f"{self.anio}-{self.periodo}"
 
     @property
+    def nombre(self) -> str:
+        """Como se lee en pantalla: `2026-1 GRADO`."""
+        return f"{self.semestre} {self.nivel.etiqueta}"
+
+    @property
     def orden(self) -> int:
-        """Clave numerica para ordenar: `2026-1` → 20261."""
+        """Clave numerica para ordenar: `2026-1` → 20261.
+
+        **Deliberadamente no distingue el nivel**: el reporte deriva el anio
+        dividiendo entre diez, y los tres periodos de un mismo semestre deben
+        seguir dando el mismo anio. Para desempatar entre ellos se ordena
+        despues por codigo.
+        """
         return self.anio * 10 + self.periodo
 
     def __lt__(self, otro: PeriodoAcademico) -> bool:
-        return self.orden < otro.orden
+        return (self.orden, self.codigo) < (otro.orden, otro.codigo)
 
     def __str__(self) -> str:
-        return self.codigo
+        return self.nombre
 
 
 # ---------------------------------------------------------------------------

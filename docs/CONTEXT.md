@@ -5,7 +5,7 @@
 > de tocar nada. Se actualiza al cerrar cada fase.
 
 **Ultima actualizacion:** 2026-09-11
-**Fases cerradas:** 00 → 07, 09, 10, 11 · **En curso:** 08 (calidad y pruebas)
+**Fases cerradas:** 00 → 07, 09 → 13 · **En curso:** 08 (calidad y pruebas)
 **Estado:** **en produccion** en <https://vice-gestion.uaeftt-ute.site>
 
 ---
@@ -33,7 +33,7 @@ Entregado y funcionando:
 
 | Componente | Estado |
 |---|---|
-| Backend | 51 rutas / 70 operaciones; **376 pruebas en verde** (350 unitarias + 26 de integracion) |
+| Backend | **408 pruebas en verde** (382 unitarias + 26 de integracion) |
 | Base de datos | 27 tablas; migracion aplica y revierte sobre PostgreSQL 18 real |
 | Frontend | Compila sin avisos; 343 kB iniciales (100 kB comprimidos) |
 | Verificacion | Recorrido completo en navegador contra backend y base reales |
@@ -182,7 +182,21 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fase 12 — espera confirmacion funcional
+### Fases 12 y 13 — cerradas
+
+**12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
+admite varios periodos, facultades y carreras; las personas se crean desde el
+padron docente ([changelog](changelogs/12-asignaturas-y-alcance-del-reporte.md)).
+
+**13**: cada semestre son tres periodos academicos —tecnologia, grado y
+posgrado—, con codigo institucional de seis digitos
+([changelog](changelogs/13-periodos-academicos-por-nivel.md)).
+
+> Al tocar los periodos, recuerde que **`orden` no distingue el nivel** a
+> proposito: el reporte deriva el anio dividiendolo entre diez, y los tres
+> periodos de un semestre deben seguir dando el mismo anio.
+
+### Fase 14 — espera confirmacion funcional
 
 El Vicerrectorado no ha confirmado que tablas adicionales incorporar. El
 procedimiento para agregar una sin romper nada esta en
@@ -221,6 +235,13 @@ No los reintroduzcas. Estan documentados en el changelog de su fase:
 18. La bateria de pruebas solo coleccionaba con `python -m pytest`, que agrega
     el directorio actual a la ruta. Con `pytest` a secas —como la llaman el
     Makefile y CI— fallaban cinco modulos (Fase 10)
+19. La fila resuelta no cargaba los identificadores de sus asignaturas:
+    `requiere_asignatura` mentia y guardar la entidad borraba los enlaces
+    (Fase 12)
+20. Los arreglos en parametros de consulta viajaban como `"a,b"` en lugar de
+    repetir el parametro, que es lo que espera FastAPI (Fase 12)
+21. Un `INSERT` de migracion reutilizando el mismo parametro en columnas de
+    tipos distintos: el driver no puede deducir uno solo (Fase 13)
 
 El octavo es el mas ilustrativo: un fallo en la ruta feliz de la configuracion
 de ejemplo, que solo aparecio al arrancar con un `.env` realista. Los dos

@@ -27,7 +27,7 @@ Eso no es purismo. Tiene tres consecuencias practicas que se notan a diario:
 2. **Cambiar de proveedor externo no toca el negocio.** El SENESCYT tiene tres
    implementaciones intercambiables; el dominio no sabe cual esta activa.
 3. **Los casos de uso se podran exponer como skills de IA sin reescribirlos**
-   (Fase 14). Ya no dependen de HTTP.
+   (Fase 16). Ya no dependen de HTTP.
 
 Hay una prueba automatica que verifica la regla analizando los `import` de cada
 modulo: [`tests/unit/test_arquitectura.py`](../backend/tests/unit/test_arquitectura.py).
@@ -98,7 +98,7 @@ caso de uso puede olvidarse de autorizar: si declara `permiso_requerido`, la
 verificacion es automatica. Hay una prueba que exige que todo caso de uso lo
 declare o figure en una lista de exentos justificados.
 
-Esa uniformidad es tambien la preparacion para la Fase 14: cada caso de uso ya
+Esa uniformidad es tambien la preparacion para la Fase 16: cada caso de uso ya
 expone un `descriptor()` con su nombre, descripcion y permiso, que es
 exactamente lo que necesita un catalogo de skills.
 
@@ -161,7 +161,7 @@ un cambio de esquema arrastra al dominio entero.
 El dominio lanza `NoEncontrado`, `ConflictoDeEstado`, `ErrorAutorizacion`. La
 capa de API los traduce a 404, 409 y 403 en un unico lugar
 ([`api/errores.py`](../backend/src/app/api/errores.py)). Cuando los casos de uso
-se expongan por MCP (Fase 15), ese canal hara su propia traduccion sin tocar el
+se expongan por MCP (Fase 17), ese canal hara su propia traduccion sin tocar el
 negocio.
 
 Todas las respuestas de error comparten forma, para que el frontend tenga un
@@ -181,7 +181,7 @@ de renunciar a una de las dos convenciones o escribir un mapeador por entidad.
 
 ## Como se extiende
 
-Agregar una tabla nueva (Fase 12) es un procedimiento mecanico que no toca nada
+Agregar una tabla nueva (Fase 14) es un procedimiento mecanico que no toca nada
 de lo existente:
 
 1. Entidad en `domain/entities/`

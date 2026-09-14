@@ -160,7 +160,9 @@ class PlantillaConsolidadoOrigen(PlantillaDistributivo):
 
         fila: dict[str, object] = {
             "IDENTIFICACION": r.docente_identificacion,
-            "PAO": r.pao,
+            # El semestre, no el periodo academico: el origen no distinguia
+            # tecnologia, grado y posgrado, y esta columna reproduce el origen.
+            "PAO": r.pao_semestre,
             "FACULTAD": r.facultad,
             "CARRERA": r.codigo_carrera or r.carrera,
             "SEDE": r.codigo_sede or r.sede,

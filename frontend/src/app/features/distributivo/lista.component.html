@@ -61,16 +61,31 @@
       />
     </div>
 
-    <select
-      aria-label="Periodo académico"
-      [ngModel]="filtro().paoId ?? ''"
-      (ngModelChange)="aplicar({ paoId: $event || undefined })"
-    >
-      <option value="">Todos los periodos</option>
-      @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
-        <option [value]="o.id">{{ o.codigo }}</option>
-      }
-    </select>
+    <details class="desplegable-periodos">
+      <summary>
+        Periodos
+        <span class="texto-xs texto-tenue">{{ resumenPeriodos() }}</span>
+      </summary>
+      <div class="panel-periodos" role="group" aria-label="Periodos académicos">
+        <div class="fila hueco-xs envolver acciones-periodos">
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarPeriodos()">
+            Todos
+          </button>
+        </div>
+        @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
+          <label class="opcion-periodo" [class.opcion-periodo--activa]="periodosElegidos().includes(o.id)">
+            <input
+              type="checkbox"
+              [checked]="periodosElegidos().includes(o.id)"
+              (change)="alternarPeriodo(o.id, $any($event.target).checked)"
+            />
+            <span>{{ o.nombre }}</span>
+          </label>
+        } @empty {
+          <p class="texto-sm texto-tenue">Cargando periodos…</p>
+        }
+      </div>
+    </details>
 
     <select
       aria-label="Facultad"

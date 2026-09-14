@@ -59,7 +59,10 @@ class TestCargaBasica:
         assert fila.total_horas == 11.5
 
         paos = await uow.catalogos.listar_todos(TipoCatalogo.PAO)
-        assert [p.codigo for p in paos] == ["2026-1"]
+        # El semestre del consolidado se convierte en el periodo academico que
+        # le corresponde por facultad y nivel.
+        assert [p.codigo for p in paos] == ["261651"]
+        assert [p.nombre for p in paos] == ["2026-1 GRADO"]
 
     async def test_un_docente_con_varias_filas_se_crea_una_sola_vez(self, uow) -> None:
         resultado = await importar(

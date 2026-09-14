@@ -98,7 +98,21 @@ lo impone el servidor a partir del actor, nunca la peticion.
 
 → [changelog](changelogs/11-alcance-academico.md) · [manual](manual/usuarios-y-roles.md)
 
-### ⏳ Fase 12 — Tablas adicionales
+### ✅ Fase 12 — Catalogo de asignaturas, seleccion multiple y personas
+Asignatura pasa a catalogo con varias materias por fila; la exportacion admite
+varios periodos, facultades y carreras; y las personas se crean a partir del
+padron docente.
+
+→ [changelog](changelogs/12-asignaturas-y-alcance-del-reporte.md)
+
+### ✅ Fase 13 — Cada semestre son tres periodos academicos
+Tecnologia, grado y posgrado se planifican por separado: cada semestre se parte
+en tres periodos con su codigo institucional de seis digitos. Trece periodos
+pasan a treinta y uno y las 15.219 filas quedan reasignadas.
+
+→ [changelog](changelogs/13-periodos-academicos-por-nivel.md) · [manual](manual/distributivo.md)
+
+### ⏳ Fase 14 — Tablas adicionales
 > **Pendiente de confirmacion funcional del Vicerrectorado.**
 
 Tablas candidatas identificadas pero no confirmadas:
@@ -114,7 +128,7 @@ esta preparada: cada tabla nueva es una entidad de dominio, un puerto de
 repositorio, una implementacion SQLAlchemy, un conjunto de casos de uso y un
 router — sin tocar lo existente (principio abierto/cerrado).
 
-### ⏳ Fase 13 — Motor generico de reportes
+### ⏳ Fase 15 — Motor generico de reportes
 Constructor de reportes configurable por el usuario (elegir tabla, columnas,
 filtros y formato) sobre el puerto `ReportExporter` ya existente. El registro de
 plantillas de la Fase 09 es el paso previo: ya separa «que columnas salen» de
@@ -129,24 +143,24 @@ son objetos con una firma unica (`execute(input) -> output`) y no dependen de
 FastAPI. Eso permite exponerlos como herramientas de un agente sin reescribirlos.
 Ver [ADR-0006](adr/0006-preparacion-capa-ia.md).
 
-### ⏳ Fase 14 — Registro de skills
+### ⏳ Fase 16 — Registro de skills
 Catalogo de capacidades invocables (`ports/skill.py`) donde cada caso de uso se
 publica con su esquema JSON de entrada/salida y el permiso que exige.
 
-### ⏳ Fase 15 — Servidor MCP
+### ⏳ Fase 17 — Servidor MCP
 Exponer el registro de skills como servidor MCP para que cualquier cliente
 compatible (Claude, IDEs) opere sobre los datos respetando el RBAC del usuario.
 
-### ⏳ Fase 16 — Consultas en lenguaje natural
+### ⏳ Fase 18 — Consultas en lenguaje natural
 Traduccion de preguntas a invocaciones de skills. **Restriccion de diseno:** el
 modelo no genera SQL libre; solo puede componer skills registradas, que ya llevan
 sus filtros de permisos. Esto evita fuga de datos y SQL injection semantica.
 
-### ⏳ Fase 17 — Agentes de tarea
+### ⏳ Fase 19 — Agentes de tarea
 Agentes que encadenan skills: "revisa que personas no tienen titulo registrado y
 genera el reporte para Talento Humano".
 
-### 💡 Fase 18 — Interfaz de voz ("Jarvis")
+### 💡 Fase 20 — Interfaz de voz ("Jarvis")
 Reconocimiento de voz (entrada) y sintesis (salida) sobre la capa de agentes.
 Pendiente de definir: procesamiento local vs. servicio externo — decision
 condicionada por tratarse de datos personales (ver [SECURITY.md](SECURITY.md)).

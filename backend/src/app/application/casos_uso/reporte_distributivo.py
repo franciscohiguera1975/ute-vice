@@ -193,7 +193,7 @@ class _BaseReporteDistributivo:
             raise ErrorValidacion("Seleccione al menos un periodo academico.", campo="pao_ids")
 
         async with self._uow:
-            periodos = await self._nombres(TipoCatalogo.PAO, entrada.pao_ids, codigo=True)
+            periodos = await self._nombres(TipoCatalogo.PAO, entrada.pao_ids)
             facultades = await self._nombres(TipoCatalogo.FACULTAD, entrada.facultad_ids)
             carreras = await self._nombres(TipoCatalogo.CARRERA, entrada.carrera_ids)
 
@@ -213,9 +213,7 @@ class _BaseReporteDistributivo:
 
         return plantilla, contenido, _Seleccion(periodos, facultades, carreras)
 
-    async def _nombres(
-        self, tipo: TipoCatalogo, ids: tuple[UUID, ...], *, codigo: bool = False
-    ) -> list[str]:
+    async def _nombres(self, tipo: TipoCatalogo, ids: tuple[UUID, ...]) -> list[str]:
         """Resuelve los identificadores a texto, fallando si alguno no existe.
 
         Se comprueba uno a uno en lugar de dejar que la consulta devuelva menos
@@ -227,7 +225,7 @@ class _BaseReporteDistributivo:
             elemento = await self._uow.catalogos.obtener(tipo, elemento_id)
             if elemento is None:
                 raise NoEncontrado(tipo.singular, elemento_id)
-            nombres.append(elemento.codigo if codigo else elemento.nombre)
+            nombres.append(elemento.nombre)
         return nombres
 
 

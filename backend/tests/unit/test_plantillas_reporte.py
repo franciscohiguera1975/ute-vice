@@ -94,7 +94,8 @@ def _resuelta(**cambios) -> FilaDistributivoResuelta:  # type: ignore[no-untyped
         ),
         "docente_identificacion": "1710034065",
         "docente_nombre": "PEREZ LUIS",
-        "pao": "2026-1",
+        "pao": "2026-1 GRADO",
+        "pao_semestre": "2026-1",
         "facultad": "FCID",
         "carrera": "SOFTWARE",
         "sede": "MATRIZ QUITO",
@@ -431,7 +432,7 @@ async def test_el_reporte_admite_varios_periodos_y_facultades(contexto_admin) ->
     )
     from app.domain.entities.catalogo import TipoCatalogo
 
-    p1, p2 = _catalogo(TipoCatalogo.PAO, "2025-2"), _catalogo(TipoCatalogo.PAO, "2026-1")
+    p1, p2 = _catalogo(TipoCatalogo.PAO, "252651"), _catalogo(TipoCatalogo.PAO, "261651")
     f1, f2 = _catalogo(TipoCatalogo.FACULTAD, "FCID"), _catalogo(TipoCatalogo.FACULTAD, "FCSEE")
     uow = _UowConCatalogos([p1, p2, f1, f2], reporte=[_reporte()])
 
@@ -443,7 +444,7 @@ async def test_el_reporte_admite_varios_periodos_y_facultades(contexto_admin) ->
         contexto_admin,
     )
 
-    assert vista.periodos == ["2025-2", "2026-1"]
+    assert vista.periodos == ["2025-2 GRADO", "2026-1 GRADO"]
     assert vista.facultades == ["FCID", "FCSEE"]
 
     filtro = uow.distributivo.ultimo_filtro

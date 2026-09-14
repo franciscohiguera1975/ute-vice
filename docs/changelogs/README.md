@@ -30,3 +30,4 @@ pendiente.
 | [10](10-despliegue.md) | Despliegue en VPS y entrega continua | ✅ |
 | [11](11-alcance-academico.md) | Alcance academico por usuario | ✅ |
 | [12](12-asignaturas-y-alcance-del-reporte.md) | Catalogo de asignaturas, seleccion multiple y personas | ✅ |
+| [13](13-periodos-academicos-por-nivel.md) | Cada semestre son tres periodos academicos | ✅ |

@@ -26,7 +26,12 @@ from uuid import UUID
 from app.application.base import CasoDeUso, ContextoEjecucion
 from app.core.logging import get_logger
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
-from app.domain.entities.distributivo import Docente, FilaDistributivo, separar_titulos
+from app.domain.entities.distributivo import (
+    Docente,
+    FilaDistributivo,
+    clasificar_periodo,
+    separar_titulos,
+)
 from app.domain.enums import Permiso
 from app.domain.errors import ErrorValidacion
 from app.domain.ports.importacion import (
@@ -114,6 +119,18 @@ class EntradaImportacion:
     crear_catalogos_faltantes: bool = True
     """Si es `False`, una fila que cite un valor desconocido se rechaza."""
     tamano_lote: int = 1000
+
+
+def _codigo_de_periodo(fila: FilaCrudaDistributivo) -> str:
+    """El codigo del periodo al que pertenece la fila.
+
+    El consolidado trae el semestre —`2026-1`— pero no el periodo academico:
+    cada semestre son tres, y a cual va cada fila lo deciden su facultad y su
+    nivel. Ver `clasificar_periodo`.
+    """
+    semestre = PeriodoAcademico.desde_codigo(fila.pao)
+    nivel = clasificar_periodo(fila.facultad, fila.nivel, fila.carrera)
+    return PeriodoAcademico(semestre.anio, semestre.periodo, nivel).codigo
 
 
 class _Catalogos:
@@ -281,7 +298,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
     @staticmethod
     def _primer_desconocido(fila: FilaCrudaDistributivo, catalogos: _Catalogos) -> str | None:
         comprobaciones = (
-            (TipoCatalogo.PAO, fila.pao),
+            (TipoCatalogo.PAO, _codigo_de_periodo(fila)),
             (TipoCatalogo.FACULTAD, _normalizar(fila.facultad)),
             (TipoCatalogo.CARRERA, _normalizar(fila.carrera)),
             (TipoCatalogo.SEDE, _normalizar_sede(fila.sede)),
@@ -390,7 +407,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
 
         for fila in filas:
             clave_doc = Identificacion(fila.identificacion).valor
-            pao_id = catalogos.resolver(TipoCatalogo.PAO, fila.pao)
+            pao_id = catalogos.resolver(TipoCatalogo.PAO, _codigo_de_periodo(fila))
             carrera_id = catalogos.resolver(TipoCatalogo.CARRERA, _normalizar(fila.carrera))
             # `_validar` ya garantizo que ambos vienen informados; la comprobacion
             # esta para que el tipo sea cierto y no una promesa.

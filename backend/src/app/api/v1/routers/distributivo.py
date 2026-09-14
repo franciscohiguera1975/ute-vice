@@ -204,6 +204,10 @@ def _filtro(
     texto: str | None = None,
     docente_id: UUID | None = None,
     pao_id: UUID | None = None,
+    pao_ids: Annotated[
+        list[UUID] | None,
+        Query(description="Varios periodos a la vez. Se suma al filtro de uno solo."),
+    ] = None,
     facultad_id: UUID | None = None,
     carrera_id: UUID | None = None,
     carrera_ids: list[UUID] | None = None,
@@ -220,6 +224,7 @@ def _filtro(
         texto=texto,
         docente_id=docente_id,
         pao_id=pao_id,
+        pao_ids=tuple(pao_ids or ()),
         facultad_id=facultad_id,
         carrera_id=carrera_id,
         carrera_ids=tuple(carrera_ids or ()),

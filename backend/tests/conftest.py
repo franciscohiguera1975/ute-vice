@@ -510,7 +510,8 @@ class RepoDistributivo:
             fila=fila,
             docente_identificacion="1710034065",
             docente_nombre="PEREZ LUIS",
-            pao="2026-1",
+            pao="2026-1 GRADO",
+            pao_semestre="2026-1",
             facultad="FCID",
             carrera="SOFTWARE",
         )

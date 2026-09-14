@@ -25,6 +25,38 @@ editar y capturar, `catalogos:leer` y `catalogos:escribir` para los catalogos,
 
 ---
 
+## Los periodos academicos
+
+**Un semestre calendario son tres periodos.** La institucion planifica por
+separado la oferta tecnologica, la de grado y la de posgrado, y cada una tiene
+su propio periodo con su codigo:
+
+```
+2 6 1 65 1
+│ │ │ │  └─ constante
+│ │ │ └──── nivel: 15 tecnologia · 65 grado · 75 posgrado
+│ │ └────── periodo del anio (1 o 2)
+└─┴──────── dos ultimos digitos del anio
+```
+
+Asi, `2026-1` son `261151` (tecnologia), `261651` (grado) y `261751` (posgrado).
+
+**A que periodo va cada fila** lo deciden su facultad y su nivel, en este orden:
+
+1. Facultad `ETECH` o `UAEFTT` → **tecnologia**, sin mirar el nivel.
+2. Si no, manda la columna `NIVEL` del consolidado.
+3. Si esa columna viene vacia, se toma del nombre de la carrera, que trae la
+   forma `SEDE:NOMBRE - NIVEL - MODALIDAD`.
+4. Sin ninguna de las dos, grado.
+
+> **En el listado y en la exportacion** se pueden marcar varios periodos a la
+> vez. Ver «2026-1 entero» es marcar sus tres.
+
+> **La columna `PAO` de la plantilla de origen sigue diciendo `2026-1`**: ese
+> archivo no distinguia niveles y la plantilla existe para contrastar contra el.
+
+---
+
 ## Los doce catalogos
 
 Los campos que el consolidado traia como texto libre son catalogos con tabla
@@ -33,7 +65,7 @@ referencian.
 
 | Catalogo | Ejemplos |
 |---|---|
-| Periodos academicos (PAO) | `2026-1`, `2025-2` |
+| Periodos academicos (PAO) | `261651` (2026-1 GRADO), `261751` (2026-1 POSGRADO) |
 | Facultades | `FCID`, `FCSEE` |
 | Carreras | Las 278 del historico |
 | Sedes | Quito, Cuenca, Santo Domingo, Monjas |

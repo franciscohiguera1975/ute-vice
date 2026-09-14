@@ -10,12 +10,14 @@ from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import (
     Docente,
     FilaDistributivo,
+    clasificar_periodo,
     separar_titulos,
 )
 from app.domain.errors import ErrorValidacion
 from app.domain.value_objects_distributivo import (
     DistribucionHoras,
     Identificacion,
+    NivelPeriodo,
     PeriodoAcademico,
 )
 
@@ -55,15 +57,34 @@ class TestIdentificacion:
 
 
 class TestPeriodoAcademico:
-    def test_interpreta_el_codigo(self) -> None:
+    """Un semestre son tres periodos: tecnologia, grado y posgrado."""
+
+    def test_arma_el_codigo_institucional(self) -> None:
+        """`2 6 | 1 | 65 | 1`: anio, periodo del anio, nivel y una constante."""
+        assert PeriodoAcademico(2026, 1, NivelPeriodo.TECNOLOGIA).codigo == "261151"
+        assert PeriodoAcademico(2026, 1, NivelPeriodo.GRADO).codigo == "261651"
+        assert PeriodoAcademico(2026, 1, NivelPeriodo.POSGRADO).codigo == "261751"
+        assert PeriodoAcademico(2023, 2, NivelPeriodo.POSGRADO).codigo == "232751"
+
+    def test_interpreta_el_codigo_institucional(self) -> None:
+        pao = PeriodoAcademico.desde_codigo("261751")
+        assert (pao.anio, pao.periodo, pao.nivel) == (2026, 1, NivelPeriodo.POSGRADO)
+        assert pao.nombre == "2026-1 POSGRADO"
+        assert pao.semestre == "2026-1"
+
+    def test_admite_el_semestre_suelto(self) -> None:
+        """Es como viene el PAO en el consolidado; el nivel sale de la fila."""
         pao = PeriodoAcademico.desde_codigo("2026-1")
         assert (pao.anio, pao.periodo) == (2026, 1)
-        assert pao.codigo == "2026-1"
+        assert pao.nivel is NivelPeriodo.GRADO
 
     def test_tolera_espacios(self) -> None:
-        assert PeriodoAcademico.desde_codigo(" 2026 - 1 ").codigo == "2026-1"
+        assert PeriodoAcademico.desde_codigo(" 2026 - 1 ").semestre == "2026-1"
+        assert PeriodoAcademico.desde_codigo(" 261651 ").codigo == "261651"
 
-    @pytest.mark.parametrize("codigo", ["2026", "2026-3", "26-1", "", "abc", "2026/1"])
+    @pytest.mark.parametrize(
+        "codigo", ["2026", "2026-3", "26-1", "", "abc", "2026/1", "261951", "261650"]
+    )
     def test_rechaza_codigos_invalidos(self, codigo: str) -> None:
         with pytest.raises(ErrorValidacion, match="PAO"):
             PeriodoAcademico.desde_codigo(codigo)
@@ -71,18 +92,64 @@ class TestPeriodoAcademico:
     def test_se_ordena_cronologicamente(self) -> None:
         """Ordenar por texto acertaria por casualidad; el reporte deriva de aqui
         el anio de inicio de un docente en una carrera."""
-        codigos = ["2026-1", "2020-2", "2025-1", "2020-1", "2025-2"]
+        codigos = ["261651", "202651", "251651", "201651", "252651"]
         periodos = sorted(PeriodoAcademico.desde_codigo(c) for c in codigos)
-        assert [p.codigo for p in periodos] == [
-            "2020-1",
-            "2020-2",
-            "2025-1",
-            "2025-2",
-            "2026-1",
+        assert [p.nombre for p in periodos] == [
+            "2020-1 GRADO",
+            "2020-2 GRADO",
+            "2025-1 GRADO",
+            "2025-2 GRADO",
+            "2026-1 GRADO",
         ]
 
+    def test_los_tres_niveles_comparten_orden(self) -> None:
+        """A proposito: el reporte deriva el anio dividiendo `orden` entre diez.
+
+        Si el nivel entrara en `orden`, esa division dejaria de dar el anio.
+        Para desempatar entre los tres se ordena despues por codigo.
+        """
+        ordenes = {PeriodoAcademico(2026, 1, n).orden for n in NivelPeriodo}
+        assert ordenes == {20261}
+
     def test_el_orden_es_numerico(self) -> None:
-        assert PeriodoAcademico.desde_codigo("2026-1").orden == 20261
+        assert PeriodoAcademico.desde_codigo("261651").orden == 20261
+
+
+class TestClasificacionDePeriodo:
+    """A cual de los tres periodos del semestre va cada fila."""
+
+    def test_la_facultad_tecnologica_manda_sobre_el_nivel(self) -> None:
+        """Esas unidades imparten tecnologia aunque la fila diga grado."""
+        assert clasificar_periodo("ETECH", "GRADO", None) is NivelPeriodo.TECNOLOGIA
+        assert clasificar_periodo("UAEFTT", None, None) is NivelPeriodo.TECNOLOGIA
+
+    @pytest.mark.parametrize(
+        ("nivel", "esperado"),
+        [("GRADO", NivelPeriodo.GRADO), ("POSGRADO", NivelPeriodo.POSGRADO)],
+    )
+    def test_fuera_de_esas_facultades_manda_el_nivel(self, nivel, esperado) -> None:  # type: ignore[no-untyped-def]
+        assert clasificar_periodo("FCII", nivel, None) is esperado
+
+    def test_sin_nivel_lo_toma_del_nombre_de_la_carrera(self) -> None:
+        """Pasa en todo 2026-1: 731 filas llegan sin la columna NIVEL."""
+        assert (
+            clasificar_periodo("FCII", None, "UIO:MEDICINA VETERINARIA - GRADO - PRESENCIAL")
+            is NivelPeriodo.GRADO
+        )
+        assert (
+            clasificar_periodo("PEL", None, "UIO:URBANISMO - POSGRADO - EN LÍNEA")
+            is NivelPeriodo.POSGRADO
+        )
+
+    def test_no_busca_la_palabra_suelta_en_todo_el_nombre(self) -> None:
+        """El origen tiene 98 carreras de grado que mencionan «MAESTRIA»."""
+        assert (
+            clasificar_periodo("FCII", None, "MAESTRIA EN TURISMO, MENCION GESTION")
+            is NivelPeriodo.GRADO
+        )
+
+    def test_sin_nivel_ni_pista_asume_grado(self) -> None:
+        assert clasificar_periodo("FCII", None, None) is NivelPeriodo.GRADO
 
 
 class TestDistribucionHoras:

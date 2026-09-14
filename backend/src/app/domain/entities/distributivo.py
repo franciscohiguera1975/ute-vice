@@ -24,7 +24,11 @@ from uuid import UUID, uuid4
 
 from app.domain.errors import ErrorValidacion
 from app.domain.value_objects import ahora_utc, normalizar_texto
-from app.domain.value_objects_distributivo import DistribucionHoras, Identificacion
+from app.domain.value_objects_distributivo import (
+    DistribucionHoras,
+    Identificacion,
+    NivelPeriodo,
+)
 
 #: Separadores con los que el consolidado concatena varios titulos en una celda.
 #:
@@ -265,6 +269,58 @@ class FilaDistributivo:
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+
+#: Facultades cuya oferta es tecnologica. No se distinguen por el nivel —sus
+#: filas vienen unas como GRADO y otras sin nivel—, sino por la unidad.
+FACULTADES_TECNOLOGICAS = frozenset({"ETECH", "UAEFTT"})
+
+
+def clasificar_periodo(
+    facultad: str | None,
+    nivel: str | None,
+    carrera: str | None = None,
+) -> NivelPeriodo:
+    """A cual de los tres periodos del semestre pertenece una fila.
+
+    Las reglas, en este orden:
+
+    1. Si la facultad es tecnologica, el periodo es de **tecnologia**, sin
+       mirar el nivel: esas unidades imparten tecnologia aunque sus filas
+       vengan etiquetadas como grado.
+    2. Si no, manda la columna `NIVEL`.
+    3. Si `NIVEL` viene vacia —pasa en todo 2026-1, 731 filas—, se toma del
+       propio nombre de la carrera, que en ese periodo trae la forma
+       `SEDE:NOMBRE - NIVEL - MODALIDAD`. Es un respaldo, no la regla: solo se
+       usa cuando no hay nivel que leer.
+    4. Sin ninguna de las dos, se asume grado, que es el caso mayoritario.
+    """
+    if (facultad or "").strip().upper() in FACULTADES_TECNOLOGICAS:
+        return NivelPeriodo.TECNOLOGIA
+
+    limpio = (nivel or "").strip().upper()
+    if limpio == "POSGRADO":
+        return NivelPeriodo.POSGRADO
+    if limpio == "GRADO":
+        return NivelPeriodo.GRADO
+
+    return _nivel_en_el_nombre(carrera) or NivelPeriodo.GRADO
+
+
+def _nivel_en_el_nombre(carrera: str | None) -> NivelPeriodo | None:
+    """Lee el nivel del segmento central de «SEDE:NOMBRE - NIVEL - MODALIDAD».
+
+    Solo mira los segmentos separados por guiones, no el texto entero: buscar
+    «MAESTRIA» en cualquier parte clasificaria como posgrado carreras de grado
+    que la mencionan, y el origen tiene 98 de esas.
+    """
+    segmentos = [p.strip().upper() for p in str(carrera or "").split(" - ")]
+    for segmento in segmentos[1:]:
+        if segmento == "POSGRADO":
+            return NivelPeriodo.POSGRADO
+        if segmento == "GRADO":
+            return NivelPeriodo.GRADO
+    return None
 
 
 def separar_asignaturas(crudo: str | None) -> list[str]:

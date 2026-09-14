@@ -126,6 +126,36 @@ export class ListaDistributivoComponent {
     this.busqueda$.next(valor.trim());
   }
 
+  // ------------------------------------------------------------- periodos
+  /**
+   * Periodos marcados.
+   *
+   * Se pueden elegir varios: desde que cada semestre son tres periodos
+   * —tecnologia, grado y posgrado—, ver «2026-1 entero» significa marcar los
+   * tres, y un desplegable de uno solo ya no bastaba.
+   */
+  protected periodosElegidos(): readonly string[] {
+    return this.filtro().paoIds ?? [];
+  }
+
+  protected resumenPeriodos(): string {
+    const elegidos = this.periodosElegidos();
+    if (elegidos.length === 0) return 'Todos';
+    if (elegidos.length === 1) return this.catalogos.nombreDe(TipoCatalogo.PAO, elegidos[0]);
+    return `${elegidos.length} seleccionados`;
+  }
+
+  protected alternarPeriodo(id: string, marcado: boolean): void {
+    const actuales = this.periodosElegidos();
+    this.aplicar({
+      paoIds: marcado ? [...new Set([...actuales, id])] : actuales.filter((p) => p !== id),
+    });
+  }
+
+  protected limpiarPeriodos(): void {
+    this.aplicar({ paoIds: [] });
+  }
+
   protected aplicar(cambios: Partial<FiltroDistributivo>): void {
     this.filtro.update((f) => ({ ...f, ...cambios }));
     this.pagina.set(1);

@@ -448,7 +448,8 @@ class RepositorioDistributivoSQL:
                 FilaDistributivoModel,
                 DocenteModel.identificacion,
                 DocenteModel.nombre_completo,
-                PaoModel.codigo,
+                PaoModel.nombre,
+                PaoModel.atributos["semestre"].astext,
                 FacultadModel.codigo,
                 CarreraModel.nombre,
                 SedeModel.nombre,
@@ -541,28 +542,29 @@ class RepositorioDistributivoSQL:
     def _a_resuelta(fila: Any, *, con_codigos: bool = False) -> FilaDistributivoResuelta:
         entidad = m.fila_a_dominio(fila[0])
         # La entidad no las trae del modelo: viven en la tabla de union.
-        entidad.asignaturas_ids = list(fila[14] or ())
+        entidad.asignaturas_ids = list(fila[15] or ())
         codigos: dict[str, Any] = {}
         if con_codigos:
             # Las anaden `add_columns` en `filas_resueltas`, despues de las
-            # dieciseis de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
-            codigos = {nombre: fila[16 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
+            # diecisiete de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
+            codigos = {nombre: fila[17 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
         return FilaDistributivoResuelta(
             fila=entidad,
             docente_identificacion=fila[1],
             docente_nombre=fila[2],
             pao=fila[3],
-            facultad=fila[4],
-            carrera=fila[5],
-            sede=fila[6],
-            nivel=fila[7],
-            titularidad=fila[8],
-            dedicacion=fila[9],
-            categoria=fila[10],
-            tipo_titulo=fila[11],
-            genero=fila[12],
-            asignaturas=tuple(fila[13] or ()),
-            titulos=tuple(fila[15] or ()),
+            pao_semestre=fila[4] or "",
+            facultad=fila[5],
+            carrera=fila[6],
+            sede=fila[7],
+            nivel=fila[8],
+            titularidad=fila[9],
+            dedicacion=fila[10],
+            categoria=fila[11],
+            tipo_titulo=fila[12],
+            genero=fila[13],
+            asignaturas=tuple(fila[14] or ()),
+            titulos=tuple(fila[16] or ()),
             **codigos,
         )
 

@@ -123,14 +123,21 @@ class ElementoCatalogo:
             raise ErrorValidacion("El nombre excede los 320 caracteres", campo="nombre")
 
         if self.tipo is TipoCatalogo.PAO:
-            # Valida el formato y deja `anio`, `periodo` y `orden` coherentes con
-            # el codigo, para que ordenar por periodo no dependa de la cadena.
+            # Valida el formato y deja codigo, nombre, atributos y orden
+            # coherentes entre si, para que ordenar por periodo no dependa de
+            # la cadena ni de que quien lo cree se acuerde de todo.
             periodo = PeriodoAcademico.desde_codigo(self.codigo)
             self.codigo = periodo.codigo
+            self.nombre = periodo.nombre
             self.atributos = {
                 **self.atributos,
                 "anio": periodo.anio,
                 "periodo": periodo.periodo,
+                "nivel": periodo.nivel.value,
+                # El semestre calendario, sin el nivel. Es lo que traia el
+                # consolidado y lo que vuelve a salir al exportarlo en su
+                # formato de origen.
+                "semestre": periodo.semestre,
             }
             self.orden = periodo.orden
 

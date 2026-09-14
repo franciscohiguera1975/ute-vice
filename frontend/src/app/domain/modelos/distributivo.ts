@@ -186,6 +186,8 @@ export interface FiltroDistributivo {
   readonly texto?: string;
   readonly docenteId?: string;
   readonly paoId?: string;
+  /** Varios periodos a la vez. Se suma al filtro de uno solo. */
+  readonly paoIds?: readonly string[];
   readonly facultadId?: string;
   readonly carreraId?: string;
   /** Varias carreras a la vez: es como se emite el reporte institucional. */

@@ -174,3 +174,56 @@
 .opcion-asignatura:hover { background: var(--superficie-2); }
 .opcion-asignatura--activa { background: var(--azul-50); font-weight: 500; }
 .opcion-asignatura input { width: auto; margin-top: 0.15rem; flex-shrink: 0; }
+
+
+/* ------------------------------------------------ filtro de periodos --- */
+/* Desplegable propio y no un `select` multiple: los `select` multiples se
+   manejan con Ctrl y nadie los descubre. Con 31 periodos hace falta ver las
+   casillas. */
+.desplegable-periodos { position: relative; }
+
+.desplegable-periodos > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.84rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.desplegable-periodos > summary:hover { background: var(--superficie-2); }
+.desplegable-periodos[open] > summary { border-color: var(--azul-600); }
+
+.panel-periodos {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 15rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.4rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-2);
+}
+
+.acciones-periodos { margin-bottom: 0.3rem; }
+
+.opcion-periodo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.82rem;
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.opcion-periodo:hover { background: var(--superficie-2); }
+.opcion-periodo--activa { background: var(--azul-50); font-weight: 500; }
+.opcion-periodo input { width: auto; margin: 0; flex-shrink: 0; }
