@@ -121,6 +121,26 @@ codigo institucional en las dos direcciones, que los tres niveles compartan
 clasificacion, incluida la que evita clasificar como posgrado una carrera de
 grado que menciona «MAESTRIA».
 
+## Un fallo de la interfaz, de paso
+
+**Las pestanas de catalogos exigian dos clics** para mostrar los datos
+correctos.
+
+La recarga colgaba del `(click)` de la pestana, y ese manejador corre **antes**
+de que el router actualice la ruta: alli `tipo()` era todavia el catalogo
+anterior, la guarda «si no cambio, no recargues» lo daba por igual y no hacia
+nada. Al segundo clic el tipo ya era el nuevo, la guarda veia la diferencia y
+entonces si cargaba.
+
+Ahora la recarga cuelga de un efecto sobre la senal `tipo`, que es lo que de
+verdad cambia. El efecto lee **solo** esa senal y hace el resto con
+`untracked`: sin eso, las senales que lee la carga —texto, pagina, filtro—
+quedarian como dependencias y buscar reiniciaria la pantalla en bucle.
+
+Comprobado pestana por pestana con un solo clic —facultades 13, sedes 4,
+categorias 6, generos 2, carreras 278—, y que buscar sigue filtrando sin
+reiniciarse.
+
 ## Lo que quedo pendiente
 
 - **Las 11 filas sin nivel ni carrera** siguen rechazandose en la importacion,

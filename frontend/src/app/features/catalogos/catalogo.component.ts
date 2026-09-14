@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -103,14 +112,25 @@ export class CatalogoComponent {
         this.cargar();
       });
 
-    // `input.required` ya esta resuelto cuando corre esto, pero el componente se
-    // reutiliza al navegar entre catalogos: hay que recargar al cambiar el tipo.
-    queueMicrotask(() => this.sincronizar());
+    // El componente se reutiliza al navegar entre catalogos —la ruta solo
+    // cambia el `:tipo`—, asi que hay que recargar cuando ese valor cambie.
+    //
+    // Va en un efecto y no en el `(click)` de la pestana: el manejador del
+    // clic corre **antes** de que el router actualice la ruta, de modo que
+    // alli `tipo()` es todavia el catalogo anterior. Esa era la causa de que
+    // hiciera falta pulsar dos veces para ver los datos correctos.
+    effect(() => {
+      const tipo = this.tipo();
+      // Solo `tipo` debe disparar esto. Sin `untracked`, las señales que lee
+      // `cargar()` —texto, pagina, filtro— quedarian como dependencias y
+      // buscar reiniciaria la pantalla en bucle.
+      untracked(() => this.sincronizar(tipo));
+    });
   }
 
-  protected sincronizar(): void {
-    if (this.tipoCargado === this.tipo()) return;
-    this.tipoCargado = this.tipo();
+  private sincronizar(tipo: TipoCatalogo): void {
+    if (this.tipoCargado === tipo) return;
+    this.tipoCargado = tipo;
     this.cerrarFormulario();
     this.texto.set('');
     this.pagina.set(1);
