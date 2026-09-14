@@ -83,6 +83,7 @@ export class CatalogoComponent {
   protected readonly descripcion = signal('');
   protected readonly activo = signal(true);
   protected readonly orden = signal(0);
+  protected readonly codigoErp = signal('');
   protected readonly guardando = signal(false);
 
   protected readonly aEliminar = signal<ElementoCatalogo | null>(null);
@@ -185,6 +186,7 @@ export class CatalogoComponent {
     this.descripcion.set('');
     this.activo.set(true);
     this.orden.set(this.datos().total);
+    this.codigoErp.set('');
   }
 
   protected abrirEdicion(elemento: ElementoCatalogo): void {
@@ -195,6 +197,7 @@ export class CatalogoComponent {
     this.descripcion.set(elemento.descripcion);
     this.activo.set(elemento.activo);
     this.orden.set(elemento.orden);
+    this.codigoErp.set(elemento.codigoErp ?? '');
   }
 
   protected cerrarFormulario(): void {
@@ -232,6 +235,7 @@ export class CatalogoComponent {
           descripcion: this.descripcion().trim(),
           activo: this.activo(),
           orden: this.orden(),
+          codigoErp: this.codigoErp().trim(),
         })
         .subscribe(alTerminar);
       return;
@@ -249,6 +253,7 @@ export class CatalogoComponent {
         descripcion: this.descripcion().trim(),
         activo: this.activo(),
         orden: this.orden(),
+        codigoErp: this.codigoErp().trim(),
       })
       .subscribe(alTerminar);
   }

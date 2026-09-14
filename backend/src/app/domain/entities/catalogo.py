@@ -100,6 +100,14 @@ class ElementoCatalogo:
     activo: bool = True
     orden: int = 0
 
+    #: Codigo del mismo elemento en el ERP academico.
+    #:
+    #: No es unico y no puede serlo: `FCSEE` y `PFCSEE` son dos unidades aqui y
+    #: una sola —`FS`— en el ERP, igual que `ETECH` y `UAEFTT` son ambas `TT`.
+    #: Sirve para reconciliar, no para identificar; la identidad sigue siendo
+    #: `codigo`.
+    codigo_erp: str = ""
+
     #: Datos propios del catalogo: `anio`/`periodo` en PAO, `modalidad` en
     #: carrera, `alias` en sede. Se guardan aqui en lugar de multiplicar
     #: columnas que estarian vacias en once de los doce catalogos.
@@ -112,6 +120,7 @@ class ElementoCatalogo:
     def __post_init__(self) -> None:
         self.codigo = " ".join((self.codigo or "").split()).upper()
         self.nombre = " ".join((self.nombre or "").split())
+        self.codigo_erp = "".join((self.codigo_erp or "").split()).upper()
 
         if not self.codigo:
             raise ErrorValidacion("El codigo es obligatorio", campo="codigo")
@@ -121,6 +130,8 @@ class ElementoCatalogo:
             raise ErrorValidacion("El nombre es obligatorio", campo="nombre")
         if len(self.nombre) > 320:
             raise ErrorValidacion("El nombre excede los 320 caracteres", campo="nombre")
+        if len(self.codigo_erp) > 64:
+            raise ErrorValidacion("El codigo del ERP excede los 64 caracteres", campo="codigoErp")
 
         if self.tipo is TipoCatalogo.PAO:
             # Valida el formato y deja codigo, nombre, atributos y orden
@@ -162,6 +173,7 @@ class ElementoCatalogo:
         descripcion: str | None = None,
         activo: bool | None = None,
         orden: int | None = None,
+        codigo_erp: str | None = None,
         atributos: dict[str, object] | None = None,
     ) -> None:
         """Aplica solo los campos recibidos; `None` significa «sin cambio».
@@ -177,6 +189,8 @@ class ElementoCatalogo:
             self.activo = activo
         if orden is not None:
             self.orden = orden
+        if codigo_erp is not None:
+            self.codigo_erp = codigo_erp
         if atributos is not None:
             self.atributos = {**self.atributos, **atributos}
 

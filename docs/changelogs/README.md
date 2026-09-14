@@ -33,3 +33,4 @@ pendiente.
 | [13](13-periodos-academicos-por-nivel.md) | Cada semestre son tres periodos academicos | ✅ |
 | [14](14-sesion-expirada.md) | La sesion expirada vuelve al acceso | ✅ |
 | [15](15-materias-por-docente.md) | Las materias que imparte cada docente | ✅ |
+| [16](16-codigo-del-erp.md) | El codigo del ERP en los catalogos | ✅ |

@@ -40,6 +40,13 @@ export interface ElementoCatalogo {
   readonly descripcion: string;
   readonly activo: boolean;
   readonly orden: number;
+  /**
+   * Codigo del mismo elemento en el ERP academico.
+   *
+   * No es unico: `FCSEE` y `PFCSEE` son dos unidades aqui y una sola —`FS`—
+   * alla. Sirve para reconciliar, no para identificar.
+   */
+  readonly codigoErp: string;
   readonly atributos: Record<string, unknown>;
   readonly creadoEn: string;
   readonly actualizadoEn: string;
@@ -63,6 +70,7 @@ export interface DatosElementoCatalogo {
   readonly descripcion?: string;
   readonly activo?: boolean;
   readonly orden?: number;
+  readonly codigoErp?: string;
   readonly atributos?: Record<string, unknown>;
 }
 

@@ -73,6 +73,21 @@
         </div>
 
         <div class="campo">
+          <label class="campo__etiqueta" for="cat-erp">Código en el ERP</label>
+          <input
+            id="cat-erp"
+            type="text"
+            class="mono"
+            [ngModel]="codigoErp()"
+            (ngModelChange)="codigoErp.set($event)"
+          />
+          <p class="campo__ayuda">
+            Cómo nombra el ERP académico a este elemento. Puede repetirse: varias
+            unidades de aquí pueden ser una sola allá.
+          </p>
+        </div>
+
+        <div class="campo">
           <label class="campo__etiqueta" for="cat-orden">Orden</label>
           <input
             id="cat-orden"
@@ -164,6 +179,7 @@
         <thead>
           <tr>
             <th>Código</th>
+            <th>ERP</th>
             <th>Nombre</th>
             <th>Descripción</th>
             <th class="centro">Orden</th>
@@ -175,6 +191,7 @@
           @for (elemento of datos().items; track elemento.id) {
             <tr [class.fila--inactiva]="!elemento.activo">
               <td class="mono texto-sm">{{ elemento.codigo }}</td>
+              <td class="mono texto-sm texto-suave">{{ elemento.codigoErp || '—' }}</td>
               <td>
                 {{ elemento.nombre }}
                 @if (atributosLegibles(elemento); as attrs) {

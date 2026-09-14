@@ -28,6 +28,7 @@ class ElementoCatalogoSalida(EsquemaBase):
     descripcion: str
     activo: bool
     orden: int
+    codigo_erp: str
     atributos: dict[str, Any]
     creado_en: datetime
     actualizado_en: datetime
@@ -42,6 +43,7 @@ class ElementoCatalogoSalida(EsquemaBase):
             descripcion=e.descripcion,
             activo=e.activo,
             orden=e.orden,
+            codigo_erp=e.codigo_erp,
             atributos=e.atributos,
             creado_en=e.creado_en,
             actualizado_en=e.actualizado_en,
@@ -70,6 +72,7 @@ class ElementoCatalogoCrear(EsquemaBase):
     descripcion: str = ""
     activo: bool = True
     orden: int = 0
+    codigo_erp: Annotated[str, Field(max_length=64)] = ""
     atributos: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -78,6 +81,7 @@ class ElementoCatalogoActualizar(EsquemaBase):
     descripcion: str | None = None
     activo: bool | None = None
     orden: int | None = None
+    codigo_erp: str | None = Field(default=None, max_length=64)
     atributos: dict[str, Any] | None = None
 
 

@@ -34,6 +34,7 @@ def catalogo_a_dominio(modelo: Base, tipo: TipoCatalogo | None = None) -> Elemen
         descripcion=modelo.descripcion,  # type: ignore[attr-defined]
         activo=modelo.activo,  # type: ignore[attr-defined]
         orden=modelo.orden,  # type: ignore[attr-defined]
+        codigo_erp=modelo.codigo_erp or "",  # type: ignore[attr-defined]
         atributos=dict(modelo.atributos or {}),  # type: ignore[attr-defined]
         creado_en=modelo.creado_en,  # type: ignore[attr-defined]
         actualizado_en=modelo.actualizado_en,  # type: ignore[attr-defined]
@@ -48,6 +49,7 @@ def catalogo_a_modelo(entidad: ElementoCatalogo, modelo: Base | None = None) -> 
     modelo.clave_busqueda = entidad.clave_busqueda  # type: ignore[attr-defined]
     modelo.activo = entidad.activo  # type: ignore[attr-defined]
     modelo.orden = entidad.orden  # type: ignore[attr-defined]
+    modelo.codigo_erp = entidad.codigo_erp  # type: ignore[attr-defined]
     modelo.atributos = entidad.atributos  # type: ignore[attr-defined]
     return modelo
 

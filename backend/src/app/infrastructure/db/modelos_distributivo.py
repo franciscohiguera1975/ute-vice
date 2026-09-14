@@ -62,6 +62,11 @@ class MixinCatalogo(MixinAuditoria):
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     orden: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    #: Codigo del elemento en el ERP academico. Sin indice ni unicidad: varias
+    #: unidades locales comparten uno —`FCSEE` y `PFCSEE` son ambas `FS`— y los
+    #: catalogos donde se consulta tienen decenas de filas, no millones.
+    codigo_erp: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+
     #: Datos propios de cada catalogo: `anio`/`periodo` en PAO, `modalidad` en
     #: carrera, `alias` en sede. Van en JSONB en lugar de multiplicar columnas
     #: que estarian vacias en once de los doce catalogos.

@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 15 — cerradas
+### Fases 12 a 16 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -213,6 +213,13 @@ SICAF ([changelog](changelogs/15-materias-por-docente.md)).
 >
 > Ojo con el **codigo de tecnologia**: el SICAF usa `55` y el sistema `15`. El
 > importador admite los dos; cual es el correcto sigue sin decidirse.
+
+**16**: los catalogos guardan `codigo_erp`, el nombre del mismo elemento en el
+ERP academico ([changelog](changelogs/16-codigo-del-erp.md)).
+
+> **No es unico**: `FCSEE` y `PFCSEE` son dos unidades aqui y una sola —`FS`—
+> alla, igual que `ETECH` y `UAEFTT` son ambas `TT`. La identidad sigue siendo
+> `codigo`; `codigo_erp` solo reconcilia.
 
 ### Fase 14 — espera confirmacion funcional
 

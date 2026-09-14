@@ -203,3 +203,41 @@ async def test_tiene_tope_por_peticion(uow, contexto_admin) -> None:  # type: ig
     ]
     with pytest.raises(ErrorValidacion):
         await CapturarAsignaturas(uow)(exceso, contexto_admin)
+
+
+class TestCodigoErp:
+    """El codigo del elemento en el ERP academico."""
+
+    def test_se_normaliza_a_mayusculas_y_sin_espacios(self) -> None:
+        elemento = ElementoCatalogo(
+            tipo=TipoCatalogo.FACULTAD, codigo="FCSEE", nombre="Salud", codigo_erp=" fs "
+        )
+        assert elemento.codigo_erp == "FS"
+
+    def test_por_omision_esta_vacio(self) -> None:
+        elemento = ElementoCatalogo(tipo=TipoCatalogo.FACULTAD, codigo="FO", nombre="Odonto")
+        assert elemento.codigo_erp == ""
+
+    def test_no_es_unico_dos_elementos_pueden_compartirlo(self) -> None:
+        # `FCSEE` y `PFCSEE` son dos unidades aqui y una sola —`FS`— en el ERP.
+        uno = ElementoCatalogo(
+            tipo=TipoCatalogo.FACULTAD, codigo="FCSEE", nombre="Salud", codigo_erp="FS"
+        )
+        otro = ElementoCatalogo(
+            tipo=TipoCatalogo.FACULTAD, codigo="PFCSEE", nombre="Posgrados", codigo_erp="FS"
+        )
+        assert uno.codigo_erp == otro.codigo_erp
+        assert uno != otro
+
+    def test_se_puede_actualizar_aunque_el_codigo_no(self) -> None:
+        elemento = ElementoCatalogo(tipo=TipoCatalogo.FACULTAD, codigo="FAU", nombre="Arqui")
+        elemento.actualizar(codigo_erp="fu")
+
+        assert elemento.codigo_erp == "FU"
+        assert elemento.codigo == "FAU"
+
+    def test_rechaza_uno_demasiado_largo(self) -> None:
+        with pytest.raises(ErrorValidacion):
+            ElementoCatalogo(
+                tipo=TipoCatalogo.FACULTAD, codigo="FO", nombre="Odonto", codigo_erp="X" * 65
+            )

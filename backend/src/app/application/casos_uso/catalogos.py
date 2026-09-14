@@ -41,6 +41,7 @@ class EntradaCrearElemento:
     descripcion: str = ""
     activo: bool = True
     orden: int = 0
+    codigo_erp: str = ""
     atributos: dict[str, object] = field(default_factory=dict)
 
 
@@ -52,6 +53,7 @@ class EntradaActualizarElemento:
     descripcion: str | None = None
     activo: bool | None = None
     orden: int | None = None
+    codigo_erp: str | None = None
     atributos: dict[str, object] | None = None
 
 
@@ -158,6 +160,7 @@ class CrearElementoCatalogo(CasoDeUso[EntradaCrearElemento, ElementoCatalogo]):
             descripcion=entrada.descripcion,
             activo=entrada.activo,
             orden=entrada.orden,
+            codigo_erp=entrada.codigo_erp,
             atributos=dict(entrada.atributos),
         )
 
@@ -197,6 +200,7 @@ class ActualizarElementoCatalogo(CasoDeUso[EntradaActualizarElemento, ElementoCa
                 descripcion=entrada.descripcion,
                 activo=entrada.activo,
                 orden=entrada.orden,
+                codigo_erp=entrada.codigo_erp,
                 atributos=entrada.atributos,
             )
             actualizado = await self._uow.catalogos.actualizar(elemento)
