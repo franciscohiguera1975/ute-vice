@@ -22,7 +22,7 @@
   gap: 0.6rem;
   padding: 0 1rem;
   color: #fff;
-  background: var(--azul-800);
+  background: var(--azul-ute);
 }
 
 .cabecera__menu,
@@ -53,17 +53,13 @@
 }
 .marca:hover { text-decoration: none; }
 
-/* El logotipo va sobre una placa blanca: es a color —azul y verde— y sobre la
-   barra azul el azul del texto se perderia. La placa es rectangular y no
-   circular porque el logotipo incluye el «ec» a la derecha y en un circulo
-   quedaria recortado o diminuto. */
+/* Sin placa: este archivo ya es el logotipo en blanco sobre el azul
+   institucional, hecho para una barra como esta. Su fondo es opaco, asi que
+   depende de que `--azul-ute` valga exactamente lo mismo. */
 .marca__logo {
   display: block;
   width: auto;
-  height: 30px;
-  padding: 5px 8px;
-  background: #fff;
-  border-radius: var(--radio);
+  height: 34px;
 }
 
 .marca__titulo { font-size: 1rem; font-weight: 700; white-space: nowrap; }

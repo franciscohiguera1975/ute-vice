@@ -46,11 +46,13 @@ Detalles que importan:
   queda igual en claro y oscuro. Por eso los colores de dentro se escriben
   literales: sobre azul, `--texto` sería ilegible en tema claro. El desplegable
   del usuario sí vuelve a superficie normal, donde el tema manda.
-- **El logotipo va sobre una placa blanca.** Es a color —azul y verde—, así que
-  sobre la barra azul el azul del texto se perdería. La placa es rectangular y
-  no circular porque el logotipo incluye el «ec» a la derecha y en un círculo
-  quedaría recortado. Se comprobó que la proporción original se conserva:
-  1,220 frente a 1,219 al renderizar.
+- **El logotipo va sin placa.** `log-fondo-blanco.png` ya es la versión en
+  blanco sobre el azul institucional, hecha para una barra como esta. Su fondo
+  es **opaco**, así que depende de que la barra lleve exactamente ese color: con
+  `--azul-800` (`#1f3864`) se veía como un rectángulo más claro recortado.
+- **La barra pasa a `--azul-ute` (`#005795`).** No es un color elegido: es el
+  fondo del archivo del logotipo, muestreado de él. Igual que `--verde-ute`
+  (`#22a94b`), que sale del logotipo circular.
 - **El activo se marca con subrayado, no con relleno.** Sobre un fondo de color,
   una pastilla clara compite con el botón de usuario y se lee como si estuviera
   pulsada.
@@ -59,6 +61,30 @@ Detalles que importan:
   llegar a tableta. Por debajo, el lateral vuelve como cajón.
 - **`--rojo-ute`** es un token nuevo para el avatar. No se reutilizó `--error`:
   un avatar en rojo de error se lee como una alerta, y esto es identidad.
+
+## La pantalla de acceso
+
+Dos columnas dentro de una tarjeta: identidad a la izquierda, formulario a la
+derecha.
+
+- **El degradado va del azul al verde del propio logotipo**, en esa dirección,
+  para que el panel se lea como una ampliación de la marca y no como un fondo
+  elegido aparte. Los dos valores salen de muestrear los archivos, no del ojo.
+- **Columnas de ancho fijo** —22rem y 24rem— y no fracciones: el formulario no
+  debe encogerse cuando el texto de la izquierda crece.
+- **Por debajo de 48rem el panel de identidad se oculta entero** en lugar de
+  apilarse. No contiene nada que haga falta para entrar, y apilado empujaría el
+  formulario fuera de la primera pantalla.
+- **No lleva `aria-hidden`.** Dentro está el único `h1` de la página, y
+  esconderlo dejaría el documento sin encabezado de primer nivel. Lo decorativo
+  es la imagen, y eso lo dice su `alt` vacío.
+
+En la cabecera, en cambio, el logotipo **sí** lleva `alt`: aporta el nombre de
+la institución, que el texto contiguo no dice.
+
+Verificado en el navegador a 800×620: tarjeta centrada (99 px arriba, 99 px
+esperados), degradado `linear-gradient(150deg, #005795, #22a94b)` y la
+proporción del logotipo intacta.
 
 ## El favicon
 
@@ -75,7 +101,8 @@ sin tocar `angular.json`.
 | `alembic/versions/…b8d3f1a29e64…` | el rol en las bases que ya existen |
 | `shared/layout/layout.component.html` | navegación a la cabecera |
 | `shared/layout/layout.component.scss` | barra azul, nav horizontal, cajón |
-| `styles.scss` | `--rojo-ute` |
+| `features/acceso/acceso.component.*` | pantalla de acceso a dos columnas |
+| `styles.scss` | `--rojo-ute`, `--azul-ute`, `--verde-ute` |
 | `index.html` | favicon |
 | `tests/unit/test_autorizacion.py` | 4 casos del rol nuevo |
 

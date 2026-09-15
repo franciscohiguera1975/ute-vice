@@ -20,6 +20,13 @@
      la barra azul, donde un tono de la misma familia no destacaria. */
   --rojo-ute: #a8322c;
 
+  /* Colores tomados de los archivos del logotipo, no elegidos a ojo.
+     `--azul-ute` es el fondo de `log-fondo-blanco.png`, que es opaco: la barra
+     tiene que llevar exactamente este valor o el logotipo se ve como un
+     rectangulo mas claro recortado sobre ella. */
+  --azul-ute: #005795;
+  --verde-ute: #22a94b;
+
   /* --- Estado --- */
   --exito: #1b7f4b;
   --exito-suave: #e3f5ec;

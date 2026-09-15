@@ -9,33 +9,82 @@
     var(--fondo);
 }
 
-.acceso__panel {
-  width: min(25rem, 100%);
-  padding: 2rem;
+/* Dos columnas de ancho fijo y no fracciones: el formulario no debe encogerse
+   cuando el texto de la izquierda crece. */
+.acceso__tarjeta {
+  display: grid;
+  grid-template-columns: 22rem 24rem;
+  width: min(46rem, 100%);
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-2);
+  overflow: hidden;
 }
 
-.acceso__marca { text-align: center; margin-bottom: 1.5rem; }
-
-.acceso__sigla {
-  display: inline-flex;
-  align-items: center;
+/* El degradado va del azul al verde del propio logotipo, en esa direccion,
+   para que el panel parezca una ampliacion de la marca y no un fondo elegido
+   aparte. Ambos valores salen de muestrear el archivo. */
+.acceso__marca {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  font-weight: 700;
+  gap: 0.15rem;
+  padding: 2.5rem 2rem;
   color: #fff;
-  background: var(--azul-800);
+  background: linear-gradient(150deg, var(--azul-ute), var(--verde-ute));
+}
+
+/* Placa blanca: el logotipo circular es a color y se apoyaria mal sobre el
+   degradado. Es el mismo recurso del pie de la marca, no una variante. */
+.acceso__logo {
+  display: block;
+  width: auto;
+  height: 74px;
+  margin-bottom: 1.75rem;
+  padding: 0.7rem;
+  background: #fff;
+  border-radius: var(--radio-lg);
+  align-self: flex-start;
+}
+
+.acceso__institucion {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 78%);
+}
+
+.acceso__titulo { margin: 0.35rem 0 0; font-size: 1.85rem; line-height: 1.15; }
+
+.acceso__subtitulo {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 85%);
+}
+
+.acceso__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.acceso__etiquetas li {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  background: rgb(255 255 255 / 16%);
+  border: 1px solid rgb(255 255 255 / 22%);
   border-radius: var(--radio);
 }
 
-.acceso__titulo { margin: 0; font-size: 1.2rem; }
-.acceso__subtitulo { margin: 0.2rem 0 0; font-size: 0.78rem; color: var(--texto-tenue); }
+.acceso__panel { padding: 2.5rem 2rem; }
+
+.acceso__bienvenida { margin: 0 0 1.5rem; font-size: 1.15rem; }
 
 .pestanas {
   display: flex;
@@ -97,4 +146,11 @@
   text-align: center;
   line-height: 1.45;
   border-top: 1px solid var(--borde);
+}
+
+/* ------------------------------------------------------------ responsivo --- */
+@media (width <= 48rem) {
+  .acceso__tarjeta { grid-template-columns: 1fr; width: min(24rem, 100%); }
+  .acceso__marca { display: none; }
+  .acceso__panel { padding: 2rem 1.5rem; }
 }
