@@ -119,7 +119,10 @@ class ElementoCatalogo:
 
     def __post_init__(self) -> None:
         self.codigo = " ".join((self.codigo or "").split()).upper()
-        self.nombre = " ".join((self.nombre or "").split())
+        # En mayusculas, igual que el codigo. Es lo que hace que la lista de un
+        # catalogo se lea uniforme: antes convivian nombres escritos a mano con
+        # los que generaba el importador, y salian «Posgrado» junto a «GRADO».
+        self.nombre = " ".join((self.nombre or "").split()).upper()
         self.codigo_erp = "".join((self.codigo_erp or "").split()).upper()
 
         if not self.codigo:

@@ -229,7 +229,7 @@ class TestElementoCatalogo:
     def test_normaliza_el_codigo_a_mayusculas(self) -> None:
         elemento = ElementoCatalogo(tipo=TipoCatalogo.SEDE, codigo="  mon ", nombre="  Monjas  ")
         assert elemento.codigo == "MON"
-        assert elemento.nombre == "Monjas"
+        assert elemento.nombre == "MONJAS"
 
     def test_el_pao_deriva_anio_periodo_y_orden_del_codigo(self) -> None:
         """Asi ordenar por periodo no depende de comparar cadenas."""
@@ -247,7 +247,7 @@ class TestElementoCatalogo:
         elemento = ElementoCatalogo(tipo=TipoCatalogo.CARRERA, codigo="MEDICINA", nombre="Medicina")
         elemento.actualizar(nombre="Medicina General", activo=False)
         assert elemento.codigo == "MEDICINA"
-        assert elemento.nombre == "Medicina General"
+        assert elemento.nombre == "MEDICINA GENERAL"
         assert not elemento.activo
 
     def test_la_clave_de_busqueda_ignora_acentos(self) -> None:

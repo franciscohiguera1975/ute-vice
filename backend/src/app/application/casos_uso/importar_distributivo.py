@@ -19,7 +19,6 @@ Tres decisiones de normalizacion, tomadas al contrastar el consolidado historico
 
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from uuid import UUID
@@ -79,14 +78,14 @@ ALIAS_GENERO: dict[str, str] = {
     "F": "FEMENINO",
 }
 
-NOMBRES_GENERO: dict[str, str] = {"MASCULINO": "Masculino", "FEMENINO": "Femenino"}
-
-#: Nombre legible de cada sede, para los selectores y el reporte.
+#: Nombre legible de cada sede. Solo hace falta cuando difiere del codigo: el
+#: origen abrevia el campus `MON`, y aqui se escribe como lo nombra el propio
+#: consolidado en sus otras filas —`RICARDO HIDALGO OTTOLENGHI`—.
+#:
+#: Antes decia «Monjas (Ricardo Hidalgo Ottolenghi)», que era una suposicion:
+#: ese nombre no aparece en ningun dato de origen.
 NOMBRES_SEDE: dict[str, str] = {
-    "QUITO": "Quito",
-    "SANTO DOMINGO": "Santo Domingo",
-    "MON": "Monjas (Ricardo Hidalgo Ottolenghi)",
-    "CUENCA": "Cuenca",
+    "MON": "RICARDO HIDALGO OTTOLENGHI",
 }
 
 #: Clave natural de una fila: docente, periodo, carrera y sede. La sede entra
@@ -128,6 +127,17 @@ class EntradaImportacion:
     aborta en la primera fila que ya existe y hay que borrar el periodo entero
     antes, perdiendo de paso las materias enlazadas.
     """
+
+
+def _nivel_de_la_fila(fila: FilaCrudaDistributivo) -> str:
+    """El nivel academico de la fila, no el que diga la columna.
+
+    El consolidado no conoce la tecnologia: sus filas de `ETECH` y `UAEFTT`
+    vienen etiquetadas como grado. Se usa la misma regla que decide el periodo,
+    para que la fila no acabe diciendo «GRADO» dentro de un periodo
+    «2026-1 TECNOLOGIA».
+    """
+    return clasificar_periodo(fila.facultad, fila.nivel, fila.carrera).value
 
 
 def _codigo_de_periodo(fila: FilaCrudaDistributivo) -> str:
@@ -176,7 +186,7 @@ class CacheDeCatalogos:
         elemento = ElementoCatalogo(
             tipo=tipo,
             codigo=clave,
-            nombre=nombre or _titulo_legible(clave),
+            nombre=nombre or clave,
             orden=len(self._por_tipo[tipo]),
         )
         self._por_tipo[tipo][elemento.codigo] = elemento.id
@@ -197,43 +207,6 @@ class CacheDeCatalogos:
         if self._nuevos:
             await self._uow.catalogos.agregar_muchos(self._nuevos)
             self._nuevos = []
-
-
-#: Palabras del titulo que van en minuscula salvo al principio.
-_MENORES = {"DE", "EN", "Y", "DEL", "LA", "EL", "LOS", "LAS", "CON", "A", "POR"}
-
-#: Numerales romanos hasta XXXIX, que es de sobra para niveles de asignatura.
-#: Se limita a `IVX` a proposito: con `LCDM` entrarian siglas como `CD` o `MD`.
-_ROMANO = re.compile(r"^[IVX]{1,6}$")
-
-#: Rachas de letras. Se opera sobre ellas y no sobre palabras separadas por
-#: espacios porque el origen escribe `II-AZOTEMIA AGUDA`, y capitalizar la
-#: palabra entera deja `Ii-azotemia`.
-_LETRAS = re.compile(r"[^\W\d_]+", re.UNICODE)
-
-
-def _titulo_legible(codigo: str) -> str:
-    """`MAESTRÍA EN X` → `Maestría en X`, respetando siglas y romanos.
-
-    Los numerales quedan como estan: una asignatura `CLINICA III` se lee mal
-    como `Clinica Iii`, y el reporte de materias trae cuatrocientas asi.
-    """
-    if len(codigo) <= 6 and " " not in codigo:
-        return codigo  # siglas de facultad: FCSEE, PEL, FO
-
-    primera = True
-
-    def convertir(encontrado: re.Match[str]) -> str:
-        nonlocal primera
-        palabra = encontrado.group(0)
-        al_principio, primera = primera, False
-        if _ROMANO.match(palabra):
-            return palabra
-        if not al_principio and palabra in _MENORES:
-            return palabra.lower()
-        return palabra.capitalize()
-
-    return _LETRAS.sub(convertir, codigo)
 
 
 class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDistributivo]):
@@ -341,7 +314,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
             (TipoCatalogo.FACULTAD, _normalizar(fila.facultad)),
             (TipoCatalogo.CARRERA, _normalizar(fila.carrera)),
             (TipoCatalogo.SEDE, _normalizar_sede(fila.sede)),
-            (TipoCatalogo.NIVEL, _normalizar(fila.nivel)),
+            (TipoCatalogo.NIVEL, _nivel_de_la_fila(fila)),
         )
         for tipo, codigo in comprobaciones:
             if not catalogos.conoce(tipo, codigo):
@@ -411,9 +384,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
     def _resolver_genero(catalogos: CacheDeCatalogos, codigo: str | None) -> UUID | None:
         if not codigo:
             return None
-        return catalogos.resolver(
-            TipoCatalogo.GENERO, codigo, nombre=NOMBRES_GENERO.get(codigo, _titulo_legible(codigo))
-        )
+        return catalogos.resolver(TipoCatalogo.GENERO, codigo, nombre=codigo)
 
     @staticmethod
     def _mejor_nombre(variantes: Counter[str]) -> str | None:
@@ -492,7 +463,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
                     facultad_id=facultad_id,
                     carrera_id=carrera_id,
                     sede_id=sede_id,
-                    nivel_id=catalogos.resolver(TipoCatalogo.NIVEL, _normalizar(principal.nivel)),
+                    nivel_id=catalogos.resolver(TipoCatalogo.NIVEL, _nivel_de_la_fila(principal)),
                     titularidad_id=catalogos.resolver(
                         TipoCatalogo.TITULARIDAD, _normalizar(principal.titularidad)
                     ),
@@ -531,7 +502,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         if not codigo:
             return None
         return catalogos.resolver(
-            TipoCatalogo.SEDE, codigo, nombre=NOMBRES_SEDE.get(codigo, _titulo_legible(codigo))
+            TipoCatalogo.SEDE, codigo, nombre=NOMBRES_SEDE.get(codigo, codigo)
         )
 
     @staticmethod

@@ -158,7 +158,7 @@ async def test_una_fila_admite_varias_materias_separadas_por_comas(  # type: ign
 
     assert resultado.actualizadas == 1
     assert resultado.asignaturas_creadas == 3
-    assert _nombres_asignaturas(uow, fila.id) == ["Calculo I", "Algebra Lineal", "Fisica"]
+    assert _nombres_asignaturas(uow, fila.id) == ["CALCULO I", "ALGEBRA LINEAL", "FISICA"]
 
 
 async def test_la_misma_materia_repetida_en_el_texto_entra_una_vez(  # type: ignore[no-untyped-def]
@@ -171,7 +171,7 @@ async def test_la_misma_materia_repetida_en_el_texto_entra_una_vez(  # type: ign
         contexto_admin,
     )
 
-    assert _nombres_asignaturas(uow, fila.id) == ["Calculo I", "Fisica"]
+    assert _nombres_asignaturas(uow, fila.id) == ["CALCULO I", "FISICA"]
 
 
 async def test_aborta_entera_si_una_fila_no_existe(uow, contexto_admin) -> None:  # type: ignore[no-untyped-def]

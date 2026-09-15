@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 19 — cerradas
+### Fases 12 a 20 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -248,6 +248,15 @@ en blanco ([changelog](changelogs/19-bucle-de-redirecciones.md)).
 > destino se calcula ahora con `rutaDeInicio`, que solo devuelve secciones que
 > el usuario puede abrir. La lista vive en `@core/secciones`, de donde sale
 > tambien el menu: duplicarla fue parte del problema.
+
+**20**: los nombres de catalogo van en mayusculas, la sede `MON` se llama como
+dice el origen y existe el nivel `TECNOLOGIA`
+([changelog](changelogs/20-nombres-en-mayusculas.md)).
+
+> **No expanda abreviaturas del origen por su cuenta.** La sede `MON` se llamaba
+> «Monjas (Ricardo Hidalgo Ottolenghi)» y ese nombre no aparece en ningun dato:
+> alguien dedujo que `MON` era Monjas. El consolidado escribe `RICARDO HIDALGO
+> OTTOLENGHI`, y eso es lo que vale.
 
 ### Fase 14 — espera confirmacion funcional
 

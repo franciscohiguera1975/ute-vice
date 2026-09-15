@@ -272,24 +272,13 @@ class TestCodocencia:
         assert resultado.sin_destino[0].nombre_docente == "GOMEZ ANA"
 
 
-class TestNombreLegible:
-    """Los nombres del SICAF llegan en mayusculas y abreviados."""
+class TestNombreDeLaAsignatura:
+    """Los nombres del SICAF llegan en mayusculas y asi se quedan."""
 
-    @pytest.mark.parametrize(
-        ("origen", "esperado"),
-        [
-            # Los romanos se conservan: son el nivel de la asignatura y
-            # `Iii` no se lee.
-            ("CLINICA III", "Clinica III"),
-            ("OCLUSIÓN Y ATM I", "Oclusión y Atm I"),
-            ("ORTODONCIA BEE II", "Ortodoncia Bee II"),
-            # El origen une el nivel con el tema por guion, sin espacios.
-            ("ADULTO II-AZOTEMIA AGUDA", "Adulto II-Azotemia Aguda"),
-            ("MAESTRÍA EN SALUD PÚBLICA", "Maestría en Salud Pública"),
-            ("FCSEE", "FCSEE"),
-        ],
-    )
-    def test_titulo_legible(self, origen: str, esperado: str) -> None:
-        from app.application.casos_uso.importar_distributivo import _titulo_legible
+    async def test_conserva_las_mayusculas_del_origen(self, uow) -> None:
+        await sembrar(uow, [fila_distributivo()])
+        await importar(uow, [materia(nombre="Clinica III")])
 
-        assert _titulo_legible(origen) == esperado
+        # Sin formato titulo: `Clinica Iii` destrozaba los numerales, y ademas
+        # convivia mal con los nombres escritos a mano.
+        assert await materias_de(uow) == ["CLINICA III"]

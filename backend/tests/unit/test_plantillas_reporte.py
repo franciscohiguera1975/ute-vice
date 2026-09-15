@@ -515,7 +515,7 @@ async def test_las_carreras_disponibles_salen_de_los_datos(uow, contexto_admin) 
         contexto_admin,
     )
 
-    assert [c.nombre for c in carreras] == ["Software"]
+    assert [c.nombre for c in carreras] == ["SOFTWARE"]
     # El filtro llega entero: lo ofrecido coincide con lo que saldra despues.
     assert uow.distributivo.ultimo_filtro.pao_ids == (pao,)
     assert uow.distributivo.ultimo_filtro.facultad_ids == (facultad,)
