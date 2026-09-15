@@ -265,6 +265,25 @@ caracter especial**, y rechaza secuencias obvias (`123456`, `qwerty`, `admin`,
 uno que parezca razonable —el usuario mas unos digitos— se rechaza si no lleva
 mayuscula.
 
+El patron que se viene usando es **el usuario con la inicial en mayuscula, mas
+`12345*`**: `Christianf.ortega12345*`. La mayuscula inicial es lo unico que lo
+salva; sin ella la politica lo rechaza. Y `12345` pasa porque la secuencia
+prohibida es `123456`, con el seis.
+
+### Roles disponibles
+
+| Codigo | Alcance |
+|---|---|
+| `ADMIN` | Todo, incluida la gestion de usuarios y roles |
+| `COORDINADOR` | Personas, titulos, consultas y reportes |
+| `ANALISTA` | Edita titulos, resuelve desafios, emite reportes |
+| `CONSULTA` | Solo lectura de personas, titulos y tablero |
+| `CONSULTA_DISTRIBUTIVO` | Solo lectura del distributivo y sus catalogos, con reportes |
+
+El ultimo es el mas estrecho: ve **Distributivo, Catalogos y Reportes**, y nada
+mas. No es un `CONSULTA` recortado —ese ve personas y titulos, que aqui quedan
+fuera, y no emite reportes, que aqui hacen falta—.
+
 Para crear varias de una vez, o sin obligar al cambio de clave, se puede hacer
 desde el contenedor con el modelo de dominio. Para levantar la obligacion de
 cambiarla en una cuenta ya creada:
