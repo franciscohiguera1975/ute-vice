@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 16 — cerradas
+### Fases 12 a 17 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -222,6 +222,15 @@ ERP academico ([changelog](changelogs/16-codigo-del-erp.md)).
 > **No es unico**: `FCSEE` y `PFCSEE` son dos unidades aqui y una sola —`FS`—
 > alla, igual que `ETECH` y `UAEFTT` son ambas `TT`. La identidad sigue siendo
 > `codigo`; `codigo_erp` solo reconcilia.
+
+**17**: `importar-distributivo --reemplazar` recarga un periodo corregido
+([changelog](changelogs/17-recargar-un-periodo.md)).
+
+> **No reproduzca la clave natural fuera del sistema.** Se intento tres veces y
+> fallo las tres —por el nombre de la sede, por el formato de la cedula, por un
+> `if` mal parentizado—, y las tres habrian duplicado filas en produccion. El
+> choque lo resuelve la restriccion `uq_distributivo_docente_pao_carrera_sede`,
+> que ya *es* esa clave. Ademas conserva el id, y de el cuelgan las materias.
 
 ### Fase 14 — espera confirmacion funcional
 

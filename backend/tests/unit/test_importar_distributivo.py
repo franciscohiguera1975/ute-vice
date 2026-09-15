@@ -335,3 +335,69 @@ class TestGrafiaDelNombre:
         )
         docente = next(iter(uow.docentes.datos.values()))
         assert docente.nombre_completo == "PEREZ GOMEZ JUAN CARLOS"
+
+
+class TestReemplazarExistentes:
+    """Recarga de un periodo ya cargado.
+
+    Sin esta opcion la segunda carga chocaba con la clave natural y obligaba a
+    vaciar el periodo antes, perdiendo de paso las materias enlazadas.
+    """
+
+    async def test_sin_la_opcion_se_duplica_la_clave(self, uow) -> None:
+        await importar(uow, [cruda(horas={"Da": 10.0})])
+        await importar(uow, [cruda(horas={"Da": 20.0})])
+        # El doble en memoria no impone la restriccion; en SQL fallaria. Lo que
+        # se comprueba aqui es que sin la opcion se intenta crear otra fila.
+        assert len(uow.distributivo.datos) == 2
+
+    async def test_con_la_opcion_actualiza_en_vez_de_crear(self, uow) -> None:
+        await importar(uow, [cruda(horas={"Da": 10.0})])
+        original = next(iter(uow.distributivo.datos.values()))
+
+        caso = ImportarDistributivo(uow)
+        resultado = await caso(
+            EntradaImportacion(filas=(cruda(horas={"Da": 20.0}),), reemplazar_existentes=True),
+            ContextoEjecucion.sistema(),
+        )
+
+        assert resultado.filas_creadas == 0
+        assert resultado.filas_actualizadas == 1
+        assert len(uow.distributivo.datos) == 1
+        fila = next(iter(uow.distributivo.datos.values()))
+        assert fila.total_horas == 20.0
+        assert fila.id == original.id, "el id se conserva: de el cuelgan las materias"
+
+    async def test_distingue_altas_de_cambios(self, uow) -> None:
+        await importar(uow, [cruda(carrera="MEDICINA", horas={"Da": 10.0})])
+
+        caso = ImportarDistributivo(uow)
+        resultado = await caso(
+            EntradaImportacion(
+                filas=(
+                    cruda(numero=2, carrera="MEDICINA", horas={"Da": 11.0}),
+                    cruda(numero=3, carrera="ODONTOLOGIA", horas={"Da": 12.0}),
+                ),
+                reemplazar_existentes=True,
+            ),
+            ContextoEjecucion.sistema(),
+        )
+
+        assert resultado.filas_actualizadas == 1
+        assert resultado.filas_creadas == 1
+        assert len(uow.distributivo.datos) == 2
+
+    async def test_la_sede_forma_parte_de_la_clave(self, uow) -> None:
+        await importar(uow, [cruda(sede="QUITO", horas={"Da": 10.0})])
+
+        caso = ImportarDistributivo(uow)
+        resultado = await caso(
+            EntradaImportacion(
+                filas=(cruda(sede="SANTO DOMINGO", horas={"Da": 10.0}),),
+                reemplazar_existentes=True,
+            ),
+            ContextoEjecucion.sistema(),
+        )
+        # Mismo docente, periodo y carrera, pero otro campus: es otra fila.
+        assert resultado.filas_creadas == 1
+        assert len(uow.distributivo.datos) == 2

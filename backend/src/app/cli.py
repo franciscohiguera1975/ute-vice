@@ -313,22 +313,31 @@ async def importar_distributivo() -> None:
     from app.infrastructure.importadores.distributivo_excel import LectorDistributivoExcel
 
     if len(sys.argv) < 3:
-        print("  Uso: python -m app.cli importar-distributivo <archivo.xlsx> [hoja]")
+        print("  Uso: python -m app.cli importar-distributivo <archivo.xlsx> [hoja] [--reemplazar]")
         sys.exit(1)
 
-    ruta = sys.argv[2]
-    hoja = sys.argv[3] if len(sys.argv) > 3 else None
+    argumentos = [a for a in sys.argv[2:] if a != "--reemplazar"]
+    reemplazar = "--reemplazar" in sys.argv
+    ruta = argumentos[0]
+    hoja = argumentos[1] if len(argumentos) > 1 else None
 
     contenedor = Contenedor(get_settings())
     print(f"  leyendo {ruta}…")
     filas = LectorDistributivoExcel().leer(ruta, hoja=hoja)
     print(f"  {len(filas):,} filas leidas".replace(",", "."))
+    if reemplazar:
+        print("  modo reemplazo: las filas que ya existan se actualizan")
 
     caso = ImportarDistributivo(contenedor.unidad_de_trabajo())
-    resultado = await caso(EntradaImportacion(filas=tuple(filas)), ContextoEjecucion.sistema())
+    resultado = await caso(
+        EntradaImportacion(filas=tuple(filas), reemplazar_existentes=reemplazar),
+        ContextoEjecucion.sistema(),
+    )
 
     print()
     print(f"  filas creadas        : {resultado.filas_creadas:,}".replace(",", "."))
+    if reemplazar:
+        print(f"  filas actualizadas   : {resultado.filas_actualizadas:,}".replace(",", "."))
     print(f"  docentes nuevos      : {resultado.docentes_creados:,}".replace(",", "."))
     print(f"  docentes ya existentes: {resultado.docentes_existentes:,}".replace(",", "."))
     print(f"  titulos profesionales : {resultado.titulos_creados:,}".replace(",", "."))

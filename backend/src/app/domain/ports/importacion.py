@@ -66,6 +66,7 @@ class ResultadoImportacionDistributivo:
     docentes_creados: int = 0
     docentes_existentes: int = 0
     filas_creadas: int = 0
+    filas_actualizadas: int = 0
     filas_consolidadas: int = 0
     elementos_catalogo_creados: dict[str, int] = field(default_factory=dict)
     titulos_creados: int = 0

@@ -121,6 +121,14 @@ class EntradaImportacion:
     """Si es `False`, una fila que cite un valor desconocido se rechaza."""
     tamano_lote: int = 1000
 
+    reemplazar_existentes: bool = False
+    """Actualiza la fila que ya tenga la misma clave natural en vez de fallar.
+
+    Es lo que hace falta al recargar un periodo corregido: sin esto, la carga
+    aborta en la primera fila que ya existe y hay que borrar el periodo entero
+    antes, perdiendo de paso las materias enlazadas.
+    """
+
 
 def _codigo_de_periodo(fila: FilaCrudaDistributivo) -> str:
     """El codigo del periodo al que pertenece la fila.
@@ -506,6 +514,12 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         await catalogos.persistir()
         await self._uow.flush()
         resultado.elementos_catalogo_creados = dict(catalogos.creados)
+
+        if entrada.reemplazar_existentes:
+            altas, cambios = await self._uow.distributivo.reemplazar_muchas(construidas)
+            resultado.filas_creadas = altas
+            resultado.filas_actualizadas = cambios
+            return
 
         for inicio in range(0, len(construidas), entrada.tamano_lote):
             lote = construidas[inicio : inicio + entrada.tamano_lote]

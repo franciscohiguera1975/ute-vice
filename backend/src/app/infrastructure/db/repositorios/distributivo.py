@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import Integer, Select, cast, delete, func, literal_column, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -658,6 +659,80 @@ class RepositorioDistributivoSQL:
         await self._s.flush()
         await self._guardar_asignaturas(filas)
         return len(filas)
+
+    async def reemplazar_muchas(self, filas: list[FilaDistributivo]) -> tuple[int, int]:
+        """Inserta o actualiza segun la clave natural. Devuelve `(altas, cambios)`.
+
+        El choque lo resuelve PostgreSQL con la restriccion que ya define la
+        clave natural —docente, periodo, carrera y sede—, y no una comparacion
+        escrita aqui. La diferencia importa: reproducir esa clave en Python
+        obliga a repetir la normalizacion de cedulas, sedes y catalogos, y basta
+        equivocarse en una para duplicar filas en lugar de actualizarlas.
+
+        **No toca `distributivo_asignaturas`.** Al conservar el id de la fila,
+        las materias enlazadas sobreviven a la recarga de un periodo; borrar e
+        insertar las habria perdido.
+
+        `xmax = 0` distingue la fila recien insertada de la actualizada: es el
+        identificador de la transaccion que la bloqueo, y en una insercion
+        limpia vale cero.
+        """
+        if not filas:
+            return (0, 0)
+
+        altas = cambios = 0
+
+        #: Lo que se escribe. La clave natural —docente, periodo, carrera y
+        #: sede— no esta aqui: es lo que identifica la fila, no lo que cambia.
+        columnas = (
+            "facultad_id",
+            "nivel_id",
+            "titularidad_id",
+            "dedicacion_id",
+            "categoria_id",
+            "tipo_titulo_id",
+            "horas_docencia",
+            "horas_gestion",
+            "horas_investigacion",
+            "horas_vinculacion",
+            "total_docencia",
+            "total_gestion",
+            "total_investigacion",
+            "total_vinculacion",
+            "total_horas",
+            "medida",
+            "observaciones",
+        )
+
+        for inicio in range(0, len(filas), 500):
+            # Todos los registros deben traer las MISMAS claves: en un VALUES
+            # de varias filas, omitir una columna en unas y no en otras —como
+            # `sede_id`, que es nula en dieciseis— no compila.
+            claves = ("id", "docente_id", "pao_id", "carrera_id", "sede_id", "creado_por")
+            registros = [
+                {c: getattr(m.fila_a_modelo(fila), c) for c in (*claves, *columnas)}
+                for fila in filas[inicio : inicio + 500]
+            ]
+
+            insercion = pg_insert(FilaDistributivoModel).values(registros)
+            sentencia: Any = insercion.on_conflict_do_update(
+                constraint="uq_distributivo_docente_pao_carrera_sede",
+                set_={
+                    **{c: getattr(insercion.excluded, c) for c in columnas},
+                    # `onupdate` no se dispara en un upsert del nucleo: la marca
+                    # de tiempo hay que ponerla a mano o la fila quedaria
+                    # fechada como el dia que se creo.
+                    "actualizado_en": func.now(),
+                },
+            ).returning(literal_column("(xmax = 0)").label("es_alta"))
+
+            for (es_alta,) in (await self._s.execute(sentencia)).all():
+                if es_alta:
+                    altas += 1
+                else:
+                    cambios += 1
+
+        return (altas, cambios)
 
     async def actualizar(self, fila: FilaDistributivo) -> FilaDistributivo:
         modelo = await self._s.get(FilaDistributivoModel, fila.id)

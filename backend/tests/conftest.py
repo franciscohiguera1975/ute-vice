@@ -539,6 +539,28 @@ class RepoDistributivo:
         self.datos[fila.id] = fila
         return fila
 
+    async def reemplazar_muchas(self, filas):  # type: ignore[no-untyped-def]
+        """En memoria la clave natural se compara a mano; en SQL la impone
+        la restriccion de la tabla."""
+
+        def clave(f):  # type: ignore[no-untyped-def]
+            return (f.docente_id, f.pao_id, f.carrera_id, f.sede_id)
+
+        existentes = {clave(f): f.id for f in self.datos.values()}
+        altas = cambios = 0
+        for fila in filas:
+            previo = existentes.get(clave(fila))
+            if previo is None:
+                self.datos[fila.id] = fila
+                existentes[clave(fila)] = fila.id
+                altas += 1
+            else:
+                # Se conserva el id: es lo que hace que sobrevivan las materias.
+                fila.id = previo
+                self.datos[previo] = fila
+                cambios += 1
+        return (altas, cambios)
+
     async def eliminar(self, fila_id: UUID) -> None:
         self.datos.pop(fila_id, None)
 
