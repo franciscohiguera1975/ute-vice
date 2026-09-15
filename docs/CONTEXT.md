@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 18 — cerradas
+### Fases 12 a 19 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -240,6 +240,15 @@ horizontal ([changelog](changelogs/18-consulta-y-cabecera.md)).
 > y consultas, que es lo que aqui no debe verse, y no emite reportes, que es lo
 > que aqui hace falta.
 
+**19**: el rol nuevo destapo un bucle de redirecciones que dejaba la pantalla
+en blanco ([changelog](changelogs/19-bucle-de-redirecciones.md)).
+
+> **Una guarda no puede redirigir a una ruta fija.** `guardaPermiso` mandaba a
+> `/tablero` al denegar, y `/tablero` esta protegido por esa misma guarda. El
+> destino se calcula ahora con `rutaDeInicio`, que solo devuelve secciones que
+> el usuario puede abrir. La lista vive en `@core/secciones`, de donde sale
+> tambien el menu: duplicarla fue parte del problema.
+
 ### Fase 14 — espera confirmacion funcional
 
 El Vicerrectorado no ha confirmado que tablas adicionales incorporar. El
@@ -289,6 +298,9 @@ No los reintroduzcas. Estan documentados en el changelog de su fase:
 22. Los interceptores HTTP registrados al reves: el de autenticacion recibia el
     error ya normalizado, no reconocia el 401, y ni la renovacion de sesion ni
     el redirigir al acceso se ejecutaron nunca (Fase 14)
+23. `guardaPermiso` redirigiendo a `/tablero`, que ella misma protege: un bucle
+    de redirecciones que dejaba la pantalla en blanco. Latente desde la fase 06;
+    aparecio con el primer rol sin `dashboard:ver` (Fase 19)
 
 El octavo es el mas ilustrativo: un fallo en la ruta feliz de la configuracion
 de ejemplo, que solo aparecio al arrancar con un `.env` realista. El noveno, el

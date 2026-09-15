@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+import { rutaDeInicio } from '@core/secciones';
+import { SesionStore } from '@core/sesion.store';
 
 @Component({
   selector: 'ute-no-encontrado',
@@ -13,7 +16,7 @@ import { RouterLink } from '@angular/router';
       <p class="texto-suave">
         La direccion que intenta abrir no existe o fue movida.
       </p>
-      <a routerLink="/tablero" class="btn btn--primario">Ir al tablero</a>
+      <a [routerLink]="inicio" class="btn btn--primario">Volver al inicio</a>
     </div>
   `,
   styles: [
@@ -39,4 +42,16 @@ import { RouterLink } from '@angular/router';
     `,
   ],
 })
-export class NoEncontradoComponent {}
+export class NoEncontradoComponent {
+  private readonly sesion = inject(SesionStore);
+
+  /**
+   * A donde vuelve el boton.
+   *
+   * No al tablero: quien no tiene `dashboard:ver` acabaria rebotando. Sin
+   * sesion, al acceso.
+   */
+  protected readonly inicio = this.sesion.autenticado()
+    ? rutaDeInicio(this.sesion)
+    : '/acceso';
+}

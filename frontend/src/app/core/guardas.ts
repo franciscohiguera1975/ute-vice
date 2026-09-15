@@ -15,6 +15,7 @@ import type { Permiso } from '@domain/modelos';
 
 import { NotificacionesService } from './notificaciones.service';
 import { SesionStore } from './sesion.store';
+import { rutaDeInicio } from './secciones';
 
 /** Exige sesion iniciada. Conserva la ruta pedida para volver tras acceder. */
 export const guardaAutenticado: CanActivateFn = (_ruta, estado) => {
@@ -32,7 +33,7 @@ export const guardaAutenticado: CanActivateFn = (_ruta, estado) => {
 export const guardaAnonimo: CanActivateFn = () => {
   const sesion = inject(SesionStore);
   const router = inject(Router);
-  return sesion.autenticado() ? router.createUrlTree(['/tablero']) : true;
+  return sesion.autenticado() ? router.createUrlTree([rutaDeInicio(sesion)]) : true;
 };
 
 /**
@@ -59,7 +60,10 @@ export function guardaPermiso(...permisos: readonly Permiso[]): CanActivateFn {
       'No tiene permiso para acceder a esa seccion',
       `Se requiere: ${permisos.join(' o ')}`,
     );
-    return router.createUrlTree(['/tablero']);
+    // A una seccion que si pueda ver, nunca a una fija: mandar a `/tablero` a
+    // quien carece de `dashboard:ver` hacia que esta misma guarda lo denegara
+    // otra vez, en bucle, y la pantalla se quedaba en blanco.
+    return router.createUrlTree([rutaDeInicio(sesion)]);
   };
 }
 

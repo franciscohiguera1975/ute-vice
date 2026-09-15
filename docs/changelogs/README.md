@@ -36,3 +36,4 @@ pendiente.
 | [16](16-codigo-del-erp.md) | El codigo del ERP en los catalogos | ✅ |
 | [17](17-recargar-un-periodo.md) | Recargar un periodo sin perder lo enlazado | ✅ |
 | [18](18-consulta-y-cabecera.md) | Rol de consulta y cabecera institucional | ✅ |
+| [19](19-bucle-de-redirecciones.md) | El bucle de redirecciones que dejaba la pantalla en blanco | ✅ |

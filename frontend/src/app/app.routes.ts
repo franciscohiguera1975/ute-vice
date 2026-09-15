@@ -9,6 +9,7 @@
  * que alguien llegue a una pantalla que no va a poder usar.
  */
 
+import { inject } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { Permiso } from '@domain/modelos';
@@ -19,6 +20,8 @@ import {
   guardaContrasenaVigente,
   guardaPermiso,
 } from './core/guardas';
+import { rutaDeInicio } from './core/secciones';
+import { SesionStore } from './core/sesion.store';
 
 export const rutas: Routes = [
   {
@@ -44,7 +47,14 @@ export const rutas: Routes = [
     loadComponent: () =>
       import('@shared/layout/layout.component').then((m) => m.LayoutComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'tablero' },
+      {
+        path: '',
+        pathMatch: 'full',
+        // Calculada y no fija: a quien no puede ver el tablero hay que llevarlo
+        // a su primera seccion disponible. `redirectTo` admite una funcion, y
+        // corre en contexto de inyeccion.
+        redirectTo: () => rutaDeInicio(inject(SesionStore)),
+      },
 
       {
         path: 'tablero',

@@ -4,16 +4,9 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
 import { RepositorioAutenticacion } from '@domain/puertos';
-import { Permiso } from '@domain/modelos';
+import { SECCIONES } from '@core/secciones';
 import { PermisoDirective } from '@shared/directivas/permiso.directive';
 
-interface Seccion {
-  readonly ruta: string;
-  readonly etiqueta: string;
-  readonly icono: string;
-  /** Permisos que habilitan la seccion. Basta con tener uno. */
-  readonly permisos: readonly Permiso[];
-}
 
 @Component({
   selector: 'ute-layout',
@@ -34,68 +27,16 @@ export class LayoutComponent {
   protected readonly temaOscuro = signal(this.leerTema());
 
   /**
-   * Secciones del menu.
+   * Secciones del menu, con los permisos que habilitan cada una; la directiva
+   * `*utePermiso` oculta las que no correspondan.
    *
-   * Cada una declara los permisos que la habilitan; la directiva `*utePermiso`
-   * se encarga de ocultar las que no correspondan. Asi el menu de un usuario de
-   * solo lectura no ofrece opciones que terminarian en un 403.
+   * La lista vive en `@core/secciones` y no aqui: de ella sale tambien la ruta
+   * a la que aterriza cada usuario, y tenerla duplicada fue lo que dejo la
+   * aplicacion en bucle para el primer rol sin `dashboard:ver`.
    */
-  protected readonly secciones: readonly Seccion[] = [
-    {
-      ruta: '/tablero',
-      etiqueta: 'Tablero',
-      icono: '▤',
-      permisos: [Permiso.DASHBOARD_VER],
-    },
-    {
-      ruta: '/personas',
-      etiqueta: 'Personas',
-      icono: '☰',
-      permisos: [Permiso.PERSONAS_LEER],
-    },
-    {
-      ruta: '/titulos',
-      etiqueta: 'Titulos',
-      icono: '◈',
-      permisos: [Permiso.TITULOS_LEER],
-    },
-    {
-      ruta: '/consultas',
-      etiqueta: 'Consultas',
-      icono: '⟳',
-      permisos: [Permiso.CONSULTAS_LEER],
-    },
-    {
-      ruta: '/distributivo',
-      etiqueta: 'Distributivo',
-      icono: '▩',
-      permisos: [Permiso.DISTRIBUTIVO_LEER],
-    },
-    {
-      ruta: '/distributivo/asignaturas',
-      etiqueta: 'Asignaturas',
-      icono: '✎',
-      permisos: [Permiso.DISTRIBUTIVO_ESCRIBIR],
-    },
-    {
-      ruta: '/catalogos',
-      etiqueta: 'Catalogos',
-      icono: '⛁',
-      permisos: [Permiso.CATALOGOS_LEER],
-    },
-    {
-      ruta: '/reportes',
-      etiqueta: 'Reportes',
-      icono: '▦',
-      permisos: [Permiso.REPORTES_GENERAR],
-    },
-    {
-      ruta: '/administracion',
-      etiqueta: 'Administracion',
-      icono: '⚙',
-      permisos: [Permiso.USUARIOS_LEER],
-    },
-  ];
+  protected readonly secciones = SECCIONES;
+
+
 
   protected alternarLateral(): void {
     this.lateralAbierto.update((v) => !v);

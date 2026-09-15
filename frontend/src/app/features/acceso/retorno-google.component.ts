@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
+import { rutaDeInicio } from '@core/secciones';
 import type { ErrorApi } from '@domain/modelos';
 import { RepositorioAutenticacion } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
@@ -77,7 +78,7 @@ export class RetornoGoogleComponent {
       next: (sesion) => {
         this.sesion.establecer(sesion);
         this.notificaciones.exito(`Bienvenido, ${sesion.usuario.nombreCompleto}`);
-        void this.router.navigate(['/tablero']);
+        void this.router.navigate([rutaDeInicio(this.sesion)]);
       },
       error: (fallo: ErrorApi) => this.error.set(fallo.mensaje),
     });

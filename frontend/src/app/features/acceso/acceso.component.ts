@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
+import { rutaDeInicio } from '@core/secciones';
 import type { ErrorApi, MetodosAcceso } from '@domain/modelos';
 import { RepositorioAutenticacion } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
@@ -112,7 +113,7 @@ export class AccesoComponent {
   private rutaDeRetorno(): string {
     const retorno = this.ruta.snapshot.queryParamMap.get('retorno');
     if (!retorno || !retorno.startsWith('/') || retorno.startsWith('//')) {
-      return '/tablero';
+      return rutaDeInicio(this.sesion);
     }
     return retorno;
   }
