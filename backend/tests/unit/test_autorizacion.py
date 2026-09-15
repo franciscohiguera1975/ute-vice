@@ -190,3 +190,51 @@ class TestCredencialesSegunProveedor:
         assert not hacer_usuario(
             proveedor=AuthProvider.LDAP, hash_contrasena=None
         ).usa_credencial_local
+
+
+class TestConsultaDistributivo:
+    """El rol de solo lectura del distributivo.
+
+    Lo que importa de este rol es lo que **no** puede: se creo para dar acceso
+    a la carga docente sin abrir el expediente de cada persona, y una
+    ampliacion accidental de sus permisos no la delataria ninguna pantalla.
+    """
+
+    def test_ve_el_distributivo_sus_catalogos_y_los_reportes(self, catalogo) -> None:  # type: ignore[no-untyped-def]
+        usuario = hacer_usuario(roles={catalogo[RolCodigo.CONSULTA_DISTRIBUTIVO]})
+
+        assert usuario.puede(Permiso.DISTRIBUTIVO_LEER)
+        assert usuario.puede(Permiso.CATALOGOS_LEER)
+        assert usuario.puede(Permiso.REPORTES_GENERAR)
+
+    def test_no_puede_modificar_nada(self, catalogo) -> None:  # type: ignore[no-untyped-def]
+        usuario = hacer_usuario(roles={catalogo[RolCodigo.CONSULTA_DISTRIBUTIVO]})
+
+        for permiso in (
+            Permiso.DISTRIBUTIVO_ESCRIBIR,
+            Permiso.DISTRIBUTIVO_ELIMINAR,
+            Permiso.DISTRIBUTIVO_IMPORTAR,
+            Permiso.CATALOGOS_ESCRIBIR,
+        ):
+            assert not usuario.puede(permiso), permiso
+
+    def test_no_alcanza_personas_titulos_ni_consultas(self, catalogo) -> None:  # type: ignore[no-untyped-def]
+        usuario = hacer_usuario(roles={catalogo[RolCodigo.CONSULTA_DISTRIBUTIVO]})
+
+        for permiso in (
+            Permiso.PERSONAS_LEER,
+            Permiso.TITULOS_LEER,
+            Permiso.CONSULTAS_LEER,
+            Permiso.USUARIOS_LEER,
+            Permiso.AUDITORIA_LEER,
+            Permiso.DASHBOARD_VER,
+        ):
+            assert not usuario.puede(permiso), permiso
+
+    def test_es_mas_estrecho_que_consulta_en_lo_suyo(self, catalogo) -> None:  # type: ignore[no-untyped-def]
+        propios = PERMISOS_POR_ROL[RolCodigo.CONSULTA_DISTRIBUTIVO]
+
+        assert len(propios) == 3, "cada permiso que se agregue aqui abre una pantalla"
+        # `CONSULTA` ve mas cosas, pero no emite reportes: no es que uno
+        # contenga al otro, son alcances distintos.
+        assert Permiso.REPORTES_GENERAR not in PERMISOS_POR_ROL[RolCodigo.CONSULTA]

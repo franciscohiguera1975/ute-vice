@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 17 — cerradas
+### Fases 12 a 18 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -231,6 +231,14 @@ ERP academico ([changelog](changelogs/16-codigo-del-erp.md)).
 > `if` mal parentizado—, y las tres habrian duplicado filas en produccion. El
 > choque lo resuelve la restriccion `uq_distributivo_docente_pao_carrera_sede`,
 > que ya *es* esa clave. Ademas conserva el id, y de el cuelgan las materias.
+
+**18**: rol `CONSULTA_DISTRIBUTIVO` —solo lectura del distributivo, sus
+catalogos y los reportes— y cabecera institucional azul con navegacion
+horizontal ([changelog](changelogs/18-consulta-y-cabecera.md)).
+
+> `CONSULTA` **no** servia: es mas ancho, no mas estrecho. Ve personas, titulos
+> y consultas, que es lo que aqui no debe verse, y no emite reportes, que es lo
+> que aqui hace falta.
 
 ### Fase 14 — espera confirmacion funcional
 

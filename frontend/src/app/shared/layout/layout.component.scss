@@ -1,14 +1,17 @@
 .capa {
   display: grid;
-  grid-template-columns: var(--ancho-lateral) 1fr;
   grid-template-rows: var(--alto-cabecera) 1fr;
   grid-template-areas:
-    'cabecera cabecera'
-    'lateral contenido';
+    'cabecera'
+    'contenido';
   min-height: 100vh;
 }
 
 /* ------------------------------------------------------------ cabecera --- */
+/* Barra institucional: fondo azul fijo en ambos temas. Es identidad de marca,
+   no superficie, asi que no sigue al tema claro/oscuro. Los colores de dentro
+   se escriben literales por la misma razon: sobre azul, `--texto` seria
+   ilegible en tema claro. */
 .cabecera {
   grid-area: cabecera;
   position: sticky;
@@ -16,10 +19,10 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   padding: 0 1rem;
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
+  color: #fff;
+  background: var(--azul-800);
 }
 
 .cabecera__menu,
@@ -30,62 +33,91 @@
   width: 34px;
   height: 34px;
   font-size: 1rem;
-  color: var(--texto-suave);
+  color: #fff;
   background: none;
   border: none;
   border-radius: var(--radio);
   cursor: pointer;
 }
 .cabecera__menu:hover,
-.cabecera__accion:hover {
-  background: var(--azul-50);
-  color: var(--texto);
-}
+.cabecera__accion:hover { background: rgb(255 255 255 / 14%); }
 .cabecera__menu { display: none; }
 
 .marca {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: inherit;
+  color: #fff;
   text-decoration: none;
+  flex-shrink: 0;
 }
 .marca:hover { text-decoration: none; }
 
-.marca__sigla {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #fff;
-  background: var(--azul-800);
+/* El logotipo va sobre una placa blanca: es a color —azul y verde— y sobre la
+   barra azul el azul del texto se perderia. La placa es rectangular y no
+   circular porque el logotipo incluye el «ec» a la derecha y en un circulo
+   quedaria recortado o diminuto. */
+.marca__logo {
+  display: block;
+  width: auto;
+  height: 30px;
+  padding: 5px 8px;
+  background: #fff;
   border-radius: var(--radio);
 }
 
-.marca__texto { display: flex; flex-direction: column; line-height: 1.15; }
-.marca__titulo { font-size: 0.9rem; font-weight: 600; }
-.marca__subtitulo { font-size: 0.7rem; color: var(--texto-tenue); }
+.marca__titulo { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+
+/* -------------------------------------------- navegacion de la cabecera --- */
+.cabecera__nav { margin-left: 0.5rem; min-width: 0; }
+
+.nav-h {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-h__enlace {
+  display: block;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 82%);
+  white-space: nowrap;
+  border-radius: var(--radio);
+  text-decoration: none;
+  transition: background var(--transicion), color var(--transicion);
+}
+.nav-h__enlace:hover { color: #fff; background: rgb(255 255 255 / 12%); text-decoration: none; }
+
+/* Subrayado y no relleno: sobre un fondo de color, una pastilla clara compite
+   con el boton de usuario y se lee como si estuviera pulsada. */
+.nav-h__enlace--activo {
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 0 #fff;
+  border-radius: var(--radio) var(--radio) 0 0;
+}
 
 /* -------------------------------------------------------------- usuario --- */
-.usuario { position: relative; }
+.usuario { position: relative; flex-shrink: 0; }
 
 .usuario__boton {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  padding: 0.2rem 0.2rem 0.2rem 0.6rem;
   font: inherit;
-  color: var(--texto);
+  color: #fff;
   background: none;
   border: 1px solid transparent;
   border-radius: 99px;
   cursor: pointer;
 }
-.usuario__boton:hover { background: var(--azul-50); border-color: var(--borde); }
+.usuario__boton:hover { background: rgb(255 255 255 / 14%); }
 
 .usuario__avatar {
   display: flex;
@@ -96,7 +128,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
-  background: var(--azul-700);
+  background: var(--rojo-ute);
   border-radius: 50%;
 }
 
@@ -107,13 +139,14 @@
   white-space: nowrap;
   font-size: 0.85rem;
 }
-.usuario__flecha { font-size: 0.65rem; color: var(--texto-tenue); }
 
+/* El desplegable vuelve a superficie normal: ahi si manda el tema. */
 .menu {
   position: absolute;
   right: 0;
   top: calc(100% + 0.4rem);
   min-width: 15rem;
+  color: var(--texto);
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
@@ -151,10 +184,9 @@
 .menu__item:hover { background: var(--azul-50); text-decoration: none; }
 .menu__item--salir { color: var(--error); border-top: 1px solid var(--borde); }
 
-/* ------------------------------------------------------------- lateral --- */
+/* ------------------------------------------------- cajon en pantalla estrecha --- */
 .lateral {
-  grid-area: lateral;
-  display: flex;
+  display: none;
   flex-direction: column;
   justify-content: space-between;
   padding: 1rem 0.75rem;
@@ -199,17 +231,14 @@
 .velo-lateral { display: none; }
 
 /* ------------------------------------------------------------ responsivo --- */
-@media (width <= 900px) {
-  .capa {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'cabecera'
-      'contenido';
-  }
-
+/* 1100px y no 900: con nueve secciones, la navegacion horizontal empieza a
+   empujar al boton de usuario fuera de la barra antes de llegar a tableta. */
+@media (width <= 1100px) {
+  .cabecera__nav { display: none; }
   .cabecera__menu { display: flex; }
 
   .lateral {
+    display: flex;
     position: fixed;
     top: var(--alto-cabecera);
     bottom: 0;
@@ -228,8 +257,9 @@
     z-index: 55;
     background: rgb(12 16 26 / 45%);
   }
+}
 
+@media (width <= 700px) {
   .usuario__nombre { display: none; }
-  .marca__subtitulo { display: none; }
   .contenido { padding: 1rem; }
 }

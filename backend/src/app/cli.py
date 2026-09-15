@@ -153,6 +153,9 @@ _DESCRIPCION_ROLES: dict[RolCodigo, str] = {
     ),
     RolCodigo.ANALISTA: ("Edita titulos, resuelve desafios de verificacion y emite reportes"),
     RolCodigo.CONSULTA: "Acceso de solo lectura a personas, titulos y tablero",
+    RolCodigo.CONSULTA_DISTRIBUTIVO: (
+        "Consulta del distributivo y sus catalogos, con emision de reportes"
+    ),
 }
 
 

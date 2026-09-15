@@ -15,6 +15,11 @@
   --azul-100: #dbe6f7;
   --azul-50: #f0f5fd;
 
+  /* Acento de marca. Vive aqui y no como `--error` porque un avatar rojo de
+     error se lee como una alerta; este es identidad, no estado. Se usa sobre
+     la barra azul, donde un tono de la misma familia no destacaria. */
+  --rojo-ute: #a8322c;
+
   /* --- Estado --- */
   --exito: #1b7f4b;
   --exito-suave: #e3f5ec;

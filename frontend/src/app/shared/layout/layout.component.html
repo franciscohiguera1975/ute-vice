@@ -6,19 +6,35 @@
       class="cabecera__menu no-imprimir"
       (click)="alternarLateral()"
       [attr.aria-expanded]="lateralAbierto()"
-      aria-controls="navegacion-principal"
+      aria-controls="navegacion-movil"
       aria-label="Alternar menu de navegacion"
     >
       ☰
     </button>
 
-    <a routerLink="/tablero" class="marca">
-      <span class="marca__sigla" aria-hidden="true">UTE</span>
-      <span class="marca__texto">
-        <span class="marca__titulo">Gestión Académica</span>
-        <span class="marca__subtitulo">Vicerrectorado</span>
-      </span>
+    <a routerLink="/distributivo" class="marca">
+      <img src="logo_ute.png" alt="" class="marca__logo" width="400" height="328" />
+      <span class="marca__titulo">Gestión Académica</span>
     </a>
+
+    <!-- La navegacion vive en la cabecera y no en un lateral: son nueve
+         secciones como mucho, y en horizontal el contenido gana el ancho que
+         ocupaba la columna. Por debajo de 1100px no caben y pasan al cajon. -->
+    <nav class="cabecera__nav no-imprimir" aria-label="Navegacion principal">
+      <ul class="nav-h">
+        @for (seccion of secciones; track seccion.ruta) {
+          <li *utePermiso="seccion.permisos">
+            <a
+              [routerLink]="seccion.ruta"
+              routerLinkActive="nav-h__enlace--activo"
+              class="nav-h__enlace"
+            >
+              {{ seccion.etiqueta }}
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
 
     <div class="crecer"></div>
 
@@ -40,9 +56,8 @@
         [attr.aria-expanded]="menuAbierto()"
         aria-haspopup="menu"
       >
-        <span class="usuario__avatar" aria-hidden="true">{{ sesion.iniciales() }}</span>
         <span class="usuario__nombre">{{ sesion.nombre() }}</span>
-        <span aria-hidden="true" class="usuario__flecha">▾</span>
+        <span class="usuario__avatar" aria-hidden="true">{{ sesion.iniciales() }}</span>
       </button>
 
       @if (menuAbierto()) {
@@ -75,9 +90,9 @@
     </div>
   </header>
 
-  <!-- ------------------------------------------------------ navegacion --- -->
+  <!-- ------------------------------------------ navegacion en pantalla estrecha --- -->
   <aside
-    id="navegacion-principal"
+    id="navegacion-movil"
     class="lateral no-imprimir"
     [class.lateral--abierto]="lateralAbierto()"
   >

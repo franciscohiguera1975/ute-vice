@@ -36,6 +36,14 @@ class RolCodigo(StrEnum):
     CONSULTA = "CONSULTA"
     """Solo lectura. Rol por defecto de usuarios federados nuevos."""
 
+    CONSULTA_DISTRIBUTIVO = "CONSULTA_DISTRIBUTIVO"
+    """Solo lectura del distributivo y sus catalogos, con reportes.
+
+    Mas estrecho que `CONSULTA`, no mas amplio: no ve personas, titulos ni
+    consultas al SENESCYT. Es para quien revisa la carga docente y necesita
+    emitir los archivos, sin acceso al resto del expediente de cada persona.
+    """
+
 
 class Permiso(StrEnum):
     """Permisos atomicos. La autorizacion se evalua siempre contra estos.
@@ -128,6 +136,18 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
             Permiso.CATALOGOS_LEER,
             Permiso.REPORTES_GENERAR,
             Permiso.DASHBOARD_VER,
+        }
+    ),
+    #: Ni `DISTRIBUTIVO_ESCRIBIR` ni `CATALOGOS_ESCRIBIR`: sin ellos la interfaz
+    #: oculta los botones de alta, edicion y borrado, y el backend rechaza la
+    #: operacion aunque alguien llame al endpoint a mano. `REPORTES_GENERAR`
+    #: habilita la pantalla de reportes y las tres descargas —xlsx, csv y pdf—,
+    #: que salen del mismo caso de uso.
+    RolCodigo.CONSULTA_DISTRIBUTIVO: frozenset(
+        {
+            Permiso.DISTRIBUTIVO_LEER,
+            Permiso.CATALOGOS_LEER,
+            Permiso.REPORTES_GENERAR,
         }
     ),
     RolCodigo.CONSULTA: frozenset(
