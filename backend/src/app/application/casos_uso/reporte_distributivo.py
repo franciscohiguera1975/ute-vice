@@ -167,6 +167,31 @@ class CarrerasDisponibles(CasoDeUso[EntradaCarrerasDisponibles, list[ElementoCat
             )
 
 
+class FacultadesDisponibles(CasoDeUso[EntradaCarrerasDisponibles, list[ElementoCatalogo]]):
+    """Facultades con filas en los periodos elegidos.
+
+    Acompana a `CarrerasDisponibles` para que el selector encadene: elegido el
+    periodo se acotan las facultades, y elegida la facultad se acotan las
+    carreras. Sin esto la pantalla ofrece las once facultades del catalogo,
+    varias de las cuales dejaron de existir en la reestructuracion de 2026-1.
+    """
+
+    nombre = "reportes.facultades_disponibles"
+    descripcion = "Facultades presentes en los periodos indicados"
+    permiso_requerido = Permiso.DISTRIBUTIVO_LEER
+
+    def __init__(self, uow: UnidadDeTrabajo) -> None:
+        self._uow = uow
+
+    async def _ejecutar(
+        self, entrada: EntradaCarrerasDisponibles, contexto: ContextoEjecucion
+    ) -> list[ElementoCatalogo]:
+        async with self._uow:
+            return await self._uow.distributivo.facultades_presentes(
+                FiltroDistributivo(pao_ids=entrada.pao_ids, alcance=contexto.alcance)
+            )
+
+
 class _BaseReporteDistributivo:
     """Resuelve filtros y delega el contenido en la plantilla."""
 

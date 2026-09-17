@@ -947,6 +947,25 @@ class RepositorioDistributivoSQL:
         filas = await self._s.scalars(self._filtrar(consulta, filtro))
         return [m.catalogo_a_dominio(f, TipoCatalogo.CARRERA) for f in filas]
 
+    async def facultades_presentes(self, filtro: FiltroDistributivo) -> list[ElementoCatalogo]:
+        """Facultades con filas en los periodos elegidos.
+
+        Mismo motivo que `carreras_presentes`: el catalogo tiene once
+        facultades y varias dejaron de existir en la reestructuracion de
+        2026-1. Ofrecerlas todas al elegir un periodo reciente lleva a marcar
+        una que devuelve cero filas y a no entender por que.
+        """
+        consulta = (
+            select(FacultadModel)
+            .distinct()
+            .select_from(FilaDistributivoModel)
+            .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .order_by(FacultadModel.codigo)
+        )
+        filas = await self._s.scalars(self._filtrar(consulta, filtro))
+        return [m.catalogo_a_dominio(f, TipoCatalogo.FACULTAD) for f in filas]
+
     async def filas_resueltas(self, filtro: FiltroDistributivo) -> list[FilaDistributivoResuelta]:
         # Se piden tambien los codigos —el texto con que el consolidado nombraba
         # cada catalogo— porque de aqui sale la exportacion que reproduce el

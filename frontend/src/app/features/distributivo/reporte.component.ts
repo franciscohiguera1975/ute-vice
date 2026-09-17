@@ -66,6 +66,7 @@ export class ReporteDistributivoComponent {
   protected readonly formato = signal<FormatoReporte>(FormatoReporte.XLSX);
   protected readonly incluirAuditoria = signal(false);
   protected readonly filtroCarrera = signal('');
+  protected readonly filtroPeriodo = signal('');
 
   protected readonly vista = signal<VistaPreviaReporte | null>(null);
   protected readonly cargandoVista = signal(false);
@@ -85,14 +86,42 @@ export class ReporteDistributivoComponent {
    * ciegas.
    */
   private readonly carrerasDelAmbito = signal<readonly OpcionSelector[]>([]);
-  protected readonly cargandoCarreras = signal(false);
 
-  protected readonly carrerasDisponibles = computed<readonly OpcionSelector[]>(() => {
-    const patron = this.filtroCarrera().trim().toLowerCase();
-    const todas = this.carrerasDelAmbito();
-    if (!patron) return todas;
-    return todas.filter((c) => c.nombre.toLowerCase().includes(patron));
-  });
+  /**
+   * Facultades con filas en los periodos elegidos.
+   *
+   * Mismo motivo que las carreras y uno propio: `FO`, `FCIC`, `CEL` y `ETECH`
+   * dejaron de existir en la reestructuracion de 2026-1 y siguen en el
+   * catalogo porque siguen en el historico. Ofrecerlas al reportar un periodo
+   * reciente lleva a marcar una que devuelve cero filas.
+   */
+  private readonly facultadesDelAmbito = signal<readonly OpcionSelector[]>([]);
+  protected readonly cargandoAmbito = signal(false);
+
+  protected readonly periodosDisponibles = computed<readonly OpcionSelector[]>(() =>
+    this.filtrar(this.catalogos.de(TipoCatalogo.PAO), this.filtroPeriodo()),
+  );
+
+  protected readonly facultadesDisponibles = computed<readonly OpcionSelector[]>(() =>
+    this.facultadesDelAmbito(),
+  );
+
+  protected readonly carrerasDisponibles = computed<readonly OpcionSelector[]>(() =>
+    this.filtrar(this.carrerasDelAmbito(), this.filtroCarrera()),
+  );
+
+  /** Busca en el nombre y en el codigo: el periodo se conoce por los dos. */
+  private filtrar(
+    opciones: readonly OpcionSelector[],
+    texto: string,
+  ): readonly OpcionSelector[] {
+    const patron = texto.trim().toLowerCase();
+    if (!patron) return opciones;
+    return opciones.filter(
+      (o) =>
+        o.nombre.toLowerCase().includes(patron) || o.codigo.toLowerCase().includes(patron),
+    );
+  }
 
   protected readonly puedeGenerar = computed(
     () => this.paosSeleccionados().length > 0 && !this.generando(),
@@ -152,17 +181,18 @@ export class ReporteDistributivoComponent {
       }
     });
 
-    // Cada vez que cambia el ambito, se vuelve a preguntar que carreras hay
-    // dentro de el. Va en un efecto y no en cada `alternar` para no repetir la
-    // llamada en tres sitios.
+    // Cada vez que cambia lo elegido se vuelve a preguntar que hay dentro.
+    // Va en un efecto y no en cada `alternar` para no repetir la llamada en
+    // tres sitios.
     effect(() => {
       const paos = this.paosSeleccionados();
       const facultades = this.facultadesSeleccionadas();
       if (paos.length === 0) {
+        this.facultadesDelAmbito.set([]);
         this.carrerasDelAmbito.set([]);
         return;
       }
-      untracked(() => this.recargarCarreras(paos, facultades));
+      untracked(() => this.recargarAmbito(paos, facultades));
     });
   }
 
@@ -210,28 +240,58 @@ export class ReporteDistributivoComponent {
     this.alternar(this.carrerasSeleccionadas, id, marcada);
   }
 
-  private recargarCarreras(paos: readonly string[], facultades: readonly string[]): void {
-    this.cargandoCarreras.set(true);
-    this.repositorio.carrerasDisponibles(paos, facultades).subscribe({
-      next: (carreras) => {
-        this.carrerasDelAmbito.set(carreras);
-        this.cargandoCarreras.set(false);
+  private recargarAmbito(paos: readonly string[], facultades: readonly string[]): void {
+    this.cargandoAmbito.set(true);
+    this.repositorio.ambitoDisponible(paos, facultades).subscribe({
+      next: (ambito) => {
+        this.facultadesDelAmbito.set(ambito.facultades);
+        this.carrerasDelAmbito.set(ambito.carreras);
+        this.cargandoAmbito.set(false);
 
         // Lo que ya no cabe en el ambito deja de estar marcado: si no, el
         // archivo saldria filtrado por una carrera que la pantalla ya no
         // muestra y nadie entenderia por que faltan filas.
-        const vigentes = new Set(carreras.map((c) => c.id));
-        this.carrerasSeleccionadas.update((sel) => sel.filter((id) => vigentes.has(id)));
+        this.podar(this.facultadesSeleccionadas, ambito.facultades);
+        this.podar(this.carrerasSeleccionadas, ambito.carreras);
       },
       error: (error: ErrorApi) => {
-        this.cargandoCarreras.set(false);
-        this.notificaciones.error('No fue posible cargar las carreras', error.mensaje);
+        this.cargandoAmbito.set(false);
+        this.notificaciones.error('No fue posible cargar el ambito', error.mensaje);
       },
     });
   }
 
+  private podar(
+    seleccion: WritableSignal<readonly string[]>,
+    vigentes: readonly OpcionSelector[],
+  ): void {
+    const validos = new Set(vigentes.map((o) => o.id));
+    seleccion.update((sel) => sel.filter((id) => validos.has(id)));
+  }
+
   protected seleccionarTodas(): void {
     this.carrerasSeleccionadas.set(this.carrerasDisponibles().map((c) => c.id));
+    this.vista.set(null);
+  }
+
+  /** «Todos» y «Ninguno» de las otras dos listas, con la misma mecanica. */
+  protected marcarTodosLosPeriodos(): void {
+    this.paosSeleccionados.set(this.periodosDisponibles().map((o) => o.id));
+    this.vista.set(null);
+  }
+
+  protected limpiarPeriodos(): void {
+    this.paosSeleccionados.set([]);
+    this.vista.set(null);
+  }
+
+  protected marcarTodasLasFacultades(): void {
+    this.facultadesSeleccionadas.set(this.facultadesDisponibles().map((o) => o.id));
+    this.vista.set(null);
+  }
+
+  protected limpiarFacultades(): void {
+    this.facultadesSeleccionadas.set([]);
     this.vista.set(null);
   }
 

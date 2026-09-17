@@ -498,6 +498,18 @@ export interface ResumenComparativo {
   readonly generadoEn: string;
 }
 
+/**
+ * Que facultades y carreras existen realmente en lo ya elegido.
+ *
+ * Las dos viajan juntas porque se piden a la vez y tienen que ser coherentes:
+ * con dos llamadas, la carrera podria llegar antes que la facultad que la
+ * contiene y la pantalla mostraria un estado imposible durante un instante.
+ */
+export interface AmbitoDisponible {
+  readonly facultades: readonly OpcionSelector[];
+  readonly carreras: readonly OpcionSelector[];
+}
+
 /** Lo que identifica el resumen que se quiere descargar. */
 export interface PeticionResumen {
   readonly resumen: TipoResumen;

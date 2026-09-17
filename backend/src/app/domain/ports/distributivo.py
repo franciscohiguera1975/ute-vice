@@ -319,6 +319,16 @@ class RepositorioDistributivo(Protocol):
         """
         ...
 
+    async def facultades_presentes(self, filtro: FiltroDistributivo) -> list[ElementoCatalogo]:
+        """Facultades que **de hecho** aparecen en las filas del filtro.
+
+        Por el mismo motivo que las carreras, y con uno propio: `FO`, `FCIC`,
+        `CEL` y `ETECH` dejaron de existir en la reestructuracion de 2026-1 y
+        siguen en el catalogo porque siguen en el historico. Ofrecerlas al
+        elegir un periodo reciente lleva a marcar una que devuelve cero filas.
+        """
+        ...
+
     async def filas_resueltas(self, filtro: FiltroDistributivo) -> list[FilaDistributivoResuelta]:
         """Todas las filas del filtro, sin paginar.
 

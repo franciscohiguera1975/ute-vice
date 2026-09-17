@@ -162,6 +162,7 @@ dentro del periodo vigente. Use `?forzar=true` con justificacion.
 | `GET` | `/distributivo/tablero` | `distributivo:leer` |
 | `GET` | `/distributivo/resumenes` | `distributivo:leer` |
 | `GET` | `/distributivo/resumenes/exportar` | `reportes:generar` |
+| `GET` | `/reportes/distributivo/ambito` | `distributivo:leer` |
 | `POST` | `/distributivo/importaciones/pao` | `distributivo:importar` |
 | `GET` | `/reportes/formatos` | `reportes:generar` |
 | `GET` | `/reportes/personas` | `reportes:generar` |
@@ -180,6 +181,11 @@ distributivo pueda verlo.
 varios periodos cada uno. Sin ellos compara los dos ultimos semestres enteros.
 Devuelve los dos resumenes —avance y estados por facultad— sobre los mismos
 grupos, en una sola respuesta.
+
+`GET /reportes/distributivo/ambito` acepta `pao_ids` y `facultad_ids`,
+repetibles. Devuelve `facultades` —las que tienen filas en esos periodos— y
+`carreras` —las de esas facultades dentro de esos periodos—. Las dos viajan
+juntas para que no puedan contradecirse entre si.
 
 `GET /distributivo/resumenes/exportar` toma los mismos `grupo_a` y `grupo_b`,
 mas `resumen` (`avance` o `estados`), `grupo` (`a` o `b`, para el desglose de

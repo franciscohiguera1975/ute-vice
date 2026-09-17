@@ -803,9 +803,7 @@ class TestExportarResumenes:
         assert respuesta.content.startswith(firma)
         assert "attachment" in respuesta.headers["content-disposition"]
 
-    async def test_el_resumen_de_estados_elige_el_grupo(
-        self, sembrado, cabeceras_admin
-    ) -> None:
+    async def test_el_resumen_de_estados_elige_el_grupo(self, sembrado, cabeceras_admin) -> None:
         _, cliente = sembrado
         await self._preparar(cliente, cabeceras_admin)
 
@@ -840,9 +838,7 @@ class TestExportarResumenes:
         # La cabecera de la tabla es la primera fila cuya celda A tiene relleno
         # propio; antes van el titulo, el subtitulo y la constancia de filtros.
         cabecera = next(
-            fila
-            for fila in range(1, 15)
-            if hoja.cell(row=fila, column=1).value == "Facultad"
+            fila for fila in range(1, 15) if hoja.cell(row=fila, column=1).value == "Facultad"
         )
 
         colores = {
@@ -859,9 +855,7 @@ class TestExportarResumenes:
             assert banda != sin_banda
             assert str(banda).endswith("EAF3FA")
 
-    async def test_el_rol_de_consulta_puede_descargarlos(
-        self, sembrado, cabeceras_admin
-    ) -> None:
+    async def test_el_rol_de_consulta_puede_descargarlos(self, sembrado, cabeceras_admin) -> None:
         """Tiene `reportes:generar` justamente para esto."""
         _, cliente = sembrado
         await self._preparar(cliente, cabeceras_admin)
@@ -886,11 +880,105 @@ class TestExportarResumenes:
         )
         assert respuesta.status_code == 200
 
-    async def test_sin_datos_no_se_genera_un_archivo_vacio(
-        self, sembrado, cabeceras_admin
-    ) -> None:
+    async def test_sin_datos_no_se_genera_un_archivo_vacio(self, sembrado, cabeceras_admin) -> None:
         _, cliente = sembrado
         respuesta = await cliente.get(
             "/api/v1/distributivo/resumenes/exportar", headers=cabeceras_admin
         )
         assert respuesta.status_code == 422
+
+
+class TestAmbitoDelReporte:
+    """El selector encadenado de la pantalla de exportacion.
+
+    Elegido el periodo se acotan las facultades; elegida la facultad se acotan
+    las carreras. Ninguna de las dos relaciones vive en una columna del
+    catalogo: se derivan de las filas, que es lo unico que no miente.
+    """
+
+    async def _cargar(self, cliente, cabeceras, semestre, **campos):  # type: ignore[no-untyped-def]
+        return await TestTableroDelDistributivo()._cargar(cliente, cabeceras, semestre, **campos)
+
+    async def _periodos(self, cliente, cabeceras):  # type: ignore[no-untyped-def]
+        cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras)).json()
+        return {p["codigo"]: p["id"] for p in cuerpo["periodos"]}
+
+    async def test_las_facultades_se_acotan_al_periodo(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        # `ARQUITECTURA Y URBANISMO` en 2026-1 y la unidad tecnologica en 2026-2:
+        # cada periodo tiene una facultad distinta.
+        await self._cargar(cliente, cabeceras_admin, "2026-1")
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("tec.xlsx", _pao_de_tecnologia(identificacion=OTRA_CEDULA))},
+            data={"semestre": "2026-2", "actualizar_existentes": "true"},
+        )
+        por_codigo = await self._periodos(cliente, cabeceras_admin)
+
+        de_2026_1 = (
+            await cliente.get(
+                "/api/v1/reportes/distributivo/ambito",
+                headers=cabeceras_admin,
+                params={"pao_ids": por_codigo["261651"]},
+            )
+        ).json()
+        de_2026_2 = (
+            await cliente.get(
+                "/api/v1/reportes/distributivo/ambito",
+                headers=cabeceras_admin,
+                params={"pao_ids": por_codigo["262151"]},
+            )
+        ).json()
+
+        assert [f["codigo"] for f in de_2026_1["facultades"]] == ["FAU"]
+        assert [f["codigo"] for f in de_2026_2["facultades"]] == ["UAEFTT"]
+
+    async def test_las_carreras_se_acotan_a_la_facultad(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-1")
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("tec.xlsx", _pao_de_tecnologia(identificacion=OTRA_CEDULA))},
+            data={"semestre": "2026-1", "actualizar_existentes": "true"},
+        )
+        por_codigo = await self._periodos(cliente, cabeceras_admin)
+        periodos = [por_codigo["261651"], por_codigo["261151"]]
+
+        sin_facultad = (
+            await cliente.get(
+                "/api/v1/reportes/distributivo/ambito",
+                headers=cabeceras_admin,
+                params={"pao_ids": periodos},
+            )
+        ).json()
+        assert len(sin_facultad["facultades"]) == 2
+        assert len(sin_facultad["carreras"]) == 2
+
+        fau = next(f for f in sin_facultad["facultades"] if f["codigo"] == "FAU")
+        con_facultad = (
+            await cliente.get(
+                "/api/v1/reportes/distributivo/ambito",
+                headers=cabeceras_admin,
+                params={"pao_ids": periodos, "facultad_ids": fau["id"]},
+            )
+        ).json()
+
+        # La facultad marcada acota las carreras, pero **no** la lista de
+        # facultades: si se acotara a si misma, desmarcarla seria imposible.
+        assert len(con_facultad["facultades"]) == 2
+        assert [c["codigo"] for c in con_facultad["carreras"]] == [
+            "UIO:ARQUITECTURA - GRADO - PRESENCIAL"
+        ]
+
+    async def test_sin_periodos_no_acota_nada(self, sembrado, cabeceras_admin) -> None:
+        """Es la pantalla la que no pregunta hasta que haya un periodo marcado."""
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-1")
+
+        cuerpo = (
+            await cliente.get("/api/v1/reportes/distributivo/ambito", headers=cabeceras_admin)
+        ).json()
+
+        assert len(cuerpo["facultades"]) == 1

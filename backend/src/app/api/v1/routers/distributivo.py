@@ -15,6 +15,7 @@ from app.api.esquemas.comunes import (
     RespuestaPaginada,
 )
 from app.api.esquemas.distributivo import (
+    AmbitoDisponible,
     ColumnaReporteSalida,
     DocenteActualizar,
     DocenteCrear,
@@ -72,6 +73,7 @@ from app.application.casos_uso.reporte_distributivo import (
     CarrerasDisponibles,
     EntradaCarrerasDisponibles,
     EntradaReporteDistributivo,
+    FacultadesDisponibles,
     GenerarReporteDistributivo,
     ListarPlantillasReporte,
     VistaPreviaReporteDistributivo,
@@ -648,32 +650,40 @@ async def listar_plantillas(contexto: ContextoDep) -> list[PlantillaReporteSalid
 
 
 @router.get(
-    "/reportes/distributivo/carreras",
-    response_model=list[OpcionSelector],
-    summary="Carreras presentes en los periodos y facultades indicados",
+    "/reportes/distributivo/ambito",
+    response_model=AmbitoDisponible,
+    summary="Facultades y carreras que existen en lo ya elegido",
     dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
 )
-async def carreras_disponibles(
+async def ambito_disponible(
     uow: UowDep,
     contexto: ContextoDep,
     pao_ids: Annotated[list[UUID] | None, Query(description="Periodos academicos")] = None,
-    facultad_ids: Annotated[list[UUID] | None, Query(description="Facultades")] = None,
-) -> list[OpcionSelector]:
-    """La relacion entre facultades y carreras, tal como esta en los datos.
+    facultad_ids: Annotated[
+        list[UUID] | None, Query(description="Facultades ya marcadas. Solo acota las carreras.")
+    ] = None,
+) -> AmbitoDisponible:
+    """El selector encadenado de la pantalla de exportacion.
 
-    No sale de una columna del catalogo: doce carreras se dictan en dos
-    facultades a la vez, y una columna obligaria a elegir una y a equivocarse
-    en la otra.
+    Las facultades se acotan por periodo; las carreras, por periodo y facultad.
+    Nada de esto sale de una columna del catalogo: doce carreras se dictan en
+    dos facultades a la vez, y varias facultades dejaron de existir en la
+    reestructuracion de 2026-1 sin desaparecer del historico.
     """
-    caso = CarrerasDisponibles(uow)
-    carreras = await caso(
-        EntradaCarrerasDisponibles(
-            pao_ids=tuple(pao_ids or ()),
-            facultad_ids=tuple(facultad_ids or ()),
-        ),
+    periodos = tuple(pao_ids or ())
+    facultades_marcadas = tuple(facultad_ids or ())
+
+    facultades = await FacultadesDisponibles(uow)(
+        EntradaCarrerasDisponibles(pao_ids=periodos), contexto
+    )
+    carreras = await CarrerasDisponibles(uow)(
+        EntradaCarrerasDisponibles(pao_ids=periodos, facultad_ids=facultades_marcadas),
         contexto,
     )
-    return [OpcionSelector.desde(c) for c in carreras]
+    return AmbitoDisponible(
+        facultades=[OpcionSelector.desde(f) for f in facultades],
+        carreras=[OpcionSelector.desde(c) for c in carreras],
+    )
 
 
 @router.post(

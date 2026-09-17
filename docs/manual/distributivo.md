@@ -145,6 +145,29 @@ peor que una celda en blanco.
 Van a existir mas plantillas. Aparecen solas en el selector a medida que se
 agregan; esta pantalla no cambia.
 
+### Los tres selectores se encadenan
+
+Periodos, facultades y carreras comparten la misma forma —filtro, «Todos» /
+«Ninguno» y lista— y se acotan en cadena:
+
+1. **Periodos académicos.** Se listan por su nombre —`2026-2 GRADO`— con el
+   código al lado; el filtro busca en los dos.
+2. **Facultades.** Solo las que tienen carga en los periodos marcados. `FO`,
+   `FCIC`, `CEL` y `ETECH` dejaron de existir en la reestructuracion de 2026-1 y
+   siguen en el catalogo porque siguen en el historico: ofrecerlas al reportar
+   un periodo reciente llevaba a marcar una que devuelve cero filas.
+3. **Carreras.** Solo las de las facultades marcadas —o de todas, si no hay
+   ninguna— dentro de esos periodos.
+
+Nada de esto sale de una columna del catalogo, sino de las filas del
+distributivo: doce carreras se dictan en dos facultades a la vez, y una columna
+`facultad_id` obligaria a elegir una y a equivocarse en la otra.
+
+> **Lo que deja de caber en el ambito se desmarca solo.** Si se quita un periodo
+> y con el desaparece una facultad que estaba marcada, la marca se retira: de
+> otro modo el archivo saldria filtrado por algo que la pantalla ya no muestra y
+> nadie entenderia por que faltan filas.
+
 ### Elegir el alcance
 
 * **Periodo academico** — obligatorio.

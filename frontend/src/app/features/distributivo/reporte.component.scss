@@ -28,6 +28,10 @@
   padding: 0.35rem;
 }
 
+/* La lista de periodos usa la misma caja pero cabe mas corta: son 37 lineas de
+   una sola linea cada una, no nombres de carrera que se parten en dos. */
+.lista-periodos { max-height: 12rem; }
+
 .carrera {
   display: flex;
   align-items: flex-start;

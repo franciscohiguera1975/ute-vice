@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 
 import type {
+  AmbitoDisponible,
   ArchivoDescarga,
   CambiosDocente,
   CambiosElementoCatalogo,
@@ -159,11 +160,11 @@ export class DistributivoHttp extends RepositorioDistributivo {
     return this.api.get<readonly PlantillaReporte[]>('/reportes/distributivo/plantillas');
   }
 
-  carrerasDisponibles(
+  ambitoDisponible(
     paoIds: readonly string[],
     facultadIds: readonly string[],
-  ): Observable<readonly OpcionSelector[]> {
-    return this.api.get<readonly OpcionSelector[]>('/reportes/distributivo/carreras', {
+  ): Observable<AmbitoDisponible> {
+    return this.api.get<AmbitoDisponible>('/reportes/distributivo/ambito', {
       paoIds,
       facultadIds,
     });

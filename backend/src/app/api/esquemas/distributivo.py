@@ -77,6 +77,19 @@ class OpcionSelector(EsquemaBase):
         return cls(id=e.id, codigo=e.codigo, nombre=e.nombre)
 
 
+class AmbitoDisponible(EsquemaBase):
+    """Que facultades y carreras existen realmente en lo ya elegido.
+
+    Las dos listas viajan juntas en una sola respuesta porque se piden a la vez
+    y tienen que ser coherentes entre si: con dos llamadas, la carrera podria
+    llegar antes que la facultad que la contiene y la pantalla mostraria un
+    estado imposible durante un instante.
+    """
+
+    facultades: list[OpcionSelector]
+    carreras: list[OpcionSelector]
+
+
 class ElementoCatalogoCrear(EsquemaBase):
     codigo: Annotated[str, Field(min_length=1, max_length=320)]
     nombre: Annotated[str, Field(min_length=1, max_length=320)]

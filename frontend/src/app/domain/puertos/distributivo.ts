@@ -3,6 +3,7 @@
 import type { Observable } from 'rxjs';
 
 import type {
+  AmbitoDisponible,
   ArchivoDescarga,
   CambiosDocente,
   CambiosElementoCatalogo,
@@ -106,16 +107,17 @@ export abstract class RepositorioDistributivo {
   abstract plantillasReporte(): Observable<readonly PlantillaReporte[]>;
 
   /**
-   * Carreras que existen en esos periodos y facultades.
+   * Facultades y carreras que existen en lo ya elegido.
    *
-   * Es la relacion entre facultades y carreras, derivada de los datos: doce
-   * carreras se dictan en dos facultades a la vez, asi que no puede vivir en
-   * una columna del catalogo.
+   * Ninguna de las dos relaciones vive en una columna del catalogo: doce
+   * carreras se dictan en dos facultades a la vez, y cuatro facultades dejaron
+   * de existir en 2026-1 sin desaparecer del historico. Se derivan de los
+   * datos, que es lo unico que no miente.
    */
-  abstract carrerasDisponibles(
+  abstract ambitoDisponible(
     paoIds: readonly string[],
     facultadIds: readonly string[],
-  ): Observable<readonly OpcionSelector[]>;
+  ): Observable<AmbitoDisponible>;
 
   /** Muestra el reporte antes de descargarlo. */
   abstract vistaPreviaReporte(

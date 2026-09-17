@@ -51,42 +51,103 @@
           </span>
           <span class="texto-xs texto-tenue">{{ resumenPeriodos() }}</span>
         </legend>
-        <div class="casillas-en-linea" role="group" aria-label="Periodos del reporte">
-          @for (o of catalogos.de(TipoCatalogo.PAO); track o.id) {
-            <label class="ficha" [class.ficha--activa]="paosSeleccionados().includes(o.id)">
+
+        <div class="fila hueco-xs envolver acciones-seleccion">
+          <input
+            type="search"
+            class="filtro-carrera"
+            placeholder="Filtrar periodos…"
+            [ngModel]="filtroPeriodo()"
+            (ngModelChange)="filtroPeriodo.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            aria-label="Filtrar la lista de periodos"
+          />
+          <button
+            type="button"
+            class="btn btn--fantasma btn--sm"
+            (click)="marcarTodosLosPeriodos()"
+          >
+            Todos
+          </button>
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarPeriodos()">
+            Ninguno
+          </button>
+        </div>
+
+        <div class="lista-carreras lista-periodos" role="group" aria-label="Periodos del reporte">
+          @for (o of periodosDisponibles(); track o.id) {
+            <label class="carrera" [class.carrera--activa]="paosSeleccionados().includes(o.id)">
               <input
                 type="checkbox"
                 [checked]="paosSeleccionados().includes(o.id)"
                 (change)="alternarPao(o.id, $any($event.target).checked)"
               />
-              <span>{{ o.codigo }}</span>
+              <span class="fila entre hueco-sm crecer">
+                <span>{{ o.nombre }}</span>
+                <span class="mono texto-xs texto-tenue">{{ o.codigo }}</span>
+              </span>
             </label>
           } @empty {
-            <p class="texto-sm texto-tenue">Cargando periodos…</p>
+            <p class="texto-sm texto-tenue">
+              @if (catalogos.de(TipoCatalogo.PAO).length === 0) {
+                Cargando periodos…
+              } @else {
+                Ningún periodo coincide con el filtro.
+              }
+            </p>
           }
         </div>
       </fieldset>
 
-      <!-- Facultades -->
+      <!-- Facultades: solo las que tienen filas en los periodos elegidos -->
       <fieldset class="grupo">
         <legend class="fila entre envolver hueco-sm">
           <span class="campo__etiqueta">Facultades</span>
           <span class="texto-xs texto-tenue">{{ resumenFacultades() }}</span>
         </legend>
-        <p class="campo__ayuda">Sin selección se incluyen todas.</p>
+
+        <div class="fila hueco-xs envolver acciones-seleccion">
+          <button
+            type="button"
+            class="btn btn--fantasma btn--sm"
+            (click)="marcarTodasLasFacultades()"
+          >
+            Todas
+          </button>
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFacultades()">
+            Ninguna
+          </button>
+        </div>
+
+        <p class="campo__ayuda">
+          Solo se listan las facultades con carga en los periodos elegidos. Sin
+          selección se incluyen todas ellas.
+        </p>
+
         <div class="casillas-en-linea" role="group" aria-label="Facultades del reporte">
-          @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
-            <label class="ficha" [class.ficha--activa]="facultadesSeleccionadas().includes(o.id)">
+          @for (o of facultadesDisponibles(); track o.id) {
+            <label
+              class="ficha"
+              [class.ficha--activa]="facultadesSeleccionadas().includes(o.id)"
+              [title]="o.nombre"
+            >
               <input
                 type="checkbox"
                 [checked]="facultadesSeleccionadas().includes(o.id)"
-                [attr.title]="o.nombre"
                 (change)="alternarFacultad(o.id, $any($event.target).checked)"
               />
               <span>{{ o.codigo }}</span>
             </label>
           } @empty {
-            <p class="texto-sm texto-tenue">Cargando facultades…</p>
+            <p class="texto-sm texto-tenue">
+              @if (cargandoAmbito()) {
+                Buscando facultades…
+              } @else if (paosSeleccionados().length === 0) {
+                Elija primero un periodo.
+              } @else {
+                Ninguna facultad tiene carga en los periodos elegidos.
+              }
+            </p>
           }
         </div>
       </fieldset>
@@ -105,6 +166,7 @@
             placeholder="Filtrar carreras…"
             [ngModel]="filtroCarrera()"
             (ngModelChange)="filtroCarrera.set($event)"
+            [ngModelOptions]="{ standalone: true }"
             aria-label="Filtrar la lista de carreras"
           />
           <button type="button" class="btn btn--fantasma btn--sm" (click)="seleccionarTodas()">
@@ -116,8 +178,9 @@
         </div>
 
         <p class="campo__ayuda">
-          Solo se listan las carreras que existen en los periodos y facultades
-          elegidos. Sin selección se incluyen todas ellas.
+          Solo se listan las carreras de las facultades marcadas —o de todas, si no
+          hay ninguna— dentro de los periodos elegidos. Sin selección se incluyen
+          todas ellas.
         </p>
 
         <div class="lista-carreras" role="group" aria-label="Carreras del reporte">
@@ -131,7 +194,7 @@
               <span>{{ c.nombre }}</span>
             </label>
           } @empty {
-            @if (cargandoCarreras()) {
+            @if (cargandoAmbito()) {
               <p class="texto-sm texto-tenue">Buscando carreras…</p>
             } @else if (paosSeleccionados().length === 0) {
               <p class="texto-sm texto-tenue">Elija primero un periodo.</p>
