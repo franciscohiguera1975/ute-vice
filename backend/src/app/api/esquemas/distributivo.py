@@ -654,12 +654,8 @@ class AvanceDeFacultadSalida(EsquemaBase):
     nombre: str
     docentes_a: int
     docentes_b: int
-    filas_a: int
-    filas_b: int
-    docentes_aprobados_b: int
     filas_aprobadas_b: int
     filas_evaluadas_b: int
-    porcentaje_avance: float
     porcentaje_aprobado_b: float
 
     @classmethod
@@ -669,12 +665,8 @@ class AvanceDeFacultadSalida(EsquemaBase):
             nombre=a.nombre,
             docentes_a=a.docentes_a,
             docentes_b=a.docentes_b,
-            filas_a=a.filas_a,
-            filas_b=a.filas_b,
-            docentes_aprobados_b=a.docentes_aprobados_b,
             filas_aprobadas_b=a.filas_aprobadas_b,
             filas_evaluadas_b=a.filas_evaluadas_b,
-            porcentaje_avance=a.porcentaje_avance,
             porcentaje_aprobado_b=a.porcentaje_aprobado_b,
         )
 

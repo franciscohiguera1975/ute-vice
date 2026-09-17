@@ -150,8 +150,6 @@ def _tabla_de_avance(
         # el subtitulo y en la constancia de filtros, que es donde se buscan.
         ColumnaReporte("docentes_a", "Docentes grupo 1", 17, "numero", "derecha", _PASTEL_AZUL),
         ColumnaReporte("docentes_b", "Docentes grupo 2", 17, "numero", "derecha", _PASTEL_VERDE),
-        ColumnaReporte("avance", "% Avance", 11, "porcentaje", "derecha", _PASTEL_AMBAR),
-        ColumnaReporte("filas_b", "Filas grupo 2", 14, "numero", "derecha", _PASTEL_VERDE_CLARO),
         ColumnaReporte(
             "aprobadas_b", "Aprobadas grupo 2", 18, "numero", "derecha", _PASTEL_VERDE_CLARO
         ),
@@ -164,8 +162,6 @@ def _tabla_de_avance(
             "nombre": a.nombre,
             "docentes_a": a.docentes_a,
             "docentes_b": a.docentes_b,
-            "avance": a.porcentaje_avance if a.docentes_a else None,
-            "filas_b": a.filas_b,
             "aprobadas_b": a.filas_aprobadas_b,
             "aprobado": a.porcentaje_aprobado_b if a.filas_evaluadas_b else None,
         }
@@ -177,14 +173,15 @@ def _tabla_de_avance(
     # cuenta dos veces— y mezclarlos en la tabla invita a leer mal el archivo.
     distintos_a = datos.grupo_a.docentes if datos.grupo_a else 0
     distintos_b = datos.grupo_b.docentes if datos.grupo_b else 0
+    aprobadas = sum(a.filas_aprobadas_b for a in datos.avance)
+    evaluadas = sum(a.filas_evaluadas_b for a in datos.avance)
     totales = {
         "Suma de la columna, grupo 1": sum(a.docentes_a for a in datos.avance),
         "Suma de la columna, grupo 2": sum(a.docentes_b for a in datos.avance),
         "Docentes distintos, grupo 1": distintos_a,
         "Docentes distintos, grupo 2": distintos_b,
-        "% Avance sobre docentes distintos": (
-            round(distintos_b / distintos_a * 100, 1) if distintos_a else 0.0
-        ),
+        "Aprobadas grupo 2": aprobadas,
+        "% Aprobado grupo 2": round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0,
     }
 
     return TablaReporte(

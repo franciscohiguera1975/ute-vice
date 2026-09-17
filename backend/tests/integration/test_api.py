@@ -630,8 +630,8 @@ class TestResumenesDelDistributivo:
         assert cuerpo["avance"][0]["codigo"] == "FAU"
         assert cuerpo["avance"][0]["docentes_a"] == 1
         assert cuerpo["avance"][0]["docentes_b"] == 1
-        assert cuerpo["avance"][0]["porcentaje_avance"] == 100.0
         assert cuerpo["avance"][0]["filas_aprobadas_b"] == 1
+        assert cuerpo["avance"][0]["porcentaje_aprobado_b"] == 100.0
 
     async def test_un_grupo_reune_los_periodos_de_todo_un_semestre(
         self, sembrado, cabeceras_admin

@@ -457,19 +457,22 @@ export interface GrupoDePeriodos {
   readonly docentes: number;
 }
 
-/** Una facultad en los dos grupos que se comparan. */
+/**
+ * Una facultad en los dos grupos que se comparan.
+ *
+ * Hubo una columna «% Avance» —el cociente de los dos recuentos de docentes—
+ * que se retiro: se leia como una tasa de continuidad y no lo es. Una facultad
+ * que pasa de 41 a 45 docentes marcaba 109,8 % aunque solo 38 de los 41
+ * originales hubieran vuelto.
+ */
 export interface AvanceDeFacultad {
   readonly codigo: string;
   readonly nombre: string;
   readonly docentesA: number;
   readonly docentesB: number;
-  readonly filasA: number;
-  readonly filasB: number;
-  readonly docentesAprobadosB: number;
   readonly filasAprobadasB: number;
+  /** Filas del grupo 2 que si traen estado. Es el denominador del porcentaje. */
   readonly filasEvaluadasB: number;
-  /** Puede pasar del 100 %: la facultad planifico mas docentes de los que tenia. */
-  readonly porcentajeAvance: number;
   readonly porcentajeAprobadoB: number;
 }
 

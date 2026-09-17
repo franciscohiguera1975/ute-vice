@@ -258,9 +258,6 @@ class RepositorioAnaliticaDistributivoSQL:
                 FacultadModel.nombre.label("nombre"),
                 distintos(en_a).label("docentes_a"),
                 distintos(en_b).label("docentes_b"),
-                _cuenta_si(en_a).label("filas_a"),
-                _cuenta_si(en_b).label("filas_b"),
-                distintos(en_b & estado.in_(_APROBADOS)).label("docentes_aprobados_b"),
                 _cuenta_si(en_b & estado.in_(_APROBADOS)).label("filas_aprobadas_b"),
                 _cuenta_si(en_b & estado.is_not(None)).label("filas_evaluadas_b"),
             )
@@ -277,9 +274,6 @@ class RepositorioAnaliticaDistributivoSQL:
                 nombre=f.nombre,
                 docentes_a=f.docentes_a,
                 docentes_b=f.docentes_b,
-                filas_a=f.filas_a,
-                filas_b=f.filas_b,
-                docentes_aprobados_b=f.docentes_aprobados_b,
                 filas_aprobadas_b=f.filas_aprobadas_b,
                 filas_evaluadas_b=f.filas_evaluadas_b,
             )

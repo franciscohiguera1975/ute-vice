@@ -157,11 +157,13 @@ export class ResumenesDistributivoComponent {
     const filas = this.datos()?.avance ?? [];
     const suma = (extraer: (a: (typeof filas)[number]) => number) =>
       filas.reduce((total, a) => total + extraer(a), 0);
+    const evaluadas = suma((a) => a.filasEvaluadasB);
+    const aprobadas = suma((a) => a.filasAprobadasB);
     return {
       docentesA: suma((a) => a.docentesA),
       docentesB: suma((a) => a.docentesB),
-      filasB: suma((a) => a.filasB),
-      aprobadasB: suma((a) => a.filasAprobadasB),
+      aprobadasB: aprobadas,
+      porcentajeAprobadoB: evaluadas === 0 ? null : (aprobadas / evaluadas) * 100,
     };
   });
 

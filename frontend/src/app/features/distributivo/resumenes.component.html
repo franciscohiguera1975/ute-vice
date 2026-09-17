@@ -106,8 +106,6 @@
                 <th scope="col" class="bloque-identidad">Facultad</th>
                 <th scope="col" class="der bloque-uno">Docentes grupo 1</th>
                 <th scope="col" class="der bloque-dos">Docentes grupo 2</th>
-                <th scope="col" class="der bloque-calculo">% Avance</th>
-                <th scope="col" class="der bloque-dos-claro">Filas grupo 2</th>
                 <th scope="col" class="der bloque-dos-claro">Aprobadas grupo 2</th>
                 <th scope="col" class="der bloque-calculo">% Aprobado</th>
               </tr>
@@ -118,16 +116,12 @@
                   <th scope="row" [title]="a.nombre">{{ a.codigo }}</th>
                   <td class="der mono">{{ a.docentesA | number }}</td>
                   <td class="der mono">{{ a.docentesB | number }}</td>
+                  <td class="der mono">{{ a.filasAprobadasB | number }}</td>
                   <td
                     class="der mono fuerte"
-                    [class.positivo]="a.porcentajeAvance >= 100"
-                    [class.negativo]="a.docentesA > 0 && a.porcentajeAvance < 50"
+                    [class.positivo]="a.filasEvaluadasB > 0 && a.porcentajeAprobadoB >= 90"
+                    [class.negativo]="a.filasEvaluadasB > 0 && a.porcentajeAprobadoB < 50"
                   >
-                    {{ a.docentesA === 0 ? '—' : (a.porcentajeAvance | number: '1.1-1') + ' %' }}
-                  </td>
-                  <td class="der mono">{{ a.filasB | number }}</td>
-                  <td class="der mono">{{ a.filasAprobadasB | number }}</td>
-                  <td class="der mono">
                     {{
                       a.filasEvaluadasB === 0
                         ? '—'
@@ -137,7 +131,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="texto-tenue">Sin facultades en estos periodos</td>
+                  <td colspan="5" class="texto-tenue">Sin facultades en estos periodos</td>
                 </tr>
               }
             </tbody>
@@ -146,24 +140,19 @@
                 <th scope="row">Suma de la columna</th>
                 <td class="der mono">{{ sumaColumnas().docentesA | number }}</td>
                 <td class="der mono">{{ sumaColumnas().docentesB | number }}</td>
-                <td class="der mono">—</td>
-                <td class="der mono">{{ sumaColumnas().filasB | number }}</td>
                 <td class="der mono">{{ sumaColumnas().aprobadasB | number }}</td>
-                <td class="der mono">—</td>
+                <td class="der mono fuerte">
+                  {{
+                    sumaColumnas().porcentajeAprobadoB === null
+                      ? '—'
+                      : (sumaColumnas().porcentajeAprobadoB | number: '1.1-1') + ' %'
+                  }}
+                </td>
               </tr>
               <tr>
                 <th scope="row">Docentes distintos</th>
                 <td class="der mono fuerte">{{ d.grupoA?.docentes ?? 0 | number }}</td>
                 <td class="der mono fuerte">{{ d.grupoB?.docentes ?? 0 | number }}</td>
-                <td class="der mono fuerte">
-                  {{
-                    (d.grupoA?.docentes ?? 0) === 0
-                      ? '—'
-                      : (((d.grupoB?.docentes ?? 0) / (d.grupoA?.docentes ?? 1)) * 100
-                          | number: '1.1-1') + ' %'
-                  }}
-                </td>
-                <td class="der mono">{{ d.grupoB?.filas ?? 0 | number }}</td>
                 <td class="der mono">—</td>
                 <td class="der mono">—</td>
               </tr>
@@ -172,15 +161,10 @@
         </div>
 
         <p class="nota texto-sm texto-tenue">
-          <strong>% Avance</strong> es el tamano del grupo 2 respecto al grupo 1:
-          <span class="mono">docentes grupo 2 ÷ docentes grupo 1</span>. Compara
-          <em>cuantos</em> hay, no <em>quienes</em>: pasar del 100 % significa que la
-          facultad planifico mas docentes de los que tenia, no que volvieran todos.
-          <br />
-          <strong>«Docentes» y «Filas» del grupo 2 coinciden</strong> porque el
-          distributivo que exporta el sistema academico trae una sola fila por docente
-          y facultad. El consolidado historico —el grupo 1— trae una por carrera y
-          sede, y por eso alli si difieren.
+          <strong>% Aprobado</strong> se calcula sobre las filas del grupo 2 que
+          <em>traen estado</em>, no sobre el total: el sistema academico entrega ese
+          dato desde 2026-2, y contar como reprobado lo que no lo tiene pintaria de
+          rojo todo el historico. Un grupo sin ninguna muestra «—».
           <br />
           <strong>Las dos filas de total dicen cosas distintas y no coinciden.</strong>
           Un docente que dicta en dos facultades cuenta una vez en cada una, asi que la

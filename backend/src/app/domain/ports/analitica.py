@@ -266,26 +266,19 @@ class GrupoDePeriodos:
 class AvanceDeFacultad:
     """Una facultad en los dos grupos de periodos que se comparan.
 
-    El avance es cuantos de los docentes que tenia el primer grupo vuelven a
-    tener carga en el segundo. Puede pasar del 100 %: significa que la facultad
-    planifico mas docentes de los que tenia.
+    Solo lleva lo que la tabla muestra. Hubo una columna «% Avance» —el
+    cociente de los dos recuentos de docentes— que se retiro: se leia como una
+    tasa de continuidad y no lo es. Una facultad que pasa de 41 a 45 docentes
+    marcaba 109,8 % aunque solo 38 de los 41 originales hubieran vuelto.
     """
 
     codigo: str
     nombre: str
     docentes_a: int
     docentes_b: int
-    filas_a: int
-    filas_b: int
-    docentes_aprobados_b: int
     filas_aprobadas_b: int
     filas_evaluadas_b: int
-
-    @property
-    def porcentaje_avance(self) -> float:
-        if self.docentes_a == 0:
-            return 0.0
-        return round(self.docentes_b / self.docentes_a * 100, 1)
+    """Filas del grupo 2 que si traen estado. Es el denominador del porcentaje."""
 
     @property
     def porcentaje_aprobado_b(self) -> float:
