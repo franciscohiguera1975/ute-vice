@@ -38,3 +38,4 @@ pendiente.
 | [18](18-consulta-y-cabecera.md) | Rol de consulta y cabecera institucional | ✅ |
 | [19](19-bucle-de-redirecciones.md) | El bucle de redirecciones que dejaba la pantalla en blanco | ✅ |
 | [20](20-nombres-en-mayusculas.md) | Nombres en mayusculas, la sede real y el nivel tecnologia | ✅ |
+| [21](21-pfcsee-en-fcsee.md) | PFCSEE se integra en FCSEE | ✅ |

@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 20 — cerradas
+### Fases 12 a 21 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -257,6 +257,17 @@ dice el origen y existe el nivel `TECNOLOGIA`
 > «Monjas (Ricardo Hidalgo Ottolenghi)» y ese nombre no aparece en ningun dato:
 > alguien dedujo que `MON` era Monjas. El consolidado escribe `RICARDO HIDALGO
 > OTTOLENGHI`, y eso es lo que vale.
+
+**21**: `PFCSEE` se integra en `FCSEE` desde 2026-1
+([changelog](changelogs/21-pfcsee-en-fcsee.md)).
+
+> Solo desde 2026-1, y la facultad queda **inactiva, no eliminada**: sus 1.775
+> filas historicas siguen ahi. Reescribir el pasado para que se parezca a la
+> estructura nueva haria irreproducibles los informes ya emitidos.
+>
+> La facultad previa no es deducible del dato —FCSEE ya tenia filas con las
+> mismas carreras—, asi que la migracion guarda los ids en
+> `distributivo_facultad_previa` para poder deshacerlo.
 
 ### Fase 14 — espera confirmacion funcional
 
