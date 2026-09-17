@@ -16,21 +16,29 @@ export interface Seccion {
   readonly icono: string;
   /** Permisos que habilitan la seccion. Basta con tener uno. */
   readonly permisos: readonly Permiso[];
+  /**
+   * Subsecciones. Una seccion con hijos se pinta como desplegable y su `ruta`
+   * es a donde lleva el encabezado.
+   */
+  readonly hijos?: readonly Seccion[];
 }
 
-/** El orden importa: es el del menu y el de preferencia al aterrizar. */
-export const SECCIONES: readonly Seccion[] = [
-  { ruta: '/tablero', etiqueta: 'Tablero', icono: '▤', permisos: [Permiso.DASHBOARD_VER] },
-  { ruta: '/personas', etiqueta: 'Personas', icono: '☰', permisos: [Permiso.PERSONAS_LEER] },
-  { ruta: '/titulos', etiqueta: 'Titulos', icono: '◈', permisos: [Permiso.TITULOS_LEER] },
-  { ruta: '/consultas', etiqueta: 'Consultas', icono: '⟳', permisos: [Permiso.CONSULTAS_LEER] },
+/**
+ * Las cinco pantallas del distributivo.
+ *
+ * Se agrupan en un desplegable y no en cinco entradas sueltas: en horizontal
+ * no caben, y sueltas no se lee que todas trabajan sobre el mismo dato.
+ */
+const DISTRIBUTIVO: readonly Seccion[] = [
   {
     ruta: '/distributivo',
-    etiqueta: 'Distributivo',
-    icono: '▩',
+    etiqueta: 'Registros',
+    icono: '▤',
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },
   {
+    // Pide `distributivo:leer` y no `dashboard:ver`: el rol de consulta no
+    // tiene el tablero general y aun asi debe ver el avance.
     ruta: '/distributivo/tablero',
     etiqueta: 'Indicadores',
     icono: '◉',
@@ -43,10 +51,42 @@ export const SECCIONES: readonly Seccion[] = [
     permisos: [Permiso.DISTRIBUTIVO_IMPORTAR],
   },
   {
+    ruta: '/distributivo/reporte',
+    etiqueta: 'Reportes',
+    icono: '⤓',
+    permisos: [Permiso.REPORTES_GENERAR],
+  },
+  {
+    ruta: '/distributivo/resumenes',
+    etiqueta: 'Resumenes',
+    icono: '▦',
+    permisos: [Permiso.DISTRIBUTIVO_LEER],
+  },
+  {
     ruta: '/distributivo/asignaturas',
     etiqueta: 'Asignaturas',
     icono: '✎',
     permisos: [Permiso.DISTRIBUTIVO_ESCRIBIR],
+  },
+];
+
+/** Los permisos de un grupo son los de sus hijos: si ninguno aplica, se oculta. */
+function permisosDe(hijos: readonly Seccion[]): readonly Permiso[] {
+  return [...new Set(hijos.flatMap((h) => h.permisos))];
+}
+
+/** El orden importa: es el del menu y el de preferencia al aterrizar. */
+export const SECCIONES: readonly Seccion[] = [
+  { ruta: '/tablero', etiqueta: 'Tablero', icono: '▤', permisos: [Permiso.DASHBOARD_VER] },
+  { ruta: '/personas', etiqueta: 'Personas', icono: '☰', permisos: [Permiso.PERSONAS_LEER] },
+  { ruta: '/titulos', etiqueta: 'Titulos', icono: '◈', permisos: [Permiso.TITULOS_LEER] },
+  { ruta: '/consultas', etiqueta: 'Consultas', icono: '⟳', permisos: [Permiso.CONSULTAS_LEER] },
+  {
+    ruta: '/distributivo',
+    etiqueta: 'Distributivo',
+    icono: '▩',
+    permisos: permisosDe(DISTRIBUTIVO),
+    hijos: DISTRIBUTIVO,
   },
   { ruta: '/catalogos', etiqueta: 'Catalogos', icono: '⛁', permisos: [Permiso.CATALOGOS_LEER] },
   { ruta: '/reportes', etiqueta: 'Reportes', icono: '▦', permisos: [Permiso.REPORTES_GENERAR] },
@@ -57,6 +97,14 @@ export const SECCIONES: readonly Seccion[] = [
     permisos: [Permiso.USUARIOS_LEER],
   },
 ];
+
+/**
+ * Las secciones sin agrupar, en el orden del menu.
+ *
+ * Un grupo no es un destino —su encabezado solo despliega—, asi que quien
+ * busca «a donde puede ir este usuario» tiene que mirar las hojas.
+ */
+export const SECCIONES_PLANAS: readonly Seccion[] = SECCIONES.flatMap((s) => s.hijos ?? [s]);
 
 /**
  * Sin permisos para ninguna seccion, el perfil siempre esta disponible: no
@@ -75,6 +123,6 @@ export const RUTA_REFUGIO = '/perfil';
  * bucle de redirecciones y la pantalla en blanco.
  */
 export function rutaDeInicio(sesion: SesionStore): string {
-  const disponible = SECCIONES.find((s) => sesion.puedeAlguno(...s.permisos));
+  const disponible = SECCIONES_PLANAS.find((s) => sesion.puedeAlguno(...s.permisos));
   return disponible?.ruta ?? RUTA_REFUGIO;
 }

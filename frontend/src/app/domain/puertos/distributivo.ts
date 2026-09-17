@@ -28,6 +28,7 @@ import type {
   PeticionCargaPao,
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
+  ResumenComparativo,
   ResumenDistributivo,
   TableroDistributivo,
   TipoCatalogo,
@@ -138,4 +139,15 @@ export abstract class RepositorioDistributivo {
 
   /** Sube un distributivo exportado por el sistema academico. */
   abstract cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao>;
+
+  /**
+   * Compara dos grupos de periodos.
+   *
+   * Son grupos y no periodos sueltos porque un semestre son varios: `2026-1`
+   * es tecnologia, grado y posgrado, mas sus interciclos.
+   */
+  abstract resumenes(
+    grupoA: readonly string[],
+    grupoB: readonly string[],
+  ): Observable<ResumenComparativo>;
 }

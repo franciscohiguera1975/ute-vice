@@ -600,3 +600,173 @@ class TestAccesoAlTableroDelDistributivo:
             data={"semestre": "2026-2"},
         )
         assert respuesta.status_code == 401
+
+
+class TestResumenesDelDistributivo:
+    """Comparacion de dos grupos de periodos.
+
+    Lo que se protege es que se comparen **grupos** y no periodos sueltos: un
+    semestre son tres periodos —tecnologia, grado y posgrado—, y comparar solo
+    el de grado dejaria fuera media institucion.
+    """
+
+    async def _cargar(self, cliente, cabeceras, semestre, **campos):  # type: ignore[no-untyped-def]
+        return await TestTableroDelDistributivo()._cargar(cliente, cabeceras, semestre, **campos)
+
+    async def test_sin_grupos_compara_los_dos_ultimos_semestres(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-1", estado="Validación Pendiente")
+        await self._cargar(cliente, cabeceras_admin, "2026-2")
+
+        respuesta = await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
+        assert respuesta.status_code == 200, respuesta.text
+        cuerpo = respuesta.json()
+
+        assert cuerpo["grupo_a"]["codigos"] == ["261651"]
+        assert cuerpo["grupo_b"]["codigos"] == ["262651"]
+        assert cuerpo["avance"][0]["codigo"] == "FAU"
+        assert cuerpo["avance"][0]["docentes_a"] == 1
+        assert cuerpo["avance"][0]["docentes_b"] == 1
+        assert cuerpo["avance"][0]["porcentaje_avance"] == 100.0
+        assert cuerpo["avance"][0]["filas_aprobadas_b"] == 1
+
+    async def test_un_grupo_reune_los_periodos_de_todo_un_semestre(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """El mismo semestre con dos facultades produce dos periodos distintos.
+
+        `ARQUITECTURA Y URBANISMO` va a grado y `UNIDAD ACADEMICA … TECNICA Y
+        TECNOLOGICA` a tecnologia: `261651` y `261151`. El grupo tiene que
+        traer los dos.
+        """
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-1")
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={
+                "archivo": (
+                    "tec.xlsx",
+                    _pao_de_tecnologia(identificacion=OTRA_CEDULA),
+                )
+            },
+            data={"semestre": "2026-1", "actualizar_existentes": "true"},
+        )
+
+        cuerpo = (
+            await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
+        ).json()
+
+        assert sorted(cuerpo["grupo_a"]["codigos"]) == ["261151", "261651"]
+        assert cuerpo["grupo_a"]["docentes"] == 2
+        assert {f["codigo"] for f in cuerpo["avance"]} == {"FAU", "UAEFTT"}
+
+    async def test_los_docentes_distintos_no_son_la_suma_por_facultad(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Un docente en dos facultades cuenta una vez en el total y dos en la columna.
+
+        Es la diferencia que hace que las dos filas de total de la pantalla no
+        coincidan, y hay que poder explicarla.
+        """
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-1")
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("tec.xlsx", _pao_de_tecnologia(identificacion=CEDULA))},
+            data={"semestre": "2026-1", "actualizar_existentes": "true"},
+        )
+
+        cuerpo = (
+            await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
+        ).json()
+
+        assert cuerpo["grupo_a"]["docentes"] == 1
+        assert sum(f["docentes_a"] for f in cuerpo["avance"]) == 2
+
+    async def test_desglosa_todos_los_estados_por_facultad(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2026-2", estado="Error")
+
+        cuerpo = (
+            await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
+        ).json()
+
+        # Con un solo semestre cargado, el grupo B queda vacio y todo cae en A.
+        estados = cuerpo["estados_a"] or cuerpo["estados_b"]
+        assert estados[0]["con_error"] == 1
+        assert estados[0]["ok"] == 0
+        assert estados[0]["total"] == 1
+        # Una fila con error esta evaluada: el porcentaje aprobado es 0, no «—».
+        assert estados[0]["evaluadas"] == 1
+        assert estados[0]["porcentaje_aprobado"] == 0.0
+
+    async def test_acepta_los_grupos_que_se_le_indiquen(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(cliente, cabeceras_admin, "2025-2")
+        await self._cargar(cliente, cabeceras_admin, "2026-2")
+
+        periodos = (
+            await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)
+        ).json()["periodos"]
+        por_codigo = {p["codigo"]: p["id"] for p in periodos}
+
+        cuerpo = (
+            await cliente.get(
+                "/api/v1/distributivo/resumenes",
+                headers=cabeceras_admin,
+                params={"grupo_a": por_codigo["252651"], "grupo_b": por_codigo["262651"]},
+            )
+        ).json()
+
+        assert cuerpo["grupo_a"]["codigos"] == ["252651"]
+        assert cuerpo["grupo_b"]["codigos"] == ["262651"]
+
+    async def test_el_rol_de_consulta_ve_los_resumenes(self, sembrado, cabeceras_admin) -> None:
+        """Son de solo lectura: el rol estrecho tiene que poder abrirlos."""
+        _, cliente = sembrado
+        await cliente.post(
+            "/api/v1/usuarios",
+            headers=cabeceras_admin,
+            json={
+                "email": "solo.lectura@ute.edu.ec",
+                "nombre_completo": "Solo Lectura",
+                "contrasena": "Lectura#2026.Ok",
+                "roles": ["CONSULTA_DISTRIBUTIVO"],
+            },
+        )
+        acceso = await cliente.post(
+            "/api/v1/auth/login",
+            json={"email": "solo.lectura@ute.edu.ec", "contrasena": "Lectura#2026.Ok"},
+        )
+        cabeceras = {"Authorization": f"Bearer {acceso.json()['tokens']['acceso']}"}
+
+        respuesta = await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras)
+        assert respuesta.status_code == 200
+
+
+def _pao_de_tecnologia(*, identificacion: str) -> bytes:
+    """Un PAO de la unidad tecnologica, que va a un periodo distinto."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    libro = Workbook()
+    hoja = libro.active
+    hoja.append(["Identificación", "Sede", "Nivel", "Facultad", "Carrera/Programa", "Da"])
+    hoja.append(
+        [
+            identificacion,
+            "SEDE QUITO",
+            "GRADO",
+            "UNIDAD ACADÉMICA ESPECIALIZADA EN LA FORMACIÓN TÉCNICA Y TECNOLÓGICA",
+            "DESARROLLO DE SOFTWARE",
+            12,
+        ]
+    )
+    memoria = BytesIO()
+    libro.save(memoria)
+    return memoria.getvalue()

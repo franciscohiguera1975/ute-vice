@@ -13,7 +13,12 @@ from uuid import uuid4
 
 import pytest
 
-from app.application.casos_uso.analitica import EntradaTableroDistributivo, _elegir
+from app.application.casos_uso.analitica import (
+    EntradaResumenComparativo,
+    EntradaTableroDistributivo,
+    _elegir,
+    _grupos,
+)
 from app.domain.ports.analitica import PeriodoDisponible
 
 pytestmark = pytest.mark.unit
@@ -103,3 +108,71 @@ class TestEleccionDelPeriodo:
         actual, _ = _elegir(catalogo(), EntradaTableroDistributivo(pao_id=uuid4()))
 
         assert actual.codigo == "262751"
+
+
+class TestGruposPorDefecto:
+    """Que dos grupos se comparan cuando no se indica ninguno.
+
+    Un semestre son varios periodos: `2026-1` es tecnologia, grado y posgrado,
+    mas sus interciclos. La propuesta por defecto tiene que ser el semestre
+    entero, no un periodo suelto — si no, «26-1 contra 26-2» obligaria a marcar
+    seis casillas para ver lo que se pide siempre.
+    """
+
+    @staticmethod
+    def _con_semestre(codigo: str, semestre: str) -> PeriodoDisponible:
+        return PeriodoDisponible(
+            id=uuid4(), codigo=codigo, nombre=codigo, semestre=semestre, filas=10
+        )
+
+    def _catalogo(self) -> list[PeriodoDisponible]:
+        return [
+            self._con_semestre("262751", "2026-2"),
+            self._con_semestre("262651", "2026-2"),
+            self._con_semestre("262151", "2026-2"),
+            self._con_semestre("261751", "2026-1"),
+            self._con_semestre("261650", "2026-1"),
+            self._con_semestre("261651", "2026-1"),
+            self._con_semestre("252651", "2025-2"),
+        ]
+
+    def test_toma_los_dos_ultimos_semestres_enteros(self) -> None:
+        periodos = self._catalogo()
+        a, b = _grupos(periodos, EntradaResumenComparativo())
+
+        codigos = {p.id: p.codigo for p in periodos}
+        assert sorted(codigos[i] for i in a) == ["261650", "261651", "261751"]
+        assert sorted(codigos[i] for i in b) == ["262151", "262651", "262751"]
+
+    def test_el_interciclo_entra_en_su_semestre(self) -> None:
+        periodos = self._catalogo()
+        a, _ = _grupos(periodos, EntradaResumenComparativo())
+        codigos = {p.id: p.codigo for p in periodos}
+
+        assert "261650" in {codigos[i] for i in a}
+
+    def test_respeta_los_grupos_que_se_indiquen(self) -> None:
+        periodos = self._catalogo()
+        elegido = periodos[6].id
+
+        a, b = _grupos(periodos, EntradaResumenComparativo(grupo_a=(elegido,)))
+
+        assert a == [elegido]
+        assert b == []
+
+    def test_descarta_periodos_que_ya_no_existen(self) -> None:
+        """Un enlace guardado con un periodo borrado no debe romper la pantalla."""
+        periodos = self._catalogo()
+        vivo = periodos[0].id
+
+        a, _ = _grupos(periodos, EntradaResumenComparativo(grupo_a=(vivo, uuid4())))
+
+        assert a == [vivo]
+
+    def test_con_un_solo_semestre_no_hay_con_que_comparar(self) -> None:
+        periodos = [self._con_semestre("262651", "2026-2")]
+
+        a, b = _grupos(periodos, EntradaResumenComparativo())
+
+        assert len(a) == 1
+        assert b == []

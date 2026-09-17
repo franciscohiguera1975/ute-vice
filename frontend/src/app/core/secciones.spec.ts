@@ -13,7 +13,7 @@
 
 import { Permiso } from '@domain/modelos';
 
-import { RUTA_REFUGIO, SECCIONES, rutaDeInicio } from './secciones';
+import { RUTA_REFUGIO, SECCIONES, SECCIONES_PLANAS, rutaDeInicio } from './secciones';
 import type { SesionStore } from './sesion.store';
 
 /** Doble minimo: de `SesionStore` solo se usa `puedeAlguno`. */
@@ -54,13 +54,13 @@ describe('rutaDeInicio', () => {
   it('nunca devuelve una ruta que el usuario no pueda abrir', () => {
     // Cada combinacion de un solo permiso, que es como se construyen los roles
     // estrechos y donde aparecio el fallo.
-    for (const seccion of SECCIONES) {
+    for (const seccion of SECCIONES_PLANAS) {
       for (const permiso of seccion.permisos) {
         const sesion = sesionCon(permiso);
         const destino = rutaDeInicio(sesion);
         if (destino === RUTA_REFUGIO) continue; // el perfil no tiene guarda
 
-        const alQueVa = SECCIONES.find((s) => s.ruta === destino);
+        const alQueVa = SECCIONES_PLANAS.find((s) => s.ruta === destino);
         expect(alQueVa)
           .withContext(`${destino} no esta entre las secciones`)
           .toBeDefined();
@@ -72,7 +72,7 @@ describe('rutaDeInicio', () => {
   });
 
   it('el perfil no figura como seccion: es el refugio, no una opcion del menu', () => {
-    expect(SECCIONES.some((s) => s.ruta === RUTA_REFUGIO)).toBeFalse();
+    expect(SECCIONES_PLANAS.some((s) => s.ruta === RUTA_REFUGIO)).toBeFalse();
   });
 });
 
@@ -91,7 +91,7 @@ describe('secciones del rol de consulta del distributivo', () => {
   );
 
   const visibles = () =>
-    SECCIONES.filter((s) => sesion.puedeAlguno(...s.permisos)).map((s) => s.ruta);
+    SECCIONES_PLANAS.filter((s) => sesion.puedeAlguno(...s.permisos)).map((s) => s.ruta);
 
   it('incluye el tablero del distributivo', () => {
     expect(visibles()).toContain('/distributivo/tablero');
@@ -110,10 +110,65 @@ describe('secciones del rol de consulta del distributivo', () => {
 describe('la carga de un PAO', () => {
   it('solo aparece con permiso de importar', () => {
     const importador = sesionCon(Permiso.DISTRIBUTIVO_IMPORTAR);
-    const seccion = SECCIONES.find((s) => s.ruta === '/distributivo/importar');
+    const seccion = SECCIONES_PLANAS.find((s) => s.ruta === '/distributivo/importar');
 
     expect(seccion).toBeDefined();
     expect(importador.puedeAlguno(...seccion!.permisos)).toBeTrue();
     expect(sesionCon(Permiso.DISTRIBUTIVO_ESCRIBIR).puedeAlguno(...seccion!.permisos)).toBeFalse();
+  });
+});
+
+/**
+ * El grupo «Distributivo».
+ *
+ * Un grupo se muestra si alguno de sus hijos se muestra: sus permisos son la
+ * union de los de ellos. Si eso se desincroniza, un usuario veria un
+ * desplegable que al abrirse esta vacio.
+ */
+describe('agrupacion del menu', () => {
+  const grupo = SECCIONES.find((s) => s.hijos !== undefined);
+
+  it('el distributivo es el grupo, con sus cinco pantallas y asignaturas', () => {
+    expect(grupo?.ruta).toBe('/distributivo');
+    expect(grupo?.hijos?.map((h) => h.etiqueta)).toEqual([
+      'Registros',
+      'Indicadores',
+      'Cargar PAO',
+      'Reportes',
+      'Resumenes',
+      'Asignaturas',
+    ]);
+  });
+
+  it('los permisos del grupo son la union de los de sus hijos', () => {
+    const union = new Set((grupo?.hijos ?? []).flatMap((h) => h.permisos));
+    expect(new Set(grupo?.permisos ?? [])).toEqual(union);
+  });
+
+  it('un grupo nunca se ofrece como destino de aterrizaje', () => {
+    // `SECCIONES_PLANAS` son las hojas; el encabezado del grupo no esta.
+    expect(SECCIONES_PLANAS.some((s) => s.hijos !== undefined)).toBeFalse();
+  });
+
+  it('quien solo puede exportar ve el grupo, y dentro solo Reportes', () => {
+    const sesion = sesionCon(Permiso.REPORTES_GENERAR);
+    expect(sesion.puedeAlguno(...(grupo?.permisos ?? []))).toBeTrue();
+    expect(
+      (grupo?.hijos ?? []).filter((h) => sesion.puedeAlguno(...h.permisos)).map((h) => h.ruta),
+    ).toEqual(['/distributivo/reporte']);
+  });
+});
+
+describe('los resumenes', () => {
+  it('los ve el rol de consulta: son de solo lectura', () => {
+    const consulta = sesionCon(
+      Permiso.DISTRIBUTIVO_LEER,
+      Permiso.CATALOGOS_LEER,
+      Permiso.REPORTES_GENERAR,
+    );
+    const seccion = SECCIONES_PLANAS.find((s) => s.ruta === '/distributivo/resumenes');
+
+    expect(seccion).toBeDefined();
+    expect(consulta.puedeAlguno(...seccion!.permisos)).toBeTrue();
   });
 });

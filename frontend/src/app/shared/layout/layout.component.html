@@ -23,14 +23,48 @@
     <nav class="cabecera__nav no-imprimir" aria-label="Navegacion principal">
       <ul class="nav-h">
         @for (seccion of secciones; track seccion.ruta) {
-          <li *utePermiso="seccion.permisos">
-            <a
-              [routerLink]="seccion.ruta"
-              routerLinkActive="nav-h__enlace--activo"
-              class="nav-h__enlace"
-            >
-              {{ seccion.etiqueta }}
-            </a>
+          <li *utePermiso="seccion.permisos" class="nav-h__item">
+            @if (seccion.hijos; as hijos) {
+              <!-- Grupo: el encabezado despliega, no navega. Se abre al pulsar
+                   y tambien al pasar el raton, para no obligar a un clic de mas
+                   en el uso corriente. -->
+              <button
+                type="button"
+                class="nav-h__enlace nav-h__enlace--grupo"
+                [class.nav-h__enlace--activo]="enGrupo(seccion)"
+                [attr.aria-expanded]="grupoAbierto() === seccion.ruta"
+                aria-haspopup="true"
+                (click)="alternarGrupo(seccion.ruta)"
+              >
+                {{ seccion.etiqueta }}
+                <span class="nav-h__flecha" aria-hidden="true">▾</span>
+              </button>
+
+              <ul class="submenu" [class.submenu--abierto]="grupoAbierto() === seccion.ruta">
+                @for (hijo of hijos; track hijo.ruta) {
+                  <li *utePermiso="hijo.permisos">
+                    <a
+                      [routerLink]="hijo.ruta"
+                      routerLinkActive="submenu__enlace--activo"
+                      [routerLinkActiveOptions]="{ exact: hijo.ruta === seccion.ruta }"
+                      class="submenu__enlace"
+                      (click)="cerrarGrupo()"
+                    >
+                      <span class="submenu__icono" aria-hidden="true">{{ hijo.icono }}</span>
+                      {{ hijo.etiqueta }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <a
+                [routerLink]="seccion.ruta"
+                routerLinkActive="nav-h__enlace--activo"
+                class="nav-h__enlace"
+              >
+                {{ seccion.etiqueta }}
+              </a>
+            }
           </li>
         }
       </ul>
@@ -100,15 +134,40 @@
       <ul class="nav">
         @for (seccion of secciones; track seccion.ruta) {
           <li *utePermiso="seccion.permisos">
-            <a
-              [routerLink]="seccion.ruta"
-              routerLinkActive="nav__enlace--activo"
-              class="nav__enlace"
-              (click)="cerrarLateral()"
-            >
-              <span class="nav__icono" aria-hidden="true">{{ seccion.icono }}</span>
-              <span>{{ seccion.etiqueta }}</span>
-            </a>
+            @if (seccion.hijos; as hijos) {
+              <!-- En el cajon el grupo se despliega siempre: no hay espacio que
+                   ganar ocultandolo y un acordeon aniade un toque por seccion. -->
+              <p class="nav__grupo">
+                <span class="nav__icono" aria-hidden="true">{{ seccion.icono }}</span>
+                <span>{{ seccion.etiqueta }}</span>
+              </p>
+              <ul class="nav nav--anidada">
+                @for (hijo of hijos; track hijo.ruta) {
+                  <li *utePermiso="hijo.permisos">
+                    <a
+                      [routerLink]="hijo.ruta"
+                      routerLinkActive="nav__enlace--activo"
+                      [routerLinkActiveOptions]="{ exact: hijo.ruta === seccion.ruta }"
+                      class="nav__enlace"
+                      (click)="cerrarLateral()"
+                    >
+                      <span class="nav__icono" aria-hidden="true">{{ hijo.icono }}</span>
+                      <span>{{ hijo.etiqueta }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <a
+                [routerLink]="seccion.ruta"
+                routerLinkActive="nav__enlace--activo"
+                class="nav__enlace"
+                (click)="cerrarLateral()"
+              >
+                <span class="nav__icono" aria-hidden="true">{{ seccion.icono }}</span>
+                <span>{{ seccion.etiqueta }}</span>
+              </a>
+            }
           </li>
         }
       </ul>

@@ -12,19 +12,26 @@ horas.
 
 ## Las pantallas
 
+Todas cuelgan del desplegable **Distributivo** del menu.
+
 | Pantalla | Ruta | Para que |
 |---|---|---|
-| **Distributivo** | `/distributivo` | Consultar, filtrar y editar las cargas |
+| **Registros** | `/distributivo` | Consultar, filtrar y editar las cargas |
 | **Indicadores** | `/distributivo/tablero` | Avance de la validacion, dos periodos comparados |
 | **Cargar PAO** | `/distributivo/importar` | Subir el distributivo que exporta el sistema academico |
+| **Reportes** | `/distributivo/reporte` | Generar el archivo de exportacion |
+| **Resumenes** | `/distributivo/resumenes` | Comparar dos grupos de periodos y desglosar facultades |
 | **Asignaturas** | `/distributivo/asignaturas` | Capturar que materia imparte cada docente |
-| **Exportar** | `/distributivo/reporte` | Generar el archivo |
 | **Catalogos** | `/catalogos` | Mantener las listas que alimentan los selectores |
 
-Permisos: `distributivo:leer` para consultar y para los indicadores,
-`distributivo:escribir` para editar y capturar, `distributivo:importar` para
-cargar un PAO, `catalogos:leer` y `catalogos:escribir` para los catalogos,
+Permisos: `distributivo:leer` para consultar, para los indicadores y para los
+resumenes; `distributivo:escribir` para editar y capturar; `distributivo:importar`
+para cargar un PAO; `catalogos:leer` y `catalogos:escribir` para los catalogos;
 `reportes:generar` para exportar.
+
+**El grupo del menu se muestra si alguno de sus hijos se muestra**: sus permisos
+son la union de los de ellos. Quien solo tiene `reportes:generar` ve el
+desplegable con una sola entrada dentro.
 
 > **Los indicadores piden `distributivo:leer` y no `dashboard:ver`.** Es
 > deliberado: el rol de consulta del distributivo no tiene el tablero general y
@@ -301,3 +308,55 @@ la carga es valida por una excepcion concedida.
 > **La diferencia de filas entre los dos periodos es lo primero que hay que
 > mirar** al recibir un PAO nuevo. Si el periodo entrante trae mucha menos carga
 > que el anterior, la exportacion vino incompleta.
+
+---
+
+## Los resumenes
+
+`/distributivo/resumenes`, con permiso `distributivo:leer`.
+
+Un **selector de resumen** elige que se mira; los dos comparten los mismos
+grupos de periodos.
+
+### Se comparan grupos, no periodos
+
+Un semestre son varios periodos: `2026-1` es `261151` + `261651` + `261751`, mas
+sus interciclos `261150`, `261650` y `261750`. Comparar solo el de grado dejaria
+fuera media institucion, asi que la pantalla trabaja con **grupos**.
+
+Marcar el semestre entero es un clic sobre su ficha; el detalle permite afinar
+periodo a periodo. Sin elegir nada se proponen los dos ultimos semestres
+completos, que es la comparacion que se pide siempre.
+
+### Resumen 1 · Avance entre dos grupos
+
+Una fila por facultad:
+
+| Columna | Que dice |
+|---|---|
+| **Docentes grupo 1 / grupo 2** | Docentes **distintos** con carga en cada grupo |
+| **% Avance** | Grupo 2 sobre grupo 1. Puede pasar del 100 %: la facultad planifico mas docentes de los que tenia |
+| **Filas grupo 2** | Cargas del grupo 2 —un docente en dos carreras son dos filas— |
+| **Aprobadas grupo 2** | Filas con estado `OK` u `OK, excepcion` |
+| **% Aprobado** | Sobre las filas con estado, no sobre el total |
+
+> **Las dos filas de total no coinciden, y es correcto.** Un docente que dicta
+> en dos facultades cuenta una vez en cada una: la **suma de la columna** es
+> mayor que los **docentes distintos**. En `2026-1` la suma da 1.399 y los
+> distintos 1.336 — 63 docentes dictan en mas de una facultad.
+
+### Resumen 2 · Estados del distributivo
+
+Las filas de cada facultad repartidas por estado de validacion —validado, con
+excepcion, pendiente, con error y sin estado— con su porcentaje de aprobacion.
+Un conmutador elige cual de los dos grupos se desglosa.
+
+«Sin estado» no es «sin validar»: el dato no existia antes de 2026-2.
+
+### Descarga
+
+**Descargar CSV** baja la tabla que se este viendo, con BOM para que Excel
+respete los acentos. Se arma en el navegador con los datos ya cargados. Los
+formatos `xlsx` y `pdf` de la pantalla de Reportes **no** estan disponibles aqui:
+esos salen de las plantillas del distributivo, que trabajan sobre las filas y no
+sobre agregados.

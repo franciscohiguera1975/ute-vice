@@ -160,6 +160,7 @@ dentro del periodo vigente. Use `?forzar=true` con justificacion.
 |---|---|---|
 | `GET` | `/tablero?dias=30` | `dashboard:ver` |
 | `GET` | `/distributivo/tablero` | `distributivo:leer` |
+| `GET` | `/distributivo/resumenes` | `distributivo:leer` |
 | `POST` | `/distributivo/importaciones/pao` | `distributivo:importar` |
 | `GET` | `/reportes/formatos` | `reportes:generar` |
 | `GET` | `/reportes/personas` | `reportes:generar` |
@@ -173,6 +174,11 @@ Los reportes devuelven el archivo binario con `Content-Disposition`. Parametro
 el periodo mas reciente con carga y el anterior del mismo nivel. Pide
 `distributivo:leer` y no `dashboard:ver` para que el rol de consulta del
 distributivo pueda verlo.
+
+`GET /distributivo/resumenes` acepta `grupo_a` y `grupo_b`, repetibles para
+varios periodos cada uno. Sin ellos compara los dos ultimos semestres enteros.
+Devuelve los dos resumenes —avance y estados por facultad— sobre los mismos
+grupos, en una sola respuesta.
 
 `POST /distributivo/importaciones/pao` es `multipart/form-data`: `archivo`
 (`.xls`, `.xlsx` o `.xlsm`, hasta 25 MB), `semestre` (`2026-2`, obligatorio

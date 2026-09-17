@@ -29,6 +29,7 @@ import type {
   PlantillaReporte,
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
+  ResumenComparativo,
   ResumenDistributivo,
   TableroDistributivo,
   TipoCatalogo,
@@ -187,6 +188,16 @@ export class DistributivoHttp extends RepositorioDistributivo {
     return this.api.get<TableroDistributivo>('/distributivo/tablero', {
       paoId,
       paoAnteriorId,
+    });
+  }
+
+  resumenes(
+    grupoA: readonly string[],
+    grupoB: readonly string[],
+  ): Observable<ResumenComparativo> {
+    return this.api.get<ResumenComparativo>('/distributivo/resumenes', {
+      grupoA,
+      grupoB,
     });
   }
 

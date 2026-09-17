@@ -7,16 +7,20 @@ para contar cuatro estados convertiria el tablero en una espera.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EstadoValidacion
 from app.domain.ports.analitica import (
+    AvanceDeFacultad,
     ConteoEtiquetado,
+    EstadosDeFacultad,
     FilaComparativa,
+    GrupoDePeriodos,
     PeriodoDisponible,
     ValidacionDePeriodo,
 )
@@ -209,10 +213,121 @@ class RepositorioAnaliticaDistributivoSQL:
             for e, v in filas
         ]
 
+    # -------------------------------------------------- grupos de periodos
+    async def totales_de_grupo(self, paos: Sequence[UUID]) -> GrupoDePeriodos:
+        """Filas y docentes distintos del grupo entero.
+
+        Los docentes se cuentan aqui y no sumando la columna por facultad: un
+        docente que dicta en dos facultades saldria dos veces en esa suma.
+        """
+        if not paos:
+            return GrupoDePeriodos(codigos=(), filas=0, docentes=0)
+
+        fila = (
+            await self._s.execute(
+                select(
+                    func.count().label("filas"),
+                    func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
+                ).where(FilaDistributivoModel.pao_id.in_(list(paos)))
+            )
+        ).one()
+
+        codigos = (
+            await self._s.scalars(
+                select(PaoModel.codigo).where(PaoModel.id.in_(list(paos))).order_by(PaoModel.codigo)
+            )
+        ).all()
+
+        return GrupoDePeriodos(
+            codigos=tuple(codigos), filas=fila.filas or 0, docentes=fila.docentes or 0
+        )
+
+    async def avance_por_facultad(
+        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
+    ) -> list[AvanceDeFacultad]:
+        if not grupo_a and not grupo_b:
+            return []
+
+        pao = FilaDistributivoModel.pao_id
+        docente = FilaDistributivoModel.docente_id
+        estado = FilaDistributivoModel.estado_validacion
+        en_a, en_b = pao.in_(list(grupo_a)), pao.in_(list(grupo_b))
+
+        def distintos(condicion: Any) -> Any:
+            return func.count(func.distinct(docente)).filter(condicion)
+
+        consulta = (
+            select(
+                FacultadModel.codigo.label("codigo"),
+                FacultadModel.nombre.label("nombre"),
+                distintos(en_a).label("docentes_a"),
+                distintos(en_b).label("docentes_b"),
+                _cuenta_si(en_a).label("filas_a"),
+                _cuenta_si(en_b).label("filas_b"),
+                distintos(en_b & estado.in_(_APROBADOS)).label("docentes_aprobados_b"),
+                _cuenta_si(en_b & estado.in_(_APROBADOS)).label("filas_aprobadas_b"),
+                _cuenta_si(en_b & estado.is_not(None)).label("filas_evaluadas_b"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .where(or_(en_a, en_b))
+            .group_by(FacultadModel.codigo, FacultadModel.nombre)
+            .order_by(FacultadModel.codigo)
+        )
+
+        return [
+            AvanceDeFacultad(
+                codigo=f.codigo,
+                nombre=f.nombre,
+                docentes_a=f.docentes_a,
+                docentes_b=f.docentes_b,
+                filas_a=f.filas_a,
+                filas_b=f.filas_b,
+                docentes_aprobados_b=f.docentes_aprobados_b,
+                filas_aprobadas_b=f.filas_aprobadas_b,
+                filas_evaluadas_b=f.filas_evaluadas_b,
+            )
+            for f in (await self._s.execute(consulta)).all()
+        ]
+
+    async def estados_por_facultad(self, paos: Sequence[UUID]) -> list[EstadosDeFacultad]:
+        if not paos:
+            return []
+
+        estado = FilaDistributivoModel.estado_validacion
+        consulta = (
+            select(
+                FacultadModel.codigo.label("codigo"),
+                FacultadModel.nombre.label("nombre"),
+                _cuenta_si(estado == EstadoValidacion.OK.value).label("ok"),
+                _cuenta_si(estado == EstadoValidacion.OK_EXCEPCION.value).label("ok_excepcion"),
+                _cuenta_si(estado == EstadoValidacion.PENDIENTE.value).label("pendiente"),
+                _cuenta_si(estado == EstadoValidacion.ERROR.value).label("con_error"),
+                _cuenta_si(estado.is_(None)).label("sin_estado"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
+            .group_by(FacultadModel.codigo, FacultadModel.nombre)
+            .order_by(FacultadModel.codigo)
+        )
+
+        return [
+            EstadosDeFacultad(
+                codigo=f.codigo,
+                nombre=f.nombre,
+                ok=f.ok,
+                ok_excepcion=f.ok_excepcion,
+                pendiente=f.pendiente,
+                con_error=f.con_error,
+                sin_estado=f.sin_estado,
+            )
+            for f in (await self._s.execute(consulta)).all()
+        ]
+
 
 def _estados_con_porcentaje(fila: Any) -> list[ConteoEtiquetado]:
     """Los cuatro estados mas «sin estado», con su peso sobre el total.
-
     El porcentaje es sobre el total de filas y no sobre las evaluadas: esta
     lista alimenta el anillo, donde los sectores tienen que sumar el 100%.
     """

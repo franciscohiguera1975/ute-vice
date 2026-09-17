@@ -18,6 +18,12 @@ export const rutas: Routes = [
     title: 'Tablero del distributivo — UTE Vice',
   },
   {
+    path: 'resumenes',
+    loadComponent: () =>
+      import('./resumenes.component').then((m) => m.ResumenesDistributivoComponent),
+    title: 'Resumenes del distributivo — UTE Vice',
+  },
+  {
     path: 'importar',
     canActivate: [guardaPermiso(Permiso.DISTRIBUTIVO_IMPORTAR)],
     loadComponent: () => import('./importar.component').then((m) => m.ImportarPaoComponent),

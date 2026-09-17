@@ -13,7 +13,11 @@ from app.api.esquemas.comunes import EsquemaBase
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import Docente
 from app.domain.ports.analitica import (
+    AvanceDeFacultad,
+    EstadosDeFacultad,
     FilaComparativa,
+    GrupoDePeriodos,
+    ResumenComparativo,
     TableroDistributivo,
     ValidacionDePeriodo,
 )
@@ -620,4 +624,107 @@ class TableroDistributivoSalida(EsquemaBase):
             por_sede=conteos(t.por_sede),
             por_dedicacion=conteos(t.por_dedicacion),
             generado_en=t.generado_en,
+        )
+
+
+# ===========================================================================
+# Resumenes comparativos
+# ===========================================================================
+
+
+class GrupoDePeriodosSalida(EsquemaBase):
+    codigos: list[str]
+    filas: int
+    docentes: int
+
+
+class AvanceDeFacultadSalida(EsquemaBase):
+    codigo: str
+    nombre: str
+    docentes_a: int
+    docentes_b: int
+    filas_a: int
+    filas_b: int
+    docentes_aprobados_b: int
+    filas_aprobadas_b: int
+    filas_evaluadas_b: int
+    porcentaje_avance: float
+    porcentaje_aprobado_b: float
+
+    @classmethod
+    def desde(cls, a: AvanceDeFacultad) -> AvanceDeFacultadSalida:
+        return cls(
+            codigo=a.codigo,
+            nombre=a.nombre,
+            docentes_a=a.docentes_a,
+            docentes_b=a.docentes_b,
+            filas_a=a.filas_a,
+            filas_b=a.filas_b,
+            docentes_aprobados_b=a.docentes_aprobados_b,
+            filas_aprobadas_b=a.filas_aprobadas_b,
+            filas_evaluadas_b=a.filas_evaluadas_b,
+            porcentaje_avance=a.porcentaje_avance,
+            porcentaje_aprobado_b=a.porcentaje_aprobado_b,
+        )
+
+
+class EstadosDeFacultadSalida(EsquemaBase):
+    codigo: str
+    nombre: str
+    ok: int
+    ok_excepcion: int
+    pendiente: int
+    con_error: int
+    sin_estado: int
+    total: int
+    evaluadas: int
+    porcentaje_aprobado: float
+
+    @classmethod
+    def desde(cls, e: EstadosDeFacultad) -> EstadosDeFacultadSalida:
+        return cls(
+            codigo=e.codigo,
+            nombre=e.nombre,
+            ok=e.ok,
+            ok_excepcion=e.ok_excepcion,
+            pendiente=e.pendiente,
+            con_error=e.con_error,
+            sin_estado=e.sin_estado,
+            total=e.total,
+            evaluadas=e.evaluadas,
+            porcentaje_aprobado=e.porcentaje_aprobado,
+        )
+
+
+class ResumenComparativoSalida(EsquemaBase):
+    periodos: list[PeriodoDisponibleSalida]
+    grupo_a: GrupoDePeriodosSalida | None
+    grupo_b: GrupoDePeriodosSalida | None
+    avance: list[AvanceDeFacultadSalida]
+    estados_a: list[EstadosDeFacultadSalida]
+    estados_b: list[EstadosDeFacultadSalida]
+    generado_en: str
+
+    @classmethod
+    def desde(cls, r: ResumenComparativo) -> ResumenComparativoSalida:
+        def grupo(g: GrupoDePeriodos | None) -> GrupoDePeriodosSalida | None:
+            if g is None:
+                return None
+            return GrupoDePeriodosSalida(
+                codigos=list(g.codigos), filas=g.filas, docentes=g.docentes
+            )
+
+        return cls(
+            periodos=[
+                PeriodoDisponibleSalida(
+                    id=p.id, codigo=p.codigo, nombre=p.nombre, semestre=p.semestre, filas=p.filas
+                )
+                for p in r.periodos
+            ],
+            grupo_a=grupo(r.grupo_a),
+            grupo_b=grupo(r.grupo_b),
+            avance=[AvanceDeFacultadSalida.desde(a) for a in r.avance],
+            estados_a=[EstadosDeFacultadSalida.desde(e) for e in r.estados_a],
+            estados_b=[EstadosDeFacultadSalida.desde(e) for e in r.estados_b],
+            generado_en=r.generado_en,
         )

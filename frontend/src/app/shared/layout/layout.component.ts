@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
 import { RepositorioAutenticacion } from '@domain/puertos';
-import { SECCIONES } from '@core/secciones';
+import { SECCIONES, type Seccion } from '@core/secciones';
 import { PermisoDirective } from '@shared/directivas/permiso.directive';
 
 
@@ -36,7 +38,45 @@ export class LayoutComponent {
    */
   protected readonly secciones = SECCIONES;
 
+  /** Ruta del grupo desplegado en la barra horizontal; vacia si ninguno. */
+  protected readonly grupoAbierto = signal('');
 
+  constructor() {
+    // Al navegar se cierra el desplegable: si no, queda abierto encima de la
+    // pantalla a la que se acaba de llegar.
+    this.router.events
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.grupoAbierto.set(''));
+  }
+
+  protected alternarGrupo(ruta: string): void {
+    this.grupoAbierto.update((actual) => (actual === ruta ? '' : ruta));
+  }
+
+  protected cerrarGrupo(): void {
+    this.grupoAbierto.set('');
+  }
+
+  /** Un grupo se marca activo cuando la ruta actual es la de alguno de sus hijos. */
+  protected enGrupo(seccion: Seccion): boolean {
+    return (seccion.hijos ?? []).some((h) => this.router.url.startsWith(h.ruta));
+  }
+
+  /** Un clic fuera cierra el desplegable, como cualquier menu del sistema. */
+  @HostListener('document:click', ['$event'])
+  protected clicFuera(evento: MouseEvent): void {
+    if (!this.grupoAbierto()) return;
+    const destino = evento.target as HTMLElement | null;
+    if (!destino?.closest('.nav-h__item')) this.grupoAbierto.set('');
+  }
+
+  @HostListener('document:keydown.escape')
+  protected escape(): void {
+    this.grupoAbierto.set('');
+  }
 
   protected alternarLateral(): void {
     this.lateralAbierto.update((v) => !v);

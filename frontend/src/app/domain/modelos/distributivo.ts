@@ -441,3 +441,67 @@ export interface ResultadoCargaPao {
   readonly resumen: string;
   readonly periodo: string;
 }
+
+// ---------------------------------------------------------------------------
+// Resumenes comparativos
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que un grupo de periodos suma en conjunto.
+ *
+ * `docentes` **no es la suma de la columna por facultad**: un docente que
+ * dicta en dos facultades cuenta una vez aqui y dos alli.
+ */
+export interface GrupoDePeriodos {
+  readonly codigos: readonly string[];
+  readonly filas: number;
+  readonly docentes: number;
+}
+
+/** Una facultad en los dos grupos que se comparan. */
+export interface AvanceDeFacultad {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly docentesA: number;
+  readonly docentesB: number;
+  readonly filasA: number;
+  readonly filasB: number;
+  readonly docentesAprobadosB: number;
+  readonly filasAprobadasB: number;
+  readonly filasEvaluadasB: number;
+  /** Puede pasar del 100 %: la facultad planifico mas docentes de los que tenia. */
+  readonly porcentajeAvance: number;
+  readonly porcentajeAprobadoB: number;
+}
+
+/** Las filas de una facultad repartidas por estado de validacion. */
+export interface EstadosDeFacultad {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly ok: number;
+  readonly okExcepcion: number;
+  readonly pendiente: number;
+  readonly conError: number;
+  readonly sinEstado: number;
+  readonly total: number;
+  readonly evaluadas: number;
+  readonly porcentajeAprobado: number;
+}
+
+export interface ResumenComparativo {
+  readonly periodos: readonly PeriodoConFilas[];
+  readonly grupoA: GrupoDePeriodos | null;
+  readonly grupoB: GrupoDePeriodos | null;
+  readonly avance: readonly AvanceDeFacultad[];
+  readonly estadosA: readonly EstadosDeFacultad[];
+  readonly estadosB: readonly EstadosDeFacultad[];
+  readonly generadoEn: string;
+}
+
+/** Los resumenes que ofrece la pantalla. El valor viaja en la URL. */
+export const TipoResumen = {
+  AVANCE: 'avance',
+  ESTADOS: 'estados',
+} as const;
+
+export type TipoResumen = (typeof TipoResumen)[keyof typeof TipoResumen];

@@ -30,12 +30,15 @@ from app.api.esquemas.distributivo import (
     PlantillaReporteSalida,
     ResultadoCapturaAsignaturasSalida,
     ResultadoImportacionSalida,
+    ResumenComparativoSalida,
     ResumenDistributivoSalida,
     TableroDistributivoSalida,
     VistaPreviaReporteSalida,
 )
 from app.application.casos_uso.analitica import (
+    EntradaResumenComparativo,
     EntradaTableroDistributivo,
+    ObtenerResumenComparativo,
     ObtenerTableroDistributivo,
 )
 from app.application.casos_uso.distributivo import (
@@ -390,6 +393,39 @@ async def tablero_distributivo(
             contexto,
         )
     return TableroDistributivoSalida.desde(resultado)
+
+
+@router.get(
+    "/distributivo/resumenes",
+    response_model=ResumenComparativoSalida,
+    summary="Comparar dos grupos de periodos",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def resumenes_del_distributivo(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    grupo_a: Annotated[
+        list[UUID] | None,
+        Query(description="Periodos del primer grupo. Repetir el parametro para varios."),
+    ] = None,
+    grupo_b: Annotated[list[UUID] | None, Query(description="Periodos del segundo grupo.")] = None,
+) -> ResumenComparativoSalida:
+    """Dos resumenes sobre los mismos grupos: avance y estados por facultad.
+
+    Se piden grupos y no periodos sueltos porque un semestre son varios: el
+    `2026-1` completo es tecnologia, grado y posgrado, mas sus interciclos.
+
+    Sin grupos, se comparan los dos ultimos semestres enteros.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ObtenerResumenComparativo(analitica, contenedor.reloj)
+        resultado = await caso(
+            EntradaResumenComparativo(grupo_a=tuple(grupo_a or ()), grupo_b=tuple(grupo_b or ())),
+            contexto,
+        )
+    return ResumenComparativoSalida.desde(resultado)
 
 
 # ===========================================================================

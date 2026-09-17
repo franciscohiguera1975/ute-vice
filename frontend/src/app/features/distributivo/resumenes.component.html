@@ -1,0 +1,346 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Resumenes del distributivo</h1>
+    <p class="texto-sm texto-suave">
+      Compare dos grupos de periodos y desglose las facultades
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <button
+      type="button"
+      class="btn btn--secundario btn--sm"
+      [disabled]="!datos()"
+      (click)="descargar()"
+    >
+      Descargar CSV
+    </button>
+    <button type="button" class="btn btn--secundario btn--sm" (click)="cargar()">
+      Actualizar
+    </button>
+  </div>
+</header>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando el resumen…" />
+} @else if (datos(); as d) {
+  @if (d.periodos.length === 0) {
+    <ute-vacio
+      titulo="Todavia no hay carga"
+      mensaje="Cuando se importe un periodo, sus resumenes apareceran aqui."
+    />
+  } @else {
+    <!-- ------------------------------------------------ selector de resumen -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Resumen</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <div class="opciones">
+          @for (opcion of opcionesResumen; track opcion.valor) {
+            <label class="opcion" [class.opcion--activa]="resumen() === opcion.valor">
+              <input
+                type="radio"
+                name="resumen"
+                [value]="opcion.valor"
+                [checked]="resumen() === opcion.valor"
+                (change)="resumen.set(opcion.valor)"
+              />
+              <span>
+                <strong>{{ opcion.etiqueta }}</strong>
+                <span class="opcion__ayuda">{{ opcion.descripcion }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------ grupos de periodos -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Periodos que se comparan</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <p class="texto-sm texto-tenue nota-grupos">
+          Un semestre son varios periodos —tecnologia, grado y posgrado, mas sus
+          interciclos—. Marque el semestre entero de un clic, o abra el detalle para
+          elegir periodo a periodo.
+        </p>
+
+        <div class="grupos">
+          @for (grupo of GRUPOS; track grupo) {
+            <div class="grupo">
+              <div class="fila entre hueco-sm grupo__cabecera">
+                <h3 class="grupo__titulo">
+                  {{ grupo === 'a' ? 'Grupo 1 · referencia' : 'Grupo 2 · comparado' }}
+                </h3>
+                <button
+                  type="button"
+                  class="btn btn--fantasma btn--sm"
+                  (click)="limpiar(grupo)"
+                >
+                  Limpiar
+                </button>
+              </div>
+
+              <div class="chips">
+                @for (semestre of semestres(); track semestre.clave) {
+                  <button
+                    type="button"
+                    class="chip"
+                    [class.chip--activo]="semestreCompleto(grupo, semestre)"
+                    (click)="alternarSemestre(grupo, semestre)"
+                  >
+                    {{ semestre.clave }}
+                    <span class="chip__cuenta">{{ semestre.filas | number }}</span>
+                  </button>
+                }
+              </div>
+
+              <details class="detalle">
+                <summary class="texto-sm texto-suave">Elegir periodo a periodo</summary>
+                <ul class="periodos">
+                  @for (semestre of semestres(); track semestre.clave) {
+                    @for (p of semestre.periodos; track p.id) {
+                      <li>
+                        <label class="periodo">
+                          <input
+                            type="checkbox"
+                            [checked]="seleccionado(grupo, p.id)"
+                            (change)="alternarPeriodo(grupo, p.id)"
+                          />
+                          <span class="mono">{{ p.codigo }}</span>
+                          <span class="periodo__nombre">{{ p.nombre }}</span>
+                          <span class="texto-xs texto-tenue">{{ p.filas | number }}</span>
+                        </label>
+                      </li>
+                    }
+                  }
+                </ul>
+              </details>
+            </div>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--primario"
+          [disabled]="!puedeComparar()"
+          (click)="cargar()"
+        >
+          Comparar
+        </button>
+      </div>
+    </section>
+
+    <!-- ============================================== resumen 1: avance ==== -->
+    @if (resumen() === TipoResumen.AVANCE) {
+      <section class="rejilla rejilla--2 seccion">
+        <article class="metrica">
+          <p class="metrica__etiqueta">Grupo 1 · {{ codigosDe('a') }}</p>
+          <p class="metrica__valor">{{ d.grupoA?.docentes ?? 0 | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            docentes distintos · {{ d.grupoA?.filas ?? 0 | number }} filas
+          </p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Grupo 2 · {{ codigosDe('b') }}</p>
+          <p class="metrica__valor">{{ d.grupoB?.docentes ?? 0 | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            docentes distintos · {{ d.grupoB?.filas ?? 0 | number }} filas
+          </p>
+        </article>
+      </section>
+
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera">
+          <h2 class="tarjeta__titulo">Avance por facultad</h2>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Facultad</th>
+                <th scope="col" class="der">Docentes grupo 1</th>
+                <th scope="col" class="der">Docentes grupo 2</th>
+                <th scope="col" class="der">% Avance</th>
+                <th scope="col" class="der">Filas grupo 2</th>
+                <th scope="col" class="der">Aprobadas grupo 2</th>
+                <th scope="col" class="der">% Aprobado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of d.avance; track a.codigo) {
+                <tr>
+                  <th scope="row" [title]="a.nombre">{{ a.codigo }}</th>
+                  <td class="der mono">{{ a.docentesA | number }}</td>
+                  <td class="der mono">{{ a.docentesB | number }}</td>
+                  <td
+                    class="der mono fuerte"
+                    [class.positivo]="a.porcentajeAvance >= 100"
+                    [class.negativo]="a.docentesA > 0 && a.porcentajeAvance < 50"
+                  >
+                    {{ a.docentesA === 0 ? '—' : (a.porcentajeAvance | number: '1.1-1') + ' %' }}
+                  </td>
+                  <td class="der mono">{{ a.filasB | number }}</td>
+                  <td class="der mono">{{ a.filasAprobadasB | number }}</td>
+                  <td class="der mono">
+                    {{
+                      a.filasEvaluadasB === 0
+                        ? '—'
+                        : (a.porcentajeAprobadoB | number: '1.1-1') + ' %'
+                    }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="texto-tenue">Sin facultades en estos periodos</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Suma de la columna</th>
+                <td class="der mono">{{ sumaColumnas().docentesA | number }}</td>
+                <td class="der mono">{{ sumaColumnas().docentesB | number }}</td>
+                <td class="der mono">—</td>
+                <td class="der mono">{{ sumaColumnas().filasB | number }}</td>
+                <td class="der mono">{{ sumaColumnas().aprobadasB | number }}</td>
+                <td class="der mono">—</td>
+              </tr>
+              <tr>
+                <th scope="row">Docentes distintos</th>
+                <td class="der mono fuerte">{{ d.grupoA?.docentes ?? 0 | number }}</td>
+                <td class="der mono fuerte">{{ d.grupoB?.docentes ?? 0 | number }}</td>
+                <td class="der mono fuerte">
+                  {{
+                    (d.grupoA?.docentes ?? 0) === 0
+                      ? '—'
+                      : (((d.grupoB?.docentes ?? 0) / (d.grupoA?.docentes ?? 1)) * 100
+                          | number: '1.1-1') + ' %'
+                  }}
+                </td>
+                <td class="der mono">{{ d.grupoB?.filas ?? 0 | number }}</td>
+                <td class="der mono">—</td>
+                <td class="der mono">—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p class="nota texto-sm texto-tenue">
+          <strong>Las dos filas de total dicen cosas distintas y no coinciden.</strong>
+          Un docente que dicta en dos facultades cuenta una vez en cada una, asi que la
+          suma de la columna es mayor que el numero de docentes distintos. El
+          <strong>% Avance</strong> es cuantos de los docentes del grupo 1 vuelven a
+          tener carga en el grupo 2; pasar del 100 % significa que la facultad planifico
+          mas docentes de los que tenia.
+        </p>
+      </section>
+    }
+
+    <!-- ============================================= resumen 2: estados ==== -->
+    @if (resumen() === TipoResumen.ESTADOS) {
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera fila entre envolver hueco-sm">
+          <h2 class="tarjeta__titulo">Estados por facultad</h2>
+          <div class="conmutador no-imprimir" role="group" aria-label="Grupo que se desglosa">
+            <button
+              type="button"
+              class="conmutador__opcion"
+              [class.conmutador__opcion--activa]="grupoDeEstados() === 'a'"
+              (click)="grupoDeEstados.set('a')"
+            >
+              Grupo 1
+            </button>
+            <button
+              type="button"
+              class="conmutador__opcion"
+              [class.conmutador__opcion--activa]="grupoDeEstados() === 'b'"
+              (click)="grupoDeEstados.set('b')"
+            >
+              Grupo 2
+            </button>
+          </div>
+        </div>
+
+        <p class="nota texto-sm texto-tenue">
+          Periodos: <span class="mono">{{ codigosDe(grupoDeEstados()) }}</span>
+        </p>
+
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Facultad</th>
+                <th scope="col" class="der">Validado</th>
+                <th scope="col" class="der">Con excepcion</th>
+                <th scope="col" class="der">Pendiente</th>
+                <th scope="col" class="der">Con error</th>
+                <th scope="col" class="der">Sin estado</th>
+                <th scope="col" class="der">Total</th>
+                <th scope="col" class="der">% Aprobado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of estadosMostrados(); track e.codigo) {
+                <tr>
+                  <th scope="row" [title]="e.nombre">{{ e.codigo }}</th>
+                  <td class="der mono">{{ e.ok | number }}</td>
+                  <td class="der mono">{{ e.okExcepcion | number }}</td>
+                  <td class="der mono">{{ e.pendiente | number }}</td>
+                  <td class="der mono" [class.negativo]="e.conError > 0">
+                    {{ e.conError | number }}
+                  </td>
+                  <td class="der mono texto-tenue">{{ e.sinEstado | number }}</td>
+                  <td class="der mono fuerte">{{ e.total | number }}</td>
+                  <td class="der mono">
+                    {{
+                      e.evaluadas === 0 ? '—' : (e.porcentajeAprobado | number: '1.1-1') + ' %'
+                    }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="texto-tenue">
+                    Este grupo no tiene periodos seleccionados
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td class="der mono">{{ totalEstados().ok | number }}</td>
+                <td class="der mono">{{ totalEstados().okExcepcion | number }}</td>
+                <td class="der mono">{{ totalEstados().pendiente | number }}</td>
+                <td class="der mono">{{ totalEstados().conError | number }}</td>
+                <td class="der mono texto-tenue">{{ totalEstados().sinEstado | number }}</td>
+                <td class="der mono fuerte">{{ totalEstados().total | number }}</td>
+                <td class="der mono fuerte">
+                  {{
+                    totalEstados().evaluadas === 0
+                      ? '—'
+                      : (totalEstados().porcentajeAprobado | number: '1.1-1') + ' %'
+                  }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p class="nota texto-sm texto-tenue">
+          <strong>«Sin estado» no es «sin validar».</strong> El sistema academico entrega
+          el estado de validacion desde 2026-2; en los periodos anteriores el dato no
+          existia. Por eso el porcentaje se calcula sobre las filas que si traen estado, y
+          un grupo sin ninguna muestra «—».
+        </p>
+      </section>
+    }
+
+    <p class="texto-xs texto-tenue">
+      Calculado el {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}
+    </p>
+  }
+}

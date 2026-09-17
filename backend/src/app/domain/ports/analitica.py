@@ -9,6 +9,7 @@ tiene su propio contrato.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
@@ -229,3 +230,102 @@ class RepositorioAnaliticaDistributivo(Protocol):
     async def distribucion_de_periodo(
         self, pao_id: UUID, *, campo: str, limite: int = 12
     ) -> list[ConteoEtiquetado]: ...
+
+    async def totales_de_grupo(self, paos: Sequence[UUID]) -> GrupoDePeriodos: ...
+
+    async def avance_por_facultad(
+        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
+    ) -> list[AvanceDeFacultad]: ...
+
+    async def estados_por_facultad(self, paos: Sequence[UUID]) -> list[EstadosDeFacultad]: ...
+
+
+# ---------------------------------------------------------------------------
+# Resumenes: dos grupos de periodos, uno frente al otro
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class GrupoDePeriodos:
+    """Lo que un grupo de periodos suma en conjunto.
+
+    `docentes` **no es la suma de los docentes de cada facultad**: un docente
+    que dicta en dos facultades cuenta una vez aqui y dos alli. Por eso se
+    calcula aparte y no sumando la columna.
+    """
+
+    codigos: tuple[str, ...]
+    filas: int
+    docentes: int
+
+
+@dataclass(frozen=True, slots=True)
+class AvanceDeFacultad:
+    """Una facultad en los dos grupos de periodos que se comparan.
+
+    El avance es cuantos de los docentes que tenia el primer grupo vuelven a
+    tener carga en el segundo. Puede pasar del 100 %: significa que la facultad
+    planifico mas docentes de los que tenia.
+    """
+
+    codigo: str
+    nombre: str
+    docentes_a: int
+    docentes_b: int
+    filas_a: int
+    filas_b: int
+    docentes_aprobados_b: int
+    filas_aprobadas_b: int
+    filas_evaluadas_b: int
+
+    @property
+    def porcentaje_avance(self) -> float:
+        if self.docentes_a == 0:
+            return 0.0
+        return round(self.docentes_b / self.docentes_a * 100, 1)
+
+    @property
+    def porcentaje_aprobado_b(self) -> float:
+        if self.filas_evaluadas_b == 0:
+            return 0.0
+        return round(self.filas_aprobadas_b / self.filas_evaluadas_b * 100, 1)
+
+
+@dataclass(frozen=True, slots=True)
+class EstadosDeFacultad:
+    """Las filas de una facultad repartidas por estado de validacion."""
+
+    codigo: str
+    nombre: str
+    ok: int
+    ok_excepcion: int
+    pendiente: int
+    con_error: int
+    sin_estado: int
+
+    @property
+    def total(self) -> int:
+        return self.ok + self.ok_excepcion + self.pendiente + self.con_error + self.sin_estado
+
+    @property
+    def evaluadas(self) -> int:
+        return self.total - self.sin_estado
+
+    @property
+    def porcentaje_aprobado(self) -> float:
+        if self.evaluadas == 0:
+            return 0.0
+        return round((self.ok + self.ok_excepcion) / self.evaluadas * 100, 1)
+
+
+@dataclass(frozen=True, slots=True)
+class ResumenComparativo:
+    """Los dos resumenes de la pantalla, en una sola respuesta."""
+
+    periodos: list[PeriodoDisponible] = field(default_factory=list)
+    grupo_a: GrupoDePeriodos | None = None
+    grupo_b: GrupoDePeriodos | None = None
+    avance: list[AvanceDeFacultad] = field(default_factory=list)
+    estados_a: list[EstadosDeFacultad] = field(default_factory=list)
+    estados_b: list[EstadosDeFacultad] = field(default_factory=list)
+    generado_en: str = ""
