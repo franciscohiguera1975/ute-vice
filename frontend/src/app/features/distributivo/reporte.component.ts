@@ -67,6 +67,7 @@ export class ReporteDistributivoComponent {
   protected readonly incluirAuditoria = signal(false);
   protected readonly filtroCarrera = signal('');
   protected readonly filtroPeriodo = signal('');
+  protected readonly filtroFacultad = signal('');
 
   protected readonly vista = signal<VistaPreviaReporte | null>(null);
   protected readonly cargandoVista = signal(false);
@@ -103,7 +104,7 @@ export class ReporteDistributivoComponent {
   );
 
   protected readonly facultadesDisponibles = computed<readonly OpcionSelector[]>(() =>
-    this.facultadesDelAmbito(),
+    this.filtrar(this.facultadesDelAmbito(), this.filtroFacultad()),
   );
 
   protected readonly carrerasDisponibles = computed<readonly OpcionSelector[]>(() =>

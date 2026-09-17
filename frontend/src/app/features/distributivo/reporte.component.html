@@ -82,9 +82,9 @@
                 [checked]="paosSeleccionados().includes(o.id)"
                 (change)="alternarPao(o.id, $any($event.target).checked)"
               />
-              <span class="fila entre hueco-sm crecer">
-                <span>{{ o.nombre }}</span>
-                <span class="mono texto-xs texto-tenue">{{ o.codigo }}</span>
+              <span class="opcion-lista">
+                <span class="opcion-lista__codigo mono">{{ o.codigo }}</span>
+                <span class="opcion-lista__nombre" [title]="o.nombre">{{ o.nombre }}</span>
               </span>
             </label>
           } @empty {
@@ -107,6 +107,15 @@
         </legend>
 
         <div class="fila hueco-xs envolver acciones-seleccion">
+          <input
+            type="search"
+            class="filtro-carrera"
+            placeholder="Filtrar facultades…"
+            [ngModel]="filtroFacultad()"
+            (ngModelChange)="filtroFacultad.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            aria-label="Filtrar la lista de facultades"
+          />
           <button
             type="button"
             class="btn btn--fantasma btn--sm"
@@ -124,19 +133,18 @@
           selección se incluyen todas ellas.
         </p>
 
-        <div class="casillas-en-linea" role="group" aria-label="Facultades del reporte">
+        <div class="lista-carreras lista-facultades" role="group" aria-label="Facultades del reporte">
           @for (o of facultadesDisponibles(); track o.id) {
-            <label
-              class="ficha"
-              [class.ficha--activa]="facultadesSeleccionadas().includes(o.id)"
-              [title]="o.nombre"
-            >
+            <label class="carrera" [class.carrera--activa]="facultadesSeleccionadas().includes(o.id)">
               <input
                 type="checkbox"
                 [checked]="facultadesSeleccionadas().includes(o.id)"
                 (change)="alternarFacultad(o.id, $any($event.target).checked)"
               />
-              <span>{{ o.codigo }}</span>
+              <span class="opcion-lista">
+                <span class="opcion-lista__codigo mono">{{ o.codigo }}</span>
+                <span class="opcion-lista__nombre" [title]="o.nombre">{{ o.nombre }}</span>
+              </span>
             </label>
           } @empty {
             <p class="texto-sm texto-tenue">
@@ -144,6 +152,8 @@
                 Buscando facultades…
               } @else if (paosSeleccionados().length === 0) {
                 Elija primero un periodo.
+              } @else if (filtroFacultad()) {
+                Ninguna facultad coincide con el filtro.
               } @else {
                 Ninguna facultad tiene carga en los periodos elegidos.
               }

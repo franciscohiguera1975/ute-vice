@@ -148,11 +148,14 @@ agregan; esta pantalla no cambia.
 ### Los tres selectores se encadenan
 
 Periodos, facultades y carreras comparten la misma forma —filtro, «Todos» /
-«Ninguno» y lista— y se acotan en cadena:
+«Ninguno» y una lista con scroll— y se acotan en cadena. Periodos y facultades
+se listan como `código · nombre`, con el código en columna a la izquierda: la
+lista se recorre leyendo solo la primera palabra, y el nombre completo sale al
+pasar el ratón cuando no cabe.
 
-1. **Periodos académicos.** Se listan por su nombre —`2026-2 GRADO`— con el
-   código al lado; el filtro busca en los dos.
-2. **Facultades.** Solo las que tienen carga en los periodos marcados. `FO`,
+1. **Periodos académicos.** `262651 · 2026-2 GRADO`. El filtro busca en los dos.
+2. **Facultades.** `FAU · FACULTAD DE ARQUITECTURA Y URBANISMO`. Solo las que
+   tienen carga en los periodos marcados. `FO`,
    `FCIC`, `CEL` y `ETECH` dejaron de existir en la reestructuracion de 2026-1 y
    siguen en el catalogo porque siguen en el historico: ofrecerlas al reportar
    un periodo reciente llevaba a marcar una que devuelve cero filas.
