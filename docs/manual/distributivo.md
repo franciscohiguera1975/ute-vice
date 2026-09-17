@@ -366,10 +366,23 @@ Una fila por facultad:
 | Columna | Que dice |
 |---|---|
 | **Docentes grupo 1 / grupo 2** | Docentes **distintos** con carga en cada grupo |
-| **% Avance** | Grupo 2 sobre grupo 1. Puede pasar del 100 %: la facultad planifico mas docentes de los que tenia |
+| **% Avance** | `docentes grupo 2 ÷ docentes grupo 1`. Compara **cuántos** hay, no **quiénes** |
 | **Filas grupo 2** | Cargas del grupo 2 —un docente en dos carreras son dos filas— |
 | **Aprobadas grupo 2** | Filas con estado `OK` u `OK, excepcion` |
 | **% Aprobado** | Sobre las filas con estado, no sobre el total |
+
+> **«% Avance» no es una tasa de continuidad.** Es el cociente de dos
+> recuentos, no la interseccion de dos conjuntos: si una facultad tenia 41
+> docentes y ahora tiene 45, marca 109,8 % aunque solo 38 de los 41 originales
+> hayan vuelto y 7 sean nuevos. Dice si la facultad planifico mas o menos
+> profesorado que antes, no cuantos repiten.
+
+> **«Docentes» y «Filas» del grupo 2 coinciden, y no es casualidad.** El
+> distributivo que exporta el sistema academico trae **una sola fila por docente
+> y facultad**: cuando alguien dicta en varias carreras, el origen las junta en
+> una celda —y esas filas quedan fuera por no poder desglosarse—. El consolidado
+> historico, en cambio, trae una fila por carrera y sede, y por eso en el grupo 1
+> los dos numeros si difieren.
 
 > **Las dos filas de total no coinciden, y es correcto.** Un docente que dicta
 > en dos facultades cuenta una vez en cada una: la **suma de la columna** es
