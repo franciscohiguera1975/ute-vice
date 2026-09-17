@@ -1,6 +1,7 @@
 /** Modelos del distributivo docente. Reflejan los del backend. */
 
 import type { Pagina } from './comunes';
+import type { Conteo } from './entidades';
 
 // ---------------------------------------------------------------------------
 // Catalogos
@@ -321,3 +322,122 @@ export interface ResultadoCapturaAsignaturas {
 }
 
 export type PaginaDistributivo = Pagina<FilaDistributivo>;
+
+// ---------------------------------------------------------------------------
+// Tablero del distributivo
+// ---------------------------------------------------------------------------
+
+/** Un periodo academico con carga, como lo ofrece el selector del tablero. */
+export interface PeriodoConFilas {
+  readonly id: string;
+  readonly codigo: string;
+  readonly nombre: string;
+  /** `2026-2`. Vacio si el catalogo no lo trae. */
+  readonly semestre: string;
+  readonly filas: number;
+}
+
+/**
+ * Como quedo la validacion de un periodo.
+ *
+ * `evaluadas` es el denominador del porcentaje y **no** es `total`: los
+ * periodos anteriores a 2026-2 no traen estado, y contarlos como reprobados
+ * pintaria todo el historico en rojo. Cuando `evaluadas` es cero, la pantalla
+ * muestra un guion en lugar de «0 %».
+ */
+export interface ValidacionDePeriodo {
+  readonly paoId: string;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly total: number;
+  readonly aprobadas: number;
+  readonly pendientes: number;
+  readonly conError: number;
+  readonly sinEstado: number;
+  readonly evaluadas: number;
+  readonly porcentajeAprobado: number;
+  readonly docentes: number;
+  readonly horas: number;
+  readonly porEstado: readonly Conteo[];
+}
+
+/** Una facultad con sus cifras en los dos periodos comparados. */
+export interface FilaComparativa {
+  readonly etiqueta: string;
+  readonly totalActual: number;
+  readonly aprobadasActual: number;
+  readonly evaluadasActual: number;
+  readonly porcentajeActual: number;
+  readonly totalAnterior: number;
+  readonly aprobadasAnterior: number;
+  readonly evaluadasAnterior: number;
+  readonly porcentajeAnterior: number;
+  /** Puntos porcentuales ganados o perdidos entre los dos periodos. */
+  readonly variacion: number;
+}
+
+export interface TableroDistributivo {
+  readonly periodos: readonly PeriodoConFilas[];
+  readonly actual: ValidacionDePeriodo | null;
+  readonly anterior: ValidacionDePeriodo | null;
+  readonly porFacultad: readonly FilaComparativa[];
+  readonly porSede: readonly Conteo[];
+  readonly porDedicacion: readonly Conteo[];
+  readonly generadoEn: string;
+}
+
+/** Estados de validacion, con la etiqueta que ve el usuario. */
+export const ETIQUETAS_ESTADO_VALIDACION: Readonly<Record<string, string>> = {
+  OK: 'Validado',
+  OK_EXCEPCION: 'Validado con excepcion',
+  PENDIENTE: 'Validacion pendiente',
+  ERROR: 'Con error',
+  SIN_ESTADO: 'Sin estado registrado',
+};
+
+// ---------------------------------------------------------------------------
+// Carga de un PAO
+// ---------------------------------------------------------------------------
+
+/** Lo que el usuario elige antes de subir el archivo. */
+export interface PeticionCargaPao {
+  readonly archivo: File;
+  /** Semestre que cubre el archivo, `2026-2`. El archivo no lo trae. */
+  readonly semestre: string;
+  readonly interciclo: boolean;
+  readonly actualizarExistentes: boolean;
+  readonly hoja?: string;
+}
+
+export interface FilaRechazada {
+  readonly numeroFila: number;
+  readonly identificacion: string;
+  readonly motivo: string;
+}
+
+export interface FilaConsolidada {
+  readonly identificacion: string;
+  readonly pao: string;
+  readonly carrera: string;
+  readonly sede: string | null;
+  readonly filasOrigen: readonly number[];
+  readonly totalHorasResultante: number;
+}
+
+export interface ResultadoCargaPao {
+  readonly totalFilasLeidas: number;
+  readonly filasCreadas: number;
+  readonly filasActualizadas: number;
+  readonly docentesCreados: number;
+  readonly docentesExistentes: number;
+  readonly filasConsolidadas: number;
+  readonly titulosCreados: number;
+  readonly elementosCatalogoCreados: Readonly<Record<string, number>>;
+  readonly rechazadas: readonly FilaRechazada[];
+  readonly consolidaciones: readonly FilaConsolidada[];
+  /** Filas que el lector descarto: juntan varias carreras o sedes en una celda. */
+  readonly noDesglosadas: readonly FilaRechazada[];
+  readonly exitosa: boolean;
+  readonly resumen: string;
+  readonly periodo: string;
+}

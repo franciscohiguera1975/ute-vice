@@ -28,9 +28,12 @@ rechazan** en lugar de inventar una atribucion o una carrera que no existe.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import xlrd
 from openpyxl import load_workbook
 
 from app.core.logging import get_logger
@@ -114,12 +117,64 @@ class CarreraAgregada(Exception):
     """La fila junta varias carreras o sedes en una celda."""
 
 
+#: Firma de un documento OLE2, que es lo que realmente son los `.xls` que
+#: exporta el sistema academico. Se mira el contenido y no la extension porque
+#: el origen tambien entrega `.xlsx` con nombre `.xls`.
+_FIRMA_OLE2 = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
+def _filas_xlsx(datos: bytes, hoja: str | None) -> Iterator[tuple[Any, ...]]:
+    libro = load_workbook(BytesIO(datos), read_only=True, data_only=True)
+    try:
+        pagina = libro[hoja] if hoja else libro[libro.sheetnames[0]]
+        yield from pagina.iter_rows(values_only=True)
+    finally:
+        libro.close()
+
+
+def _filas_xls(datos: bytes, hoja: str | None) -> Iterator[tuple[Any, ...]]:
+    """Formato Excel 97-2003, que openpyxl no lee.
+
+    El sistema academico exporta en este formato, asi que convertirlo a mano
+    antes de cargarlo seria un paso manual en cada importacion.
+    """
+    libro = xlrd.open_workbook(file_contents=datos)
+    pagina = libro.sheet_by_name(hoja) if hoja else libro.sheet_by_index(0)
+    for numero in range(pagina.nrows):
+        yield tuple(pagina.row_values(numero))
+
+
+def _filas_del_libro(origen: str | Path | bytes, hoja: str | None) -> Iterator[tuple[Any, ...]]:
+    if isinstance(origen, bytes):
+        datos = origen
+    else:
+        camino = Path(origen)
+        if not camino.exists():
+            raise ErrorValidacion(f"El archivo no existe: {camino}", campo="archivo")
+        datos = camino.read_bytes()
+
+    if not datos:
+        raise ErrorValidacion("El archivo esta vacio", campo="archivo")
+
+    try:
+        if datos[:8] == _FIRMA_OLE2:
+            yield from _filas_xls(datos, hoja)
+        else:
+            yield from _filas_xlsx(datos, hoja)
+    except ErrorValidacion:
+        raise
+    except Exception as exc:  # el motivo lo pone la libreria que abre el libro
+        raise ErrorValidacion(
+            f"No se pudo leer el archivo como hoja de calculo: {exc}", campo="archivo"
+        ) from exc
+
+
 class LectorPaoExcel:
     """Convierte el distributivo del sistema academico en filas planas."""
 
     def leer(
         self,
-        ruta: str | Path,
+        origen: str | Path | bytes,
         *,
         pao: str,
         interciclo: bool = False,
@@ -127,42 +182,36 @@ class LectorPaoExcel:
     ) -> tuple[list[FilaCrudaDistributivo], list[tuple[int, str, str]]]:
         """Devuelve `(filas, rechazadas)`.
 
+        `origen` es una ruta o el contenido del archivo. Acepta bytes para que
+        la carga desde la interfaz no tenga que escribir un temporal en disco.
+
         `pao` es el codigo del periodo —`262651`, `261650`—, que el archivo no
         trae. Cada rechazada es `(numero de fila, identificacion, motivo)`.
         """
-        camino = Path(ruta)
-        if not camino.exists():
-            raise ErrorValidacion(f"El archivo no existe: {camino}", campo="archivo")
-
-        libro = load_workbook(camino, read_only=True, data_only=True)
+        iterador = _filas_del_libro(origen, hoja)
         try:
-            pagina = libro[hoja] if hoja else libro[libro.sheetnames[0]]
-            iterador = pagina.iter_rows(values_only=True)
+            cabecera = next(iterador)
+        except StopIteration:
+            raise ErrorValidacion("El archivo esta vacio", campo="archivo") from None
+
+        col = {_texto(c): i for i, c in enumerate(cabecera) if c is not None}
+        for obligatoria in ("Identificación", "Facultad", "Carrera/Programa"):
+            if obligatoria not in col:
+                raise ErrorValidacion(
+                    f"Al archivo le falta la columna '{obligatoria}'", campo="archivo"
+                )
+
+        filas: list[FilaCrudaDistributivo] = []
+        rechazadas: list[tuple[int, str, str]] = []
+
+        for numero, cruda in enumerate(iterador, start=2):
+            identificacion = _texto(cruda[col["Identificación"]])
+            if not identificacion:
+                continue
             try:
-                cabecera = next(iterador)
-            except StopIteration:
-                raise ErrorValidacion("El archivo esta vacio", campo="archivo") from None
-
-            col = {_texto(c): i for i, c in enumerate(cabecera) if c is not None}
-            for obligatoria in ("Identificación", "Facultad", "Carrera/Programa"):
-                if obligatoria not in col:
-                    raise ErrorValidacion(
-                        f"Al archivo le falta la columna '{obligatoria}'", campo="archivo"
-                    )
-
-            filas: list[FilaCrudaDistributivo] = []
-            rechazadas: list[tuple[int, str, str]] = []
-
-            for numero, cruda in enumerate(iterador, start=2):
-                identificacion = _texto(cruda[col["Identificación"]])
-                if not identificacion:
-                    continue
-                try:
-                    filas.append(self._fila(numero, cruda, col, pao, interciclo))
-                except CarreraAgregada as exc:
-                    rechazadas.append((numero, identificacion, str(exc)))
-        finally:
-            libro.close()
+                filas.append(self._fila(numero, cruda, col, pao, interciclo))
+            except CarreraAgregada as exc:
+                rechazadas.append((numero, identificacion, str(exc)))
 
         log.info(
             "Distributivo del sistema academico leido",

@@ -93,6 +93,7 @@ def test_el_dominio_no_importa_librerias_de_infraestructura() -> None:
         "jwt",
         "argon2",
         "openpyxl",
+        "xlrd",
         "reportlab",
         "ldap3",
         "asyncpg",

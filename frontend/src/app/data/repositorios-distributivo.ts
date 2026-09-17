@@ -24,10 +24,13 @@ import type {
   Pagina,
   ParametrosPaginacion,
   AsignaturaCapturada,
+  PeticionCargaPao,
   PeticionReporteDistributivo,
   PlantillaReporte,
   ResultadoCapturaAsignaturas,
+  ResultadoCargaPao,
   ResumenDistributivo,
+  TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
 } from '@domain/modelos';
@@ -177,6 +180,26 @@ export class DistributivoHttp extends RepositorioDistributivo {
       peticion,
       { formato },
       `distributivo.${formato.toLowerCase()}`,
+    );
+  }
+
+  tablero(paoId?: string, paoAnteriorId?: string): Observable<TableroDistributivo> {
+    return this.api.get<TableroDistributivo>('/distributivo/tablero', {
+      paoId,
+      paoAnteriorId,
+    });
+  }
+
+  cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {
+    return this.api.subir<ResultadoCargaPao>(
+      '/distributivo/importaciones/pao',
+      peticion.archivo,
+      {
+        semestre: peticion.semestre,
+        interciclo: String(peticion.interciclo),
+        actualizar_existentes: String(peticion.actualizarExistentes),
+        ...(peticion.hoja ? { hoja: peticion.hoja } : {}),
+      },
     );
   }
 }

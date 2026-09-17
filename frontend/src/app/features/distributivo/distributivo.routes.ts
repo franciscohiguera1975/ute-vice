@@ -10,6 +10,20 @@ export const rutas: Routes = [
     title: 'Distributivo docente — UTE Vice',
   },
   {
+    // El tablero pide `distributivo:leer`, no `dashboard:ver`: el rol de
+    // consulta no tiene el tablero general y aun asi debe poder verlo.
+    path: 'tablero',
+    loadComponent: () =>
+      import('./tablero.component').then((m) => m.TableroDistributivoComponent),
+    title: 'Tablero del distributivo — UTE Vice',
+  },
+  {
+    path: 'importar',
+    canActivate: [guardaPermiso(Permiso.DISTRIBUTIVO_IMPORTAR)],
+    loadComponent: () => import('./importar.component').then((m) => m.ImportarPaoComponent),
+    title: 'Cargar un PAO — UTE Vice',
+  },
+  {
     path: 'asignaturas',
     canActivate: [guardaPermiso(Permiso.DISTRIBUTIVO_ESCRIBIR)],
     loadComponent: () =>

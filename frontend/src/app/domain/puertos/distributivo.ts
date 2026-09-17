@@ -25,8 +25,11 @@ import type {
   AsignaturaCapturada,
   PeticionReporteDistributivo,
   PlantillaReporte,
+  PeticionCargaPao,
   ResultadoCapturaAsignaturas,
+  ResultadoCargaPao,
   ResumenDistributivo,
+  TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
 } from '../modelos';
@@ -121,4 +124,18 @@ export abstract class RepositorioDistributivo {
     peticion: PeticionReporteDistributivo,
     formato: FormatoReporte,
   ): Observable<ArchivoDescarga>;
+
+  /**
+   * Indicadores de validacion de dos periodos, uno frente al otro.
+   *
+   * Sin periodos, el backend elige el mas reciente y el anterior del mismo
+   * tipo —grado con grado, interciclo con interciclo—.
+   */
+  abstract tablero(
+    paoId?: string,
+    paoAnteriorId?: string,
+  ): Observable<TableroDistributivo>;
+
+  /** Sube un distributivo exportado por el sistema academico. */
+  abstract cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao>;
 }

@@ -373,3 +373,230 @@ class TestControlDeAcceso:
             else await peticion(ruta, headers=cabeceras_lector)
         )
         assert respuesta.status_code == 403, f"{metodo.upper()} {ruta} -> {respuesta.status_code}"
+
+
+class TestTableroDelDistributivo:
+    """El tablero del distributivo, sobre datos cargados por la propia API.
+
+    Se carga un PAO por el endpoint de importacion y se leen sus indicadores:
+    asi la prueba cubre el camino entero —archivo, catalogos, periodos y
+    agregaciones— y no solo el SQL de las agregaciones.
+    """
+
+    @staticmethod
+    def _archivo(estado: str = "OK", identificacion: str = CEDULA) -> bytes:
+        """Un PAO minimo en memoria, con las columnas que exige el lector."""
+        from io import BytesIO
+
+        from openpyxl import Workbook
+
+        cabecera = [
+            "Identificación",
+            "Apellidos y Nombres",
+            "Sede",
+            "Nivel",
+            "Facultad",
+            "Carrera/Programa",
+            "Modalidad",
+            "Da",
+            "Ga",
+            "Titularidad",
+            "Categoría",
+            "Dedicación",
+            "Relación Laboral",
+            "Estado de la Validación",
+            "N.º Semanas",
+            "Fase",
+            "Tutores Posgrado",
+            "Tutores Medicina",
+        ]
+        fila = [
+            identificacion,
+            "YEPEZ ANA",
+            "SEDE QUITO",
+            "GRADO",
+            "ARQUITECTURA Y URBANISMO",
+            "ARQUITECTURA",
+            "PRESENCIAL",
+            20,
+            4,
+            "NO TITULAR",
+            "AUXILIAR",
+            "TIEMPO COMPLETO",
+            "Dependencia Laboral",
+            estado,
+            16,
+            "Planificación",
+            "No",
+            "No",
+        ]
+
+        libro = Workbook()
+        hoja = libro.active
+        hoja.append(cabecera)
+        hoja.append(fila)
+        memoria = BytesIO()
+        libro.save(memoria)
+        return memoria.getvalue()
+
+    async def _cargar(self, cliente, cabeceras, semestre: str, **campos):  # type: ignore[no-untyped-def]
+        return await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras,
+            files={"archivo": (f"PAO_{semestre}.xlsx", self._archivo(**campos))},
+            data={"semestre": semestre, "actualizar_existentes": "true"},
+        )
+
+    async def test_carga_un_pao_y_calcula_sus_indicadores(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+
+        carga = await self._cargar(cliente, cabeceras_admin, "2026-2")
+        assert carga.status_code == 200, carga.text
+        assert carga.json()["filas_creadas"] == 1
+        assert carga.json()["periodo"] == "2026-2"
+
+        respuesta = await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)
+        assert respuesta.status_code == 200, respuesta.text
+        cuerpo = respuesta.json()
+
+        # Un archivo de grado produce el periodo `262651`: `26` anio, `2`
+        # semestre, `65` grado, `1` ordinario.
+        assert cuerpo["actual"]["codigo"] == "262651"
+        assert cuerpo["actual"]["total"] == 1
+        assert cuerpo["actual"]["aprobadas"] == 1
+        assert cuerpo["actual"]["porcentaje_aprobado"] == 100.0
+        assert cuerpo["anterior"] is None
+        assert cuerpo["por_facultad"][0]["total_actual"] == 1
+
+    async def test_compara_con_el_periodo_anterior(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+
+        assert (
+            await self._cargar(cliente, cabeceras_admin, "2026-1", estado="Validación Pendiente")
+        ).status_code == 200
+        assert (await self._cargar(cliente, cabeceras_admin, "2026-2")).status_code == 200
+
+        cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)).json()
+
+        assert cuerpo["actual"]["codigo"] == "262651"
+        assert cuerpo["anterior"]["codigo"] == "261651"
+        assert cuerpo["actual"]["porcentaje_aprobado"] == 100.0
+        assert cuerpo["anterior"]["porcentaje_aprobado"] == 0.0
+        assert cuerpo["por_facultad"][0]["variacion"] == 100.0
+
+    async def test_recargar_el_mismo_periodo_actualiza_en_vez_de_duplicar(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Es el caso habitual: el PAO llega corregido y se vuelve a subir."""
+        _, cliente = sembrado
+
+        primera = await self._cargar(
+            cliente, cabeceras_admin, "2026-2", estado="Validación Pendiente"
+        )
+        assert primera.json()["filas_creadas"] == 1
+
+        segunda = await self._cargar(cliente, cabeceras_admin, "2026-2", estado="OK")
+        assert segunda.json()["filas_creadas"] == 0
+        assert segunda.json()["filas_actualizadas"] == 1
+
+        cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)).json()
+        assert cuerpo["actual"]["total"] == 1
+        assert cuerpo["actual"]["aprobadas"] == 1
+
+    async def test_rechaza_un_archivo_que_no_es_una_hoja_de_calculo(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("pao.xlsx", b"esto no es un libro")},
+            data={"semestre": "2026-2"},
+        )
+        assert respuesta.status_code == 422
+
+    async def test_rechaza_una_extension_que_no_corresponde(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("pao.csv", self._archivo())},
+            data={"semestre": "2026-2"},
+        )
+        assert respuesta.status_code == 422
+
+    async def test_sin_carga_el_tablero_responde_vacio_y_no_falla(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)).json()
+
+        assert cuerpo["periodos"] == []
+        assert cuerpo["actual"] is None
+
+
+class TestAccesoAlTableroDelDistributivo:
+    """Quien ve el tablero y quien puede cargar un PAO.
+
+    El rol de consulta del distributivo es de solo lectura: se creo para dos
+    usuarios que consultan y exportan, y **no** tiene `dashboard:ver`. El
+    tablero del distributivo pide `distributivo:leer` justamente para que ese
+    rol lo vea sin abrirle el tablero general ni la carga de archivos.
+    """
+
+    @pytest.fixture
+    async def cabeceras_consulta(self, sembrado, cabeceras_admin):  # type: ignore[no-untyped-def]
+        _, cliente = sembrado
+        creacion = await cliente.post(
+            "/api/v1/usuarios",
+            headers=cabeceras_admin,
+            json={
+                "email": "consulta.distributivo@ute.edu.ec",
+                "nombre_completo": "Consulta Distributivo",
+                "contrasena": "Consulta#2026.Ok",
+                "roles": ["CONSULTA_DISTRIBUTIVO"],
+            },
+        )
+        assert creacion.status_code == 201, creacion.text
+        acceso = await cliente.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "consulta.distributivo@ute.edu.ec",
+                "contrasena": "Consulta#2026.Ok",
+            },
+        )
+        return {"Authorization": f"Bearer {acceso.json()['tokens']['acceso']}"}
+
+    async def test_el_rol_de_consulta_ve_el_tablero(self, sembrado, cabeceras_consulta) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_consulta)
+        assert respuesta.status_code == 200
+
+    async def test_el_rol_de_consulta_no_ve_el_tablero_general(
+        self, sembrado, cabeceras_consulta
+    ) -> None:
+        _, cliente = sembrado
+        assert (await cliente.get("/api/v1/tablero", headers=cabeceras_consulta)).status_code == 403
+
+    async def test_el_rol_de_consulta_no_puede_cargar_un_pao(
+        self, sembrado, cabeceras_consulta
+    ) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_consulta,
+            files={"archivo": ("pao.xlsx", TestTableroDelDistributivo._archivo())},
+            data={"semestre": "2026-2"},
+        )
+        assert respuesta.status_code == 403
+
+    async def test_sin_token_no_se_puede_cargar(self, sembrado) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            files={"archivo": ("pao.xlsx", TestTableroDelDistributivo._archivo())},
+            data={"semestre": "2026-2"},
+        )
+        assert respuesta.status_code == 401

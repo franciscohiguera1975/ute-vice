@@ -31,6 +31,18 @@ export const SECCIONES: readonly Seccion[] = [
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },
   {
+    ruta: '/distributivo/tablero',
+    etiqueta: 'Indicadores',
+    icono: '◉',
+    permisos: [Permiso.DISTRIBUTIVO_LEER],
+  },
+  {
+    ruta: '/distributivo/importar',
+    etiqueta: 'Cargar PAO',
+    icono: '⤒',
+    permisos: [Permiso.DISTRIBUTIVO_IMPORTAR],
+  },
+  {
     ruta: '/distributivo/asignaturas',
     etiqueta: 'Asignaturas',
     icono: '✎',

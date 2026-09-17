@@ -6,7 +6,7 @@ from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 
 from app.api.dependencias import ContenedorDep, ContextoDep, UowDep, requiere
 from app.api.esquemas.comunes import (
@@ -29,8 +29,14 @@ from app.api.esquemas.distributivo import (
     PeticionReporteDistributivo,
     PlantillaReporteSalida,
     ResultadoCapturaAsignaturasSalida,
+    ResultadoImportacionSalida,
     ResumenDistributivoSalida,
+    TableroDistributivoSalida,
     VistaPreviaReporteSalida,
+)
+from app.application.casos_uso.analitica import (
+    EntradaTableroDistributivo,
+    ObtenerTableroDistributivo,
 )
 from app.application.casos_uso.distributivo import (
     ActualizarFilaDistributivo,
@@ -55,6 +61,10 @@ from app.application.casos_uso.docentes import (
     ListarDocentes,
     ObtenerDocente,
 )
+from app.application.casos_uso.importar_distributivo import (
+    EntradaImportacion,
+    ImportarDistributivo,
+)
 from app.application.casos_uso.reporte_distributivo import (
     CarrerasDisponibles,
     EntradaCarrerasDisponibles,
@@ -64,7 +74,9 @@ from app.application.casos_uso.reporte_distributivo import (
     VistaPreviaReporteDistributivo,
 )
 from app.domain.enums import FormatoReporte, Permiso
+from app.domain.errors import ErrorValidacion
 from app.domain.ports.distributivo import FiltroDistributivo, FiltroDocentes
+from app.infrastructure.importadores.pao_excel import LectorPaoExcel
 
 router = APIRouter(tags=["Distributivo docente"])
 
@@ -339,6 +351,126 @@ async def capturar_asignaturas(
         actualizadas=resultado.actualizadas,
         sin_cambios=resultado.sin_cambios,
         asignaturas_creadas=resultado.asignaturas_creadas,
+    )
+
+
+# ===========================================================================
+# Tablero del distributivo
+# ===========================================================================
+
+
+@router.get(
+    "/distributivo/tablero",
+    response_model=TableroDistributivoSalida,
+    summary="Avance de la validacion en dos periodos",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def tablero_distributivo(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    pao_id: Annotated[
+        UUID | None, Query(description="Periodo a examinar. Por defecto, el mas reciente.")
+    ] = None,
+    pao_anterior_id: Annotated[
+        UUID | None,
+        Query(description="Periodo con el que comparar. Por defecto, el anterior del mismo tipo."),
+    ] = None,
+) -> TableroDistributivoSalida:
+    """Todos los indicadores en una sola llamada.
+
+    Se agrupan igual que en el tablero general: con cinco peticiones
+    concurrentes, las cifras de la misma pantalla podrian no cuadrar entre si.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ObtenerTableroDistributivo(analitica, contenedor.reloj)
+        resultado = await caso(
+            EntradaTableroDistributivo(pao_id=pao_id, pao_anterior_id=pao_anterior_id),
+            contexto,
+        )
+    return TableroDistributivoSalida.desde(resultado)
+
+
+# ===========================================================================
+# Carga de un distributivo exportado por el sistema academico
+# ===========================================================================
+
+#: Tope del archivo. El PAO mas grande cargado hasta ahora pesa 820 KB; 25 MB
+#: deja margen de sobra y evita que una subida equivocada ocupe memoria.
+_TOPE_ARCHIVO = 25 * 1024 * 1024
+
+#: Extensiones que acepta el lector. El contenido manda —se mira la firma del
+#: archivo, no el nombre—, pero filtrar aqui da un mensaje claro antes de leer.
+_EXTENSIONES = (".xls", ".xlsx", ".xlsm")
+
+
+@router.post(
+    "/distributivo/importaciones/pao",
+    response_model=ResultadoImportacionSalida,
+    summary="Cargar un distributivo exportado por el sistema academico",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_IMPORTAR)],
+    responses={422: {"description": "El archivo no tiene la estructura esperada"}},
+)
+async def importar_pao(
+    uow: UowDep,
+    contexto: ContextoDep,
+    archivo: Annotated[UploadFile, File(description="PAO en formato .xls o .xlsx")],
+    semestre: Annotated[
+        str, Form(description="Semestre que cubre el archivo, `2026-2`. El archivo no lo trae.")
+    ],
+    interciclo: Annotated[
+        bool, Form(description="Periodo corto entre dos ordinarios: su codigo termina en 0.")
+    ] = False,
+    actualizar_existentes: Annotated[
+        bool,
+        Form(
+            description=(
+                "Actualiza la fila que ya exista con la misma clave natural en vez de rechazarla."
+            )
+        ),
+    ] = True,
+    hoja: Annotated[
+        str | None, Form(description="Hoja del libro. Por defecto, la primera.")
+    ] = None,
+) -> ResultadoImportacionSalida:
+    """Lee el archivo y carga sus filas.
+
+    Un archivo cubre un semestre, pero produce hasta tres periodos: a cual va
+    cada fila lo decide su facultad —tecnologia, grado o posgrado—, igual que
+    en la carga por linea de comandos.
+
+    `actualizar_existentes` viene activado por defecto porque el caso habitual
+    es recargar un periodo corregido: sin el, la carga se detendria en la
+    primera fila ya existente.
+    """
+    nombre = archivo.filename or "archivo"
+    if not nombre.lower().endswith(_EXTENSIONES):
+        raise ErrorValidacion(
+            f"Se esperaba un archivo {', '.join(_EXTENSIONES)}; llego '{nombre}'",
+            campo="archivo",
+        )
+
+    contenido = await archivo.read()
+    if len(contenido) > _TOPE_ARCHIVO:
+        raise ErrorValidacion(
+            f"El archivo supera el tope de {_TOPE_ARCHIVO // (1024 * 1024)} MB",
+            campo="archivo",
+        )
+
+    filas, no_desglosadas = LectorPaoExcel().leer(
+        contenido, pao=semestre.strip(), interciclo=interciclo, hoja=hoja or None
+    )
+
+    caso = ImportarDistributivo(uow)
+    resultado = await caso(
+        EntradaImportacion(filas=tuple(filas), reemplazar_existentes=actualizar_existentes),
+        contexto,
+    )
+    return ResultadoImportacionSalida.desde(
+        resultado,
+        no_desglosadas=no_desglosadas,
+        periodo=f"{semestre.strip()}{' interciclo' if interciclo else ''}",
     )
 
 

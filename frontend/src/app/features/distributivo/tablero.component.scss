@@ -1,0 +1,71 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1.25rem; }
+
+.selectores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.selectores .campo { margin-bottom: 0; }
+
+/* Alineacion a la derecha para las columnas de cifras. La tabla se lee de un
+   vistazo solo si los digitos quedan en columna. */
+.der { text-align: right; }
+.fuerte { font-weight: 600; }
+
+.metrica {
+  padding: 1rem 1.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-1);
+}
+
+.metrica__etiqueta {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+}
+
+.metrica__valor {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrica__barra { margin: 0.55rem 0 0.35rem; }
+.metrica__pie { margin: 0.3rem 0 0; }
+
+.positivo { color: var(--exito); }
+.negativo { color: var(--error); }
+
+.nota {
+  margin: 0;
+  padding: 0.75rem 1.15rem 1rem;
+}
+
+.tabla__fila--tenue th,
+.tabla__fila--tenue td { color: var(--texto-suave); }
+
+/* Punto de color delante de cada estado, para que la tabla y el anillo se
+   lean como la misma informacion. */
+.punto {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 0.45rem;
+  border-radius: 2px;
+  background: var(--borde);
+  vertical-align: baseline;
+}
+.punto--ok { background: var(--azul-800); }
+.punto--ok_excepcion { background: var(--azul-600); }
+.punto--pendiente { background: #9a6400; }
+.punto--error { background: var(--error); }
+.punto--sin_estado { background: var(--borde-fuerte); }

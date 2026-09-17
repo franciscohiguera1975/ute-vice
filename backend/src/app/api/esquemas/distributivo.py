@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
@@ -11,7 +12,13 @@ from pydantic import Field, field_validator
 from app.api.esquemas.comunes import EsquemaBase
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import Docente
+from app.domain.ports.analitica import (
+    FilaComparativa,
+    TableroDistributivo,
+    ValidacionDePeriodo,
+)
 from app.domain.ports.distributivo import FilaDistributivoResuelta, ResumenDistributivo
+from app.domain.ports.importacion import ResultadoImportacionDistributivo
 from app.domain.ports.reportes import ColumnaReporte
 from app.domain.value_objects_distributivo import DistribucionHoras, Identificacion
 
@@ -433,6 +440,7 @@ class VistaPreviaReporteSalida(EsquemaBase):
 class ResultadoImportacionSalida(EsquemaBase):
     total_filas_leidas: int
     filas_creadas: int
+    filas_actualizadas: int
     docentes_creados: int
     docentes_existentes: int
     filas_consolidadas: int
@@ -442,3 +450,174 @@ class ResultadoImportacionSalida(EsquemaBase):
     consolidaciones: list[dict[str, Any]]
     exitosa: bool
     resumen: str
+
+    #: Filas que el lector descarto antes de llegar al caso de uso: las que
+    #: juntan varias carreras o sedes en una celda. Se informan aparte de
+    #: `rechazadas` porque el motivo es del archivo, no de la validacion.
+    no_desglosadas: list[dict[str, Any]] = Field(default_factory=list)
+
+    #: El periodo al que se cargo, como lo entendio el sistema.
+    periodo: str = ""
+
+    @classmethod
+    def desde(
+        cls,
+        r: ResultadoImportacionDistributivo,
+        *,
+        no_desglosadas: Sequence[tuple[int, str, str]] = (),
+        periodo: str = "",
+    ) -> ResultadoImportacionSalida:
+        return cls(
+            total_filas_leidas=r.total_filas_leidas,
+            filas_creadas=r.filas_creadas,
+            filas_actualizadas=r.filas_actualizadas,
+            docentes_creados=r.docentes_creados,
+            docentes_existentes=r.docentes_existentes,
+            filas_consolidadas=r.filas_consolidadas,
+            titulos_creados=r.titulos_creados,
+            elementos_catalogo_creados=dict(r.elementos_catalogo_creados),
+            # Se recorta a 200: un archivo mal exportado puede rechazar miles de
+            # filas, y devolverlas todas convierte la respuesta en megabytes que
+            # nadie va a leer en pantalla.
+            rechazadas=[
+                {
+                    "numero_fila": e.numero_fila,
+                    "identificacion": e.identificacion,
+                    "motivo": e.motivo,
+                }
+                for e in r.rechazadas[:200]
+            ],
+            consolidaciones=[
+                {
+                    "identificacion": c.identificacion,
+                    "pao": c.pao,
+                    "carrera": c.carrera,
+                    "sede": c.sede,
+                    "filas_origen": list(c.filas_origen),
+                    "total_horas_resultante": c.total_horas_resultante,
+                }
+                for c in r.consolidaciones[:200]
+            ],
+            exitosa=r.exitosa,
+            resumen=r.resumen(),
+            no_desglosadas=[
+                {"numero_fila": numero, "identificacion": identificacion, "motivo": motivo}
+                for numero, identificacion, motivo in list(no_desglosadas)[:200]
+            ],
+            periodo=periodo,
+        )
+
+
+# ===========================================================================
+# Tablero del distributivo
+# ===========================================================================
+
+
+class PeriodoDisponibleSalida(EsquemaBase):
+    id: UUID
+    codigo: str
+    nombre: str
+    semestre: str
+    filas: int
+
+
+class ValidacionDePeriodoSalida(EsquemaBase):
+    pao_id: UUID
+    codigo: str
+    nombre: str
+    total: int
+    aprobadas: int
+    pendientes: int
+    con_error: int
+    sin_estado: int
+    evaluadas: int
+    porcentaje_aprobado: float
+    docentes: int
+    horas: float
+    por_estado: list[dict[str, Any]]
+
+    @classmethod
+    def desde(cls, v: ValidacionDePeriodo) -> ValidacionDePeriodoSalida:
+        return cls(
+            pao_id=v.pao_id,
+            codigo=v.codigo,
+            nombre=v.nombre,
+            total=v.total,
+            aprobadas=v.aprobadas,
+            pendientes=v.pendientes,
+            con_error=v.con_error,
+            sin_estado=v.sin_estado,
+            evaluadas=v.evaluadas,
+            porcentaje_aprobado=v.porcentaje_aprobado,
+            docentes=v.docentes,
+            horas=v.horas,
+            por_estado=[
+                {"etiqueta": c.etiqueta, "valor": c.valor, "porcentaje": c.porcentaje}
+                for c in v.por_estado
+            ],
+        )
+
+
+class FilaComparativaSalida(EsquemaBase):
+    etiqueta: str
+    total_actual: int
+    aprobadas_actual: int
+    evaluadas_actual: int
+    porcentaje_actual: float
+    total_anterior: int
+    aprobadas_anterior: int
+    evaluadas_anterior: int
+    porcentaje_anterior: float
+    variacion: float
+
+    @classmethod
+    def desde(cls, f: FilaComparativa) -> FilaComparativaSalida:
+        return cls(
+            etiqueta=f.etiqueta,
+            total_actual=f.total_actual,
+            aprobadas_actual=f.aprobadas_actual,
+            evaluadas_actual=f.evaluadas_actual,
+            porcentaje_actual=f.porcentaje_actual,
+            total_anterior=f.total_anterior,
+            aprobadas_anterior=f.aprobadas_anterior,
+            evaluadas_anterior=f.evaluadas_anterior,
+            porcentaje_anterior=f.porcentaje_anterior,
+            variacion=f.variacion,
+        )
+
+
+class TableroDistributivoSalida(EsquemaBase):
+    periodos: list[PeriodoDisponibleSalida]
+    actual: ValidacionDePeriodoSalida | None
+    anterior: ValidacionDePeriodoSalida | None
+    por_facultad: list[FilaComparativaSalida]
+    por_sede: list[dict[str, Any]]
+    por_dedicacion: list[dict[str, Any]]
+    generado_en: str
+
+    @classmethod
+    def desde(cls, t: TableroDistributivo) -> TableroDistributivoSalida:
+        def conteos(lista: Sequence[Any]) -> list[dict[str, Any]]:
+            return [
+                {"etiqueta": c.etiqueta, "valor": c.valor, "porcentaje": c.porcentaje}
+                for c in lista
+            ]
+
+        return cls(
+            periodos=[
+                PeriodoDisponibleSalida(
+                    id=p.id,
+                    codigo=p.codigo,
+                    nombre=p.nombre,
+                    semestre=p.semestre,
+                    filas=p.filas,
+                )
+                for p in t.periodos
+            ],
+            actual=ValidacionDePeriodoSalida.desde(t.actual) if t.actual else None,
+            anterior=ValidacionDePeriodoSalida.desde(t.anterior) if t.anterior else None,
+            por_facultad=[FilaComparativaSalida.desde(f) for f in t.por_facultad],
+            por_sede=conteos(t.por_sede),
+            por_dedicacion=conteos(t.por_dedicacion),
+            generado_en=t.generado_en,
+        )

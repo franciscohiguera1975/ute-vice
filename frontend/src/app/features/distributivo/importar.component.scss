@@ -1,0 +1,70 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1.25rem; }
+
+.der { text-align: right; }
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.casilla input { margin-top: 0.25rem; flex-shrink: 0; }
+.casilla .campo__ayuda { display: block; margin-top: 0.2rem; }
+
+.avanzado {
+  margin-bottom: 1rem;
+  summary { cursor: pointer; }
+  .campo { margin-top: 0.75rem; max-width: 22rem; }
+}
+
+.aviso-formato {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--superficie-2);
+  border-left: 3px solid var(--azul-600);
+  border-radius: var(--radio-sm);
+}
+
+.subtitulo {
+  margin: 1.5rem 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.metrica {
+  padding: 0.85rem 1rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.metrica__etiqueta {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+}
+.metrica__valor {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.metrica__pie { margin: 0.25rem 0 0; }
+
+.etiquetas {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+.etiqueta {
+  padding: 0.18rem 0.5rem;
+  font-size: 0.76rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+}

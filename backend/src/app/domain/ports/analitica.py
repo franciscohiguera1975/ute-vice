@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,3 +117,115 @@ class RepositorioAnalitica(Protocol):
     async def personas_por_unidad(self, *, limite: int = 15) -> list[ConteoEtiquetado]: ...
 
     async def personas_por_vinculacion(self) -> list[ConteoEtiquetado]: ...
+
+
+# ---------------------------------------------------------------------------
+# Tablero del distributivo docente
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class PeriodoDisponible:
+    """Un PAO que tiene filas cargadas, para elegirlo en el tablero."""
+
+    id: UUID
+    codigo: str
+    nombre: str
+    semestre: str
+    """`2026-2`. Sale de los atributos del catalogo; vacio si no lo trae."""
+    filas: int
+
+
+@dataclass(frozen=True, slots=True)
+class ValidacionDePeriodo:
+    """Como quedo la validacion de un periodo.
+
+    `aprobadas` suma `OK` y `OK_EXCEPCION`: las dos dicen que la carga es
+    valida, y la segunda solo anade que lo es por una excepcion concedida.
+
+    `sin_estado` esta aparte y **no cuenta como reprobada**: los periodos
+    anteriores a 2026-2 no traian el dato. Mezclarlo con `ERROR` haria que
+    todo el historico apareciera como rechazado.
+    """
+
+    pao_id: UUID
+    codigo: str
+    nombre: str
+    total: int
+    aprobadas: int
+    pendientes: int
+    con_error: int
+    sin_estado: int
+    docentes: int
+    horas: float
+    por_estado: list[ConteoEtiquetado] = field(default_factory=list)
+
+    @property
+    def evaluadas(self) -> int:
+        """Filas que si traen estado. Es el denominador del porcentaje."""
+        return self.total - self.sin_estado
+
+    @property
+    def porcentaje_aprobado(self) -> float:
+        if self.evaluadas == 0:
+            return 0.0
+        return round(self.aprobadas / self.evaluadas * 100, 2)
+
+
+@dataclass(frozen=True, slots=True)
+class FilaComparativa:
+    """Una facultad con sus cifras en los dos periodos que se comparan."""
+
+    etiqueta: str
+    total_actual: int
+    aprobadas_actual: int
+    evaluadas_actual: int
+    total_anterior: int
+    aprobadas_anterior: int
+    evaluadas_anterior: int
+
+    @staticmethod
+    def _porcentaje(aprobadas: int, evaluadas: int) -> float:
+        return round(aprobadas / evaluadas * 100, 2) if evaluadas else 0.0
+
+    @property
+    def porcentaje_actual(self) -> float:
+        return self._porcentaje(self.aprobadas_actual, self.evaluadas_actual)
+
+    @property
+    def porcentaje_anterior(self) -> float:
+        return self._porcentaje(self.aprobadas_anterior, self.evaluadas_anterior)
+
+    @property
+    def variacion(self) -> float:
+        """Puntos porcentuales ganados o perdidos entre los dos periodos."""
+        return round(self.porcentaje_actual - self.porcentaje_anterior, 2)
+
+
+@dataclass(frozen=True, slots=True)
+class TableroDistributivo:
+    """Todo lo que pinta el tablero del distributivo, en una sola respuesta."""
+
+    periodos: list[PeriodoDisponible] = field(default_factory=list)
+    actual: ValidacionDePeriodo | None = None
+    anterior: ValidacionDePeriodo | None = None
+    por_facultad: list[FilaComparativa] = field(default_factory=list)
+    por_sede: list[ConteoEtiquetado] = field(default_factory=list)
+    por_dedicacion: list[ConteoEtiquetado] = field(default_factory=list)
+    generado_en: str = ""
+
+
+class RepositorioAnaliticaDistributivo(Protocol):
+    """Agregaciones del distributivo docente. Solo lectura."""
+
+    async def periodos_con_filas(self) -> list[PeriodoDisponible]: ...
+
+    async def validacion_de_periodo(self, pao_id: UUID) -> ValidacionDePeriodo | None: ...
+
+    async def validacion_por_facultad(
+        self, *, actual: UUID, anterior: UUID | None
+    ) -> list[FilaComparativa]: ...
+
+    async def distribucion_de_periodo(
+        self, pao_id: UUID, *, campo: str, limite: int = 12
+    ) -> list[ConteoEtiquetado]: ...

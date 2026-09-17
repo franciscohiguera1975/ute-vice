@@ -15,13 +15,20 @@ horas.
 | Pantalla | Ruta | Para que |
 |---|---|---|
 | **Distributivo** | `/distributivo` | Consultar, filtrar y editar las cargas |
+| **Indicadores** | `/distributivo/tablero` | Avance de la validacion, dos periodos comparados |
+| **Cargar PAO** | `/distributivo/importar` | Subir el distributivo que exporta el sistema academico |
 | **Asignaturas** | `/distributivo/asignaturas` | Capturar que materia imparte cada docente |
 | **Exportar** | `/distributivo/reporte` | Generar el archivo |
 | **Catalogos** | `/catalogos` | Mantener las listas que alimentan los selectores |
 
-Permisos: `distributivo:leer` para consultar, `distributivo:escribir` para
-editar y capturar, `catalogos:leer` y `catalogos:escribir` para los catalogos,
+Permisos: `distributivo:leer` para consultar y para los indicadores,
+`distributivo:escribir` para editar y capturar, `distributivo:importar` para
+cargar un PAO, `catalogos:leer` y `catalogos:escribir` para los catalogos,
 `reportes:generar` para exportar.
+
+> **Los indicadores piden `distributivo:leer` y no `dashboard:ver`.** Es
+> deliberado: el rol de consulta del distributivo no tiene el tablero general y
+> aun asi debe poder ver el avance de la validacion.
 
 ---
 
@@ -33,13 +40,18 @@ su propio periodo con su codigo:
 
 ```
 2 6 1 65 1
-│ │ │ │  └─ constante
+│ │ │ │  └─ 1 ordinario · 0 interciclo
 │ │ │ └──── nivel: 15 tecnologia · 65 grado · 75 posgrado
 │ │ └────── periodo del anio (1 o 2)
 └─┴──────── dos ultimos digitos del anio
 ```
 
 Asi, `2026-1` son `261151` (tecnologia), `261651` (grado) y `261751` (posgrado).
+
+**Con el interciclo son seis.** El periodo corto que corre entre dos ordinarios
+lleva la misma cifra de anio y semestre y termina en `0`: `261650` es el
+interciclo de grado de `2026-1`. No se deduce del archivo —sus filas dicen el
+mismo semestre que el ordinario— y lo indica quien importa.
 
 **A que periodo va cada fila** lo deciden su facultad y su nivel, en este orden:
 
@@ -205,3 +217,87 @@ La importacion:
 
 `vaciar-distributivo` deja la tabla y sus catalogos vacios, para reimportar
 desde cero.
+
+---
+
+## Cargar un PAO desde la interfaz
+
+`/distributivo/importar`, con permiso `distributivo:importar`.
+
+Es el distributivo que exporta el sistema academico, no el consolidado
+historico: tiene sus propias cabeceras y trae seis datos que el consolidado no
+tenia —estado de validacion, fase, semanas, relacion laboral y las dos marcas de
+tutoria—.
+
+Se acepta `.xls` (Excel 97-2003, que es lo que entrega el ERP), `.xlsx` y
+`.xlsm`, hasta 25 MB. **Lo que decide el formato es el contenido del archivo, no
+su extension**: el origen a veces entrega un `.xlsx` con nombre `.xls`.
+
+### Lo que hay que indicar
+
+| Campo | Por que |
+|---|---|
+| **Semestre** | El archivo no lo trae. Formato `2026-2`. |
+| **Interciclo** | Tampoco lo trae: sus filas dicen el mismo semestre que el ordinario. |
+| **Actualizar las filas que ya existan** | Activado por defecto. Es lo que hace falta al recargar un periodo corregido: sin el, la carga rechaza cada fila ya registrada y habria que borrar el periodo entero, perdiendo las materias enlazadas. |
+
+Un archivo cubre un semestre pero **produce hasta tres periodos**: a cual va
+cada fila lo decide su facultad, con la misma regla de arriba.
+
+### Lo que informa al terminar
+
+* Filas creadas y actualizadas, y docentes nuevos.
+* **Catalogos poblados**: valores que no existian y se crearon al vuelo.
+  Conviene revisarlos —una carrera escrita de otra forma entra como carrera
+  nueva, y de ahi salen los duplicados del catalogo—.
+* **Filas fusionadas**: el archivo traia la misma clave natural dos veces y se
+  sumaron las horas.
+* **Filas que no se pudieron desglosar**: juntan varias carreras o sedes en una
+  celda —`ALIMENTOS, ELECTROMECANICA`— con un total de horas unico que no se
+  puede repartir. Quedan fuera en lugar de inventar una atribucion o una carrera
+  que no existe. La solucion es pedir al origen la exportacion desglosada: una
+  fila por combinacion de carrera y sede.
+* **Rechazadas por la validacion**, con el numero de fila del archivo.
+
+Ninguna fila se descarta en silencio.
+
+---
+
+## Los indicadores
+
+`/distributivo/tablero`, con permiso `distributivo:leer`.
+
+Compara **dos periodos**. Por defecto toma el mas reciente con carga y el
+anterior *del mismo tipo*: `2026-2 GRADO` se compara con `2026-1 GRADO`, y un
+interciclo con otro interciclo. Comparar grado con posgrado no diria nada.
+Ambos se pueden cambiar en los selectores.
+
+### El porcentaje se calcula sobre las filas evaluadas
+
+El estado de validacion lo entrega el sistema academico **desde 2026-2**. Las
+filas anteriores lo tienen vacio, y eso no significa que estuvieran sin validar:
+significa que el dato no existia.
+
+Por eso el denominador son las filas **con estado**, no el total, y un periodo
+sin ninguna muestra un guion —«—»— y no un cero. Contar las filas sin estado
+como reprobadas pintaria todo el historico en rojo.
+
+`OK` y `OK, excepcion` cuentan las dos como aprobadas: la segunda solo anade que
+la carga es valida por una excepcion concedida.
+
+### Que hay en la pantalla
+
+* Cuatro cifras del periodo: filas —con la diferencia frente al anterior—,
+  porcentaje aprobado, pendientes y filas sin estado.
+* **Aprobacion de los dos periodos**: una fila por periodo, con filas, filas con
+  estado, aprobadas, porcentaje, docentes y horas.
+* **Desglose por estado**: los cinco estados con su conteo y su peso, en las dos
+  columnas de periodo. Se muestran siempre los cinco, incluidos los que valen
+  cero: que «Con error» valga cero es justamente lo que se quiere leer.
+* **Facultades, los dos periodos**, con la variacion en puntos porcentuales.
+* Cuatro graficos: estados, aprobacion por facultad, filas por sede y filas por
+  dedicacion.
+
+> **La diferencia de filas entre los dos periodos es lo primero que hay que
+> mirar** al recibir un PAO nuevo. Si el periodo entrante trae mucha menos carga
+> que el anterior, la exportacion vino incompleta.

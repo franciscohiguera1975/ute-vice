@@ -1,0 +1,308 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Tablero del distributivo</h1>
+    <p class="texto-sm texto-suave">
+      Avance de la validacion de la carga docente, un periodo frente a otro
+    </p>
+  </div>
+
+  <button type="button" class="btn btn--secundario btn--sm no-imprimir" (click)="cargar()">
+    Actualizar
+  </button>
+</header>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando indicadores…" />
+} @else if (datos(); as d) {
+  @if (d.periodos.length === 0) {
+    <ute-vacio
+      titulo="Todavia no hay carga"
+      mensaje="Cuando se importe un periodo, sus indicadores apareceran aqui."
+    />
+  } @else {
+    <!-- ------------------------------------------------ eleccion de periodos -->
+    <section class="selectores no-imprimir" aria-label="Periodos que se comparan">
+      <label class="campo">
+        <span class="campo__etiqueta">Periodo actual</span>
+        <select
+          class="entrada"
+          [ngModel]="paoId()"
+          (ngModelChange)="cambiarActual($event)"
+          name="paoActual"
+        >
+          @for (p of d.periodos; track p.id) {
+            <option [value]="p.id">{{ p.nombre }} · {{ p.filas | number }} filas</option>
+          }
+        </select>
+      </label>
+
+      <label class="campo">
+        <span class="campo__etiqueta">Comparado con</span>
+        <select
+          class="entrada"
+          [ngModel]="paoAnteriorId()"
+          (ngModelChange)="cambiarAnterior($event)"
+          name="paoAnterior"
+        >
+          <option value="">Sin comparacion</option>
+          @for (p of d.periodos; track p.id) {
+            @if (p.id !== paoId()) {
+              <option [value]="p.id">{{ p.nombre }} · {{ p.filas | number }} filas</option>
+            }
+          }
+        </select>
+      </label>
+    </section>
+
+    @if (d.actual; as actual) {
+      <!-- ------------------------------------------------------ indicadores -->
+      <section class="rejilla rejilla--4 seccion" aria-label="Indicadores del periodo">
+        <article class="metrica">
+          <p class="metrica__etiqueta">Filas del periodo</p>
+          <p class="metrica__valor">{{ actual.total | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            {{ actual.docentes | number }} docentes ·
+            {{ actual.horas | number: '1.0-1' }} horas
+            @if (variacionDeFilas(); as variacion) {
+              <span [class.negativo]="variacion < 0">
+                · {{ variacion > 0 ? '+' : '' }}{{ variacion | number }} frente al anterior
+              </span>
+            }
+          </p>
+        </article>
+
+        <article class="metrica">
+          <p class="metrica__etiqueta">Aprobado</p>
+          <p class="metrica__valor">{{ porcentaje(actual) }}</p>
+          <div class="barra metrica__barra">
+            <div
+              class="barra__relleno"
+              [style.width.%]="actual.evaluadas ? actual.porcentajeAprobado : 0"
+            ></div>
+          </div>
+          <p class="metrica__pie texto-xs texto-tenue">
+            {{ actual.aprobadas | number }} de {{ actual.evaluadas | number }} con estado
+          </p>
+        </article>
+
+        <article class="metrica">
+          <p class="metrica__etiqueta">Pendientes de validar</p>
+          <p class="metrica__valor">{{ actual.pendientes | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            {{ actual.conError | number }} con error
+          </p>
+        </article>
+
+        <article class="metrica">
+          <p class="metrica__etiqueta">Sin estado registrado</p>
+          <p class="metrica__valor">{{ actual.sinEstado | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            El sistema academico entrega este dato desde 2026-2
+          </p>
+        </article>
+      </section>
+
+      <!-- ------------------------------------------- tabla: aprobacion -->
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera">
+          <h2 class="tarjeta__titulo">Aprobacion de los dos periodos</h2>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Periodo</th>
+                <th scope="col" class="der">Filas</th>
+                <th scope="col" class="der">Con estado</th>
+                <th scope="col" class="der">Aprobadas</th>
+                <th scope="col" class="der">% aprobado</th>
+                <th scope="col" class="der">Docentes</th>
+                <th scope="col" class="der">Horas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">{{ actual.nombre }} <span class="mono texto-xs texto-tenue">{{ actual.codigo }}</span></th>
+                <td class="der mono">{{ actual.total | number }}</td>
+                <td class="der mono">{{ actual.evaluadas | number }}</td>
+                <td class="der mono">{{ actual.aprobadas | number }}</td>
+                <td class="der mono fuerte">{{ porcentaje(actual) }}</td>
+                <td class="der mono">{{ actual.docentes | number }}</td>
+                <td class="der mono">{{ actual.horas | number: '1.0-1' }}</td>
+              </tr>
+
+              @if (d.anterior; as anterior) {
+                <tr class="tabla__fila--tenue">
+                  <th scope="row">{{ anterior.nombre }} <span class="mono texto-xs texto-tenue">{{ anterior.codigo }}</span></th>
+                  <td class="der mono">{{ anterior.total | number }}</td>
+                  <td class="der mono">{{ anterior.evaluadas | number }}</td>
+                  <td class="der mono">{{ anterior.aprobadas | number }}</td>
+                  <td class="der mono fuerte">{{ porcentaje(anterior) }}</td>
+                  <td class="der mono">{{ anterior.docentes | number }}</td>
+                  <td class="der mono">{{ anterior.horas | number: '1.0-1' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (!hayComparacion() && d.anterior) {
+          <p class="nota texto-sm texto-tenue">
+            {{ d.anterior.nombre }} no trae estado de validacion: el sistema academico
+            empezo a entregarlo en 2026-2, asi que su porcentaje no es comparable y se
+            muestra como «—».
+          </p>
+        }
+      </section>
+
+      <!-- ----------------------------------------- tabla: desglose por estado -->
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera">
+          <h2 class="tarjeta__titulo">Desglose por estado</h2>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Estado</th>
+                <th scope="col" class="der">{{ actual.codigo }}</th>
+                <th scope="col" class="der">%</th>
+                @if (d.anterior; as anterior) {
+                  <th scope="col" class="der">{{ anterior.codigo }}</th>
+                  <th scope="col" class="der">%</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of desgloseDeEstados(); track fila.codigo) {
+                <tr>
+                  <th scope="row">
+                    <span class="punto" [class]="'punto--' + fila.codigo.toLowerCase()"></span>
+                    {{ fila.etiqueta }}
+                  </th>
+                  <td class="der mono">{{ fila.actual | number }}</td>
+                  <td class="der mono texto-tenue">{{ fila.porcentajeActual | number: '1.0-1' }} %</td>
+                  @if (d.anterior) {
+                    <td class="der mono">{{ fila.anterior | number }}</td>
+                    <td class="der mono texto-tenue">
+                      {{ fila.porcentajeAnterior | number: '1.0-1' }} %
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td class="der mono fuerte">{{ actual.total | number }}</td>
+                <td class="der mono texto-tenue">100 %</td>
+                @if (d.anterior; as anterior) {
+                  <td class="der mono fuerte">{{ anterior.total | number }}</td>
+                  <td class="der mono texto-tenue">100 %</td>
+                }
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------- graficos -->
+      <section class="rejilla rejilla--2 seccion" aria-label="Graficos">
+        <article class="tarjeta">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Estados de {{ actual.codigo }}</h2>
+          </div>
+          <div class="tarjeta__cuerpo">
+            <ute-grafico-anillo
+            [datos]="estadosConEtiqueta()"
+            titulo="Estados de validacion"
+            unidad="filas"
+          />
+          </div>
+        </article>
+
+        <article class="tarjeta">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Aprobacion por facultad (%)</h2>
+          </div>
+          <div class="tarjeta__cuerpo">
+            <ute-grafico-barras [datos]="avancePorFacultad()" titulo="Aprobacion por facultad" />
+          </div>
+        </article>
+
+        <article class="tarjeta">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Filas por sede</h2>
+          </div>
+          <div class="tarjeta__cuerpo">
+            <ute-grafico-barras [datos]="d.porSede" titulo="Filas por sede" />
+          </div>
+        </article>
+
+        <article class="tarjeta">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Filas por dedicacion</h2>
+          </div>
+          <div class="tarjeta__cuerpo">
+            <ute-grafico-anillo [datos]="d.porDedicacion" titulo="Dedicacion" unidad="filas" />
+          </div>
+        </article>
+      </section>
+
+      <!-- --------------------------------------- tabla: comparativa facultad -->
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera">
+          <h2 class="tarjeta__titulo">Facultades, los dos periodos</h2>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Facultad</th>
+                <th scope="col" class="der">Filas {{ actual.codigo }}</th>
+                <th scope="col" class="der">% aprobado</th>
+                @if (d.anterior; as anterior) {
+                  <th scope="col" class="der">Filas {{ anterior.codigo }}</th>
+                  <th scope="col" class="der">% aprobado</th>
+                  <th scope="col" class="der">Variacion</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of d.porFacultad; track fila.etiqueta) {
+                <tr>
+                  <th scope="row">{{ fila.etiqueta }}</th>
+                  <td class="der mono">{{ fila.totalActual | number }}</td>
+                  <td class="der mono">
+                    {{ porcentajeFila(fila.aprobadasActual, fila.evaluadasActual) }}
+                  </td>
+                  @if (d.anterior) {
+                    <td class="der mono">{{ fila.totalAnterior | number }}</td>
+                    <td class="der mono">
+                      {{ porcentajeFila(fila.aprobadasAnterior, fila.evaluadasAnterior) }}
+                    </td>
+                    <td
+                      class="der mono"
+                      [class.positivo]="fila.evaluadasAnterior > 0 && fila.variacion > 0"
+                      [class.negativo]="fila.evaluadasAnterior > 0 && fila.variacion < 0"
+                    >
+                      {{ variacionDeFila(fila) }}
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="texto-tenue">Sin facultades en estos periodos</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="texto-xs texto-tenue">
+        Calculado el {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}
+      </p>
+    }
+  }
+}

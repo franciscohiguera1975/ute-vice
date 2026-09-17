@@ -159,6 +159,8 @@ dentro del periodo vigente. Use `?forzar=true` con justificacion.
 | Metodo | Ruta | Permiso |
 |---|---|---|
 | `GET` | `/tablero?dias=30` | `dashboard:ver` |
+| `GET` | `/distributivo/tablero` | `distributivo:leer` |
+| `POST` | `/distributivo/importaciones/pao` | `distributivo:importar` |
 | `GET` | `/reportes/formatos` | `reportes:generar` |
 | `GET` | `/reportes/personas` | `reportes:generar` |
 | `GET` | `/reportes/titulos` | `reportes:generar` |
@@ -166,6 +168,17 @@ dentro del periodo vigente. Use `?forzar=true` con justificacion.
 
 Los reportes devuelven el archivo binario con `Content-Disposition`. Parametro
 `formato`: `XLSX`, `CSV` o `PDF`.
+
+`GET /distributivo/tablero` acepta `pao_id` y `pao_anterior_id`. Sin ellos toma
+el periodo mas reciente con carga y el anterior del mismo nivel. Pide
+`distributivo:leer` y no `dashboard:ver` para que el rol de consulta del
+distributivo pueda verlo.
+
+`POST /distributivo/importaciones/pao` es `multipart/form-data`: `archivo`
+(`.xls`, `.xlsx` o `.xlsm`, hasta 25 MB), `semestre` (`2026-2`, obligatorio
+porque el archivo no lo trae), `interciclo`, `actualizar_existentes` y `hoja`.
+Devuelve el informe de la carga; **422** si el archivo no tiene la estructura
+esperada.
 
 ### Administracion
 

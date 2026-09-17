@@ -8,9 +8,12 @@ entra dos veces al catalogo con dos nombres.
 
 from __future__ import annotations
 
+from io import BytesIO
+
 import pytest
 from openpyxl import Workbook
 
+from app.domain.errors import ErrorValidacion
 from app.infrastructure.importadores.pao_excel import LectorPaoExcel
 
 pytestmark = pytest.mark.unit
@@ -230,3 +233,56 @@ class TestCategoria:
             hacer_archivo(tmp_path, fila(**{"Categoría": "N/A"})), pao="2026-2"
         )
         assert filas[0].categoria is None
+
+
+class TestOrigenDelArchivo:
+    """De donde se lee: ruta o contenido, `.xlsx` o el `.xls` de 2003.
+
+    El sistema academico exporta en formato Excel 97-2003, que openpyxl no
+    abre. Antes habia que convertirlo a mano antes de cada carga; leerlo
+    directamente es lo que permite subirlo desde la interfaz.
+    """
+
+    def test_lee_desde_bytes_igual_que_desde_la_ruta(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        archivo = hacer_archivo(tmp_path, fila())
+
+        desde_ruta, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+        desde_bytes, _ = LectorPaoExcel().leer(archivo.read_bytes(), pao="2026-2")
+
+        assert desde_bytes == desde_ruta
+
+    def test_lee_el_formato_de_excel_97_2003(self) -> None:
+        xlwt = pytest.importorskip("xlwt", reason="solo para fabricar un .xls de prueba")
+
+        libro = xlwt.Workbook()
+        hoja = libro.add_sheet("Distributivo")
+        for columna, titulo in enumerate(CABECERA):
+            hoja.write(0, columna, titulo)
+        for columna, valor in enumerate(fila()):
+            hoja.write(1, columna, valor)
+
+        memoria = BytesIO()
+        libro.save(memoria)
+        contenido = memoria.getvalue()
+
+        # Es realmente un documento OLE2, que es lo que distingue al formato.
+        assert contenido[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+        filas, _ = LectorPaoExcel().leer(contenido, pao="2026-2")
+
+        assert len(filas) == 1
+        assert filas[0].identificacion == "1710034065"
+        assert filas[0].carrera == "UIO:ARQUITECTURA - GRADO - PRESENCIAL"
+        assert filas[0].sistema.semanas == 16
+
+    def test_un_archivo_que_no_es_una_hoja_de_calculo_se_rechaza(self) -> None:
+        with pytest.raises(ErrorValidacion):
+            LectorPaoExcel().leer(b"esto no es un libro de Excel", pao="2026-2")
+
+    def test_un_archivo_vacio_se_rechaza(self) -> None:
+        with pytest.raises(ErrorValidacion):
+            LectorPaoExcel().leer(b"", pao="2026-2")
+
+    def test_una_ruta_que_no_existe_se_rechaza(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        with pytest.raises(ErrorValidacion):
+            LectorPaoExcel().leer(tmp_path / "no-esta.xlsx", pao="2026-2")

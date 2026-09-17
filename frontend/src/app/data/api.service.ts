@@ -50,6 +50,23 @@ export class ApiService {
       .pipe(map((respuesta) => aCamel<T>(respuesta)));
   }
 
+  /**
+   * Envia un archivo con campos adicionales.
+   *
+   * No pasa por `aSnake`: `FormData` lleva los nombres de campo tal cual, y el
+   * backend los declara ya en `snake_case`. Tampoco se fija el
+   * `Content-Type` — el navegador tiene que anadir el `boundary`.
+   */
+  subir<T>(ruta: string, archivo: File, campos: Record<string, string>): Observable<T> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo, archivo.name);
+    for (const [clave, valor] of Object.entries(campos)) cuerpo.append(clave, valor);
+
+    return this.http
+      .post<unknown>(this.url(ruta), cuerpo)
+      .pipe(map((respuesta) => aCamel<T>(respuesta)));
+  }
+
   patch<T>(ruta: string, cuerpo: unknown): Observable<T> {
     return this.http
       .patch<unknown>(this.url(ruta), aSnake(cuerpo))

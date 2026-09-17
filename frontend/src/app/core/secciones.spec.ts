@@ -75,3 +75,45 @@ describe('rutaDeInicio', () => {
     expect(SECCIONES.some((s) => s.ruta === RUTA_REFUGIO)).toBeFalse();
   });
 });
+
+/**
+ * El menu del rol de consulta.
+ *
+ * Es de solo lectura: ve los indicadores del distributivo —que piden
+ * `distributivo:leer` y no `dashboard:ver`, justamente para esto— y no ve la
+ * carga de archivos, que modifica datos.
+ */
+describe('secciones del rol de consulta del distributivo', () => {
+  const sesion = sesionCon(
+    Permiso.DISTRIBUTIVO_LEER,
+    Permiso.CATALOGOS_LEER,
+    Permiso.REPORTES_GENERAR,
+  );
+
+  const visibles = () =>
+    SECCIONES.filter((s) => sesion.puedeAlguno(...s.permisos)).map((s) => s.ruta);
+
+  it('incluye el tablero del distributivo', () => {
+    expect(visibles()).toContain('/distributivo/tablero');
+  });
+
+  it('no incluye la carga de un PAO', () => {
+    expect(visibles()).not.toContain('/distributivo/importar');
+  });
+
+  it('no incluye ninguna seccion que escriba', () => {
+    expect(visibles()).not.toContain('/distributivo/asignaturas');
+    expect(visibles()).not.toContain('/administracion');
+  });
+});
+
+describe('la carga de un PAO', () => {
+  it('solo aparece con permiso de importar', () => {
+    const importador = sesionCon(Permiso.DISTRIBUTIVO_IMPORTAR);
+    const seccion = SECCIONES.find((s) => s.ruta === '/distributivo/importar');
+
+    expect(seccion).toBeDefined();
+    expect(importador.puedeAlguno(...seccion!.permisos)).toBeTrue();
+    expect(sesionCon(Permiso.DISTRIBUTIVO_ESCRIBIR).puedeAlguno(...seccion!.permisos)).toBeFalse();
+  });
+});

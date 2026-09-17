@@ -1,0 +1,286 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Cargar un PAO</h1>
+    <p class="texto-sm texto-suave">
+      Distributivo exportado por el sistema academico, en formato
+      <span class="mono">.xls</span> o <span class="mono">.xlsx</span>
+    </p>
+  </div>
+
+  <a class="btn btn--secundario btn--sm" routerLink="/distributivo/tablero">Ver el tablero</a>
+</header>
+
+<section class="tarjeta seccion">
+  <div class="tarjeta__cabecera">
+    <h2 class="tarjeta__titulo">Archivo y periodo</h2>
+  </div>
+
+  <div class="tarjeta__cuerpo">
+    <div class="rejilla rejilla--2">
+      <label class="campo">
+        <span class="campo__etiqueta">Archivo</span>
+        <input
+          type="file"
+          class="campo__control"
+          [accept]="EXTENSIONES.join(',')"
+          (change)="elegir($event)"
+        />
+        @if (errorArchivo()) {
+          <span class="campo__error">{{ errorArchivo() }}</span>
+        } @else if (archivo(); as elegido) {
+          <span class="campo__ayuda">{{ elegido.name }} · {{ tamano(elegido) }}</span>
+        } @else {
+          <span class="campo__ayuda">Hasta {{ TOPE_MB }} MB</span>
+        }
+      </label>
+
+      <label class="campo">
+        <span class="campo__etiqueta">
+          Semestre <span class="campo__requerido">*</span>
+        </span>
+        <input
+          type="text"
+          class="campo__control"
+          [class.campo__control--error]="semestre() && !semestreValido()"
+          placeholder="2026-2"
+          [ngModel]="semestre()"
+          (ngModelChange)="semestre.set($event)"
+          name="semestre"
+        />
+        <span class="campo__ayuda">
+          El archivo no lo trae: hay que indicarlo. Formato <span class="mono">AAAA-1</span>
+          o <span class="mono">AAAA-2</span>.
+        </span>
+      </label>
+    </div>
+
+    <div class="rejilla rejilla--2">
+      <label class="campo casilla">
+        <input
+          type="checkbox"
+          [ngModel]="interciclo()"
+          (ngModelChange)="interciclo.set($event)"
+          name="interciclo"
+        />
+        <span>
+          <strong>Interciclo</strong>
+          <span class="campo__ayuda">
+            El periodo corto entre dos ordinarios. No se deduce del archivo: sus filas
+            dicen el mismo semestre que el ordinario.
+          </span>
+        </span>
+      </label>
+
+      <label class="campo casilla">
+        <input
+          type="checkbox"
+          [ngModel]="actualizarExistentes()"
+          (ngModelChange)="actualizarExistentes.set($event)"
+          name="actualizar"
+        />
+        <span>
+          <strong>Actualizar las filas que ya existan</strong>
+          <span class="campo__ayuda">
+            Recomendado al recargar un periodo corregido. Sin esto, la carga rechaza
+            cada fila que ya este registrada.
+          </span>
+        </span>
+      </label>
+    </div>
+
+    <details class="avanzado">
+      <summary class="texto-sm texto-suave">Opciones avanzadas</summary>
+      <label class="campo">
+        <span class="campo__etiqueta">Hoja del libro</span>
+        <input
+          type="text"
+          class="campo__control"
+          placeholder="La primera"
+          [ngModel]="hoja()"
+          (ngModelChange)="hoja.set($event)"
+          name="hoja"
+        />
+      </label>
+    </details>
+
+    <p class="aviso-formato texto-sm texto-tenue">
+      Un archivo cubre un semestre pero produce <strong>hasta tres periodos</strong>:
+      tecnologia, grado y posgrado. A cual va cada fila lo decide su facultad. Las filas
+      que juntan varias carreras o sedes en una celda quedan fuera —su clave exige una
+      carrera y una sede— y se listan al terminar.
+    </p>
+
+    <div class="fila hueco-sm">
+      <button
+        type="button"
+        class="btn btn--primario"
+        [disabled]="!puedeSubir()"
+        (click)="subir()"
+      >
+        {{ subiendo() ? 'Cargando…' : 'Cargar el archivo' }}
+      </button>
+      <button type="button" class="btn btn--fantasma" [disabled]="subiendo()" (click)="limpiar()">
+        Limpiar
+      </button>
+    </div>
+  </div>
+</section>
+
+@if (resultado(); as r) {
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Resultado de la carga — {{ r.periodo }}</h2>
+    </div>
+
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--4 seccion">
+        <article class="metrica">
+          <p class="metrica__etiqueta">Filas leidas</p>
+          <p class="metrica__valor">{{ r.totalFilasLeidas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Creadas</p>
+          <p class="metrica__valor">{{ r.filasCreadas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Actualizadas</p>
+          <p class="metrica__valor">{{ r.filasActualizadas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Docentes nuevos</p>
+          <p class="metrica__valor">{{ r.docentesCreados | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            {{ r.docentesExistentes | number }} ya registrados
+          </p>
+        </article>
+      </div>
+
+      @if (catalogosCreados().length > 0) {
+        <h3 class="subtitulo">Catalogos poblados</h3>
+        <ul class="etiquetas">
+          @for (entrada of catalogosCreados(); track entrada[0]) {
+            <li class="etiqueta">
+              {{ entrada[0] }} <span class="mono">+{{ entrada[1] }}</span>
+            </li>
+          }
+        </ul>
+        <p class="texto-xs texto-tenue">
+          Valores que no existian y se crearon al vuelo. Conviene revisarlos en Catalogos:
+          una carrera escrita de otra forma entra como carrera nueva.
+        </p>
+      }
+
+      @if (r.consolidaciones.length > 0) {
+        <h3 class="subtitulo">
+          Filas fusionadas ({{ r.filasConsolidadas | number }})
+        </h3>
+        <p class="texto-sm texto-tenue">
+          El archivo traia la misma carga dos veces —mismo docente, periodo, carrera y
+          sede—. Se sumaron las horas.
+        </p>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Identificacion</th>
+                <th scope="col">Carrera</th>
+                <th scope="col">Sede</th>
+                <th scope="col">Filas del archivo</th>
+                <th scope="col" class="der">Horas</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of r.consolidaciones.slice(0, TOPE_LISTA); track $index) {
+                <tr>
+                  <td class="mono">{{ c.identificacion }}</td>
+                  <td class="truncar">{{ c.carrera }}</td>
+                  <td>{{ c.sede ?? '—' }}</td>
+                  <td class="mono">{{ c.filasOrigen.join(', ') }}</td>
+                  <td class="der mono">{{ c.totalHorasResultante | number: '1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (r.consolidaciones.length > TOPE_LISTA) {
+          <p class="texto-xs texto-tenue">
+            … y {{ r.consolidaciones.length - TOPE_LISTA }} mas.
+          </p>
+        }
+      }
+
+      @if (r.noDesglosadas.length > 0) {
+        <h3 class="subtitulo">
+          Filas que no se pudieron desglosar ({{ r.noDesglosadas.length | number }})
+        </h3>
+        <p class="texto-sm texto-tenue">
+          Juntan varias carreras o sedes en una celda, con un total de horas unico que no
+          se puede repartir entre ellas. Quedan fuera en lugar de inventar una atribucion.
+        </p>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col" class="der">Fila</th>
+                <th scope="col">Identificacion</th>
+                <th scope="col">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of r.noDesglosadas.slice(0, TOPE_LISTA); track $index) {
+                <tr>
+                  <td class="der mono">{{ f.numeroFila }}</td>
+                  <td class="mono">{{ f.identificacion }}</td>
+                  <td>{{ f.motivo }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (r.noDesglosadas.length > TOPE_LISTA) {
+          <p class="texto-xs texto-tenue">
+            … y {{ r.noDesglosadas.length - TOPE_LISTA }} mas.
+          </p>
+        }
+      }
+
+      @if (r.rechazadas.length > 0) {
+        <h3 class="subtitulo texto-error">
+          Rechazadas por la validacion ({{ r.rechazadas.length | number }})
+        </h3>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col" class="der">Fila</th>
+                <th scope="col">Identificacion</th>
+                <th scope="col">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of r.rechazadas.slice(0, TOPE_LISTA); track $index) {
+                <tr>
+                  <td class="der mono">{{ f.numeroFila }}</td>
+                  <td class="mono">{{ f.identificacion }}</td>
+                  <td>{{ f.motivo }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (r.rechazadas.length > TOPE_LISTA) {
+          <p class="texto-xs texto-tenue">… y {{ r.rechazadas.length - TOPE_LISTA }} mas.</p>
+        }
+      }
+
+      <p class="fila hueco-sm">
+        <a class="btn btn--secundario btn--sm" routerLink="/distributivo/tablero">
+          Ver el tablero del periodo
+        </a>
+        <a class="btn btn--fantasma btn--sm" routerLink="/distributivo">
+          Ir al distributivo
+        </a>
+      </p>
+    </div>
+  </section>
+}

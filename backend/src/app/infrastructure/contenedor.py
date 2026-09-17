@@ -24,7 +24,10 @@ from app.application.casos_uso.autenticacion import PoliticaAcceso
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.domain.enums import AuthProvider
-from app.domain.ports.analitica import RepositorioAnalitica
+from app.domain.ports.analitica import (
+    RepositorioAnalitica,
+    RepositorioAnaliticaDistributivo,
+)
 from app.domain.ports.reloj import (
     AleatorioDelSistema,
     FuenteAleatoria,
@@ -42,6 +45,9 @@ from app.domain.ports.uow import UnidadDeTrabajo
 from app.domain.services.planificacion import ConfiguracionRitmo, PoliticaPlanificacion
 from app.domain.services.reconciliador import ReconciliadorTitulos
 from app.infrastructure.db.analitica import RepositorioAnaliticaSQL
+from app.infrastructure.db.analitica_distributivo import (
+    RepositorioAnaliticaDistributivoSQL,
+)
 from app.infrastructure.db.sesion import crear_fabrica_sesiones, crear_motor
 from app.infrastructure.db.uow import UnidadDeTrabajoSQL
 from app.infrastructure.reportes.registro import RegistroExportadoresEnMemoria
@@ -82,6 +88,9 @@ class Contenedor:
 
     def analitica(self, sesion: AsyncSession) -> RepositorioAnalitica:
         return RepositorioAnaliticaSQL(sesion)
+
+    def analitica_distributivo(self, sesion: AsyncSession) -> RepositorioAnaliticaDistributivo:
+        return RepositorioAnaliticaDistributivoSQL(sesion)
 
     # -------------------------------------------------------------- tiempo
     @cached_property
