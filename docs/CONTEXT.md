@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 21 — cerradas
+### Fases 12 a 22 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -267,7 +267,15 @@ dice el origen y existe el nivel `TECNOLOGIA`
 >
 > La facultad previa no es deducible del dato —FCSEE ya tenia filas con las
 > mismas carreras—, asi que la migracion guarda los ids en
-> `distributivo_facultad_previa` para poder deshacerlo.
+> `distributivo_valor_previo` para poder deshacerlo.
+
+**22**: se unifican cuatro categorias que duplicaban a las existentes
+([changelog](changelogs/22-categorias-duplicadas.md)).
+
+> Las restricciones siguen la convencion de `Base.metadata`: la clave primaria
+> es `pk_<tabla>`, no `<tabla>_pkey`. Y los parametros repetidos en una sentencia
+> necesitan `CAST(... AS varchar)`, o asyncpg falla con
+> `AmbiguousParameterError` — es la segunda vez que ocurre.
 
 ### Fase 14 — espera confirmacion funcional
 
