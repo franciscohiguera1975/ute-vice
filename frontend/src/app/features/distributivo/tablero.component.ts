@@ -1,33 +1,45 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 
+import { DescargaService } from '@core/descarga.service';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
   ETIQUETAS_ESTADO_VALIDACION,
+  FormatoReporte,
+  Permiso,
+  TipoResumen,
   type Conteo,
   type ErrorApi,
   type FilaComparativa,
   type TableroDistributivo,
-  type ValidacionDePeriodo,
+  type ValidacionDeGrupo,
 } from '@domain/modelos';
 import { RepositorioDistributivo } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
 import { VacioComponent } from '@shared/componentes/vacio.component';
+import { PermisoDirective } from '@shared/directivas/permiso.directive';
 
 import {
   GraficoAnilloComponent,
   GraficoBarrasComponent,
 } from '@features/tablero/graficos.component';
 
+import { SelectorGruposComponent } from './selector-grupos.component';
+
 /**
  * Tablero del distributivo docente.
  *
- * Compara dos periodos. El eje del que cuelga todo es el estado de validacion,
- * que el sistema academico empezo a entregar en 2026-2; los periodos anteriores
- * lo tienen vacio, y por eso el porcentaje se calcula sobre las filas
- * **evaluadas** y no sobre el total. Un periodo sin ese dato muestra un guion,
- * no un cero: no es que nada estuviera aprobado, es que no se sabe.
+ * Compara dos **grupos** de periodos, no dos periodos: un semestre son tres
+ * —tecnologia, grado y posgrado— mas sus interciclos, y mirar solo el de grado
+ * deja fuera media institucion. Usa el mismo selector y la misma propuesta por
+ * defecto que los resumenes, para que las dos pantallas no digan cifras
+ * distintas del mismo periodo.
+ *
+ * El eje del que cuelga todo es el estado de validacion, que el sistema
+ * academico empezo a entregar en 2026-2; los periodos anteriores lo tienen
+ * vacio, y por eso el porcentaje se calcula sobre las filas **evaluadas** y no
+ * sobre el total. Un grupo sin ese dato muestra un guion, no un cero: no es que
+ * nada estuviera aprobado, es que no se sabe.
  */
 @Component({
   selector: 'ute-tablero-distributivo',
@@ -35,9 +47,10 @@ import {
   imports: [
     DatePipe,
     DecimalPipe,
-    FormsModule,
     CargandoComponent,
     VacioComponent,
+    PermisoDirective,
+    SelectorGruposComponent,
     GraficoAnilloComponent,
     GraficoBarrasComponent,
   ],
@@ -48,11 +61,23 @@ import {
 export class TableroDistributivoComponent {
   private readonly repositorio = inject(RepositorioDistributivo);
   private readonly notificaciones = inject(NotificacionesService);
+  private readonly descarga = inject(DescargaService);
+
+  protected readonly Permiso = Permiso;
 
   protected readonly datos = signal<TableroDistributivo | null>(null);
   protected readonly cargando = signal(true);
-  protected readonly paoId = signal('');
-  protected readonly paoAnteriorId = signal('');
+
+  /** Grupo 1 es la referencia y grupo 2 el que se examina, como en resumenes. */
+  protected readonly grupoA = signal<readonly string[]>([]);
+  protected readonly grupoB = signal<readonly string[]>([]);
+
+  protected readonly descargando = signal<FormatoReporte | null>(null);
+  protected readonly formatos = [
+    { valor: FormatoReporte.XLSX, etiqueta: 'Excel' },
+    { valor: FormatoReporte.CSV, etiqueta: 'CSV' },
+    { valor: FormatoReporte.PDF, etiqueta: 'PDF' },
+  ];
 
   constructor() {
     this.cargar();
@@ -60,13 +85,15 @@ export class TableroDistributivoComponent {
 
   protected cargar(): void {
     this.cargando.set(true);
-    this.repositorio.tablero(this.paoId() || undefined, this.paoAnteriorId() || undefined).subscribe({
+    this.repositorio.tablero(this.grupoA(), this.grupoB()).subscribe({
       next: (tablero) => {
         this.datos.set(tablero);
-        // El backend decide los periodos cuando no se indican; se reflejan en
-        // los selectores para que la pantalla diga exactamente que compara.
-        this.paoId.set(tablero.actual?.paoId ?? '');
-        this.paoAnteriorId.set(tablero.anterior?.paoId ?? '');
+        // El backend propone los dos ultimos semestres cuando no se pide nada;
+        // se reflejan en el selector para que la pantalla diga que compara.
+        if (this.grupoA().length === 0 && this.grupoB().length === 0) {
+          this.grupoA.set(this.idsDe(tablero, tablero.anterior?.codigos ?? []));
+          this.grupoB.set(this.idsDe(tablero, tablero.actual?.codigos ?? []));
+        }
         this.cargando.set(false);
       },
       error: (error: ErrorApi) => {
@@ -76,17 +103,9 @@ export class TableroDistributivoComponent {
     });
   }
 
-  protected cambiarActual(id: string): void {
-    this.paoId.set(id);
-    // Se deja que el backend vuelva a elegir el comparado: al cambiar de nivel
-    // —grado a posgrado— el anterior que estaba puesto ya no es comparable.
-    this.paoAnteriorId.set('');
-    this.cargar();
-  }
-
-  protected cambiarAnterior(id: string): void {
-    this.paoAnteriorId.set(id);
-    this.cargar();
+  private idsDe(datos: TableroDistributivo, codigos: readonly string[]): string[] {
+    const buscados = new Set(codigos);
+    return datos.periodos.filter((p) => buscados.has(p.codigo)).map((p) => p.id);
   }
 
   // ------------------------------------------------------------ derivados
@@ -109,7 +128,7 @@ export class TableroDistributivoComponent {
   );
 
   /**
-   * Diferencia de filas entre los dos periodos.
+   * Diferencia de filas entre los dos grupos.
    *
    * Es lo primero que se mira al recibir un PAO nuevo: si el periodo entrante
    * trae mucha menos carga que el anterior, la exportacion vino incompleta.
@@ -122,10 +141,10 @@ export class TableroDistributivoComponent {
 
   protected readonly hayComparacion = computed(() => (this.datos()?.anterior?.evaluadas ?? 0) > 0);
 
-  /** Un periodo sin estados no aporta un porcentaje, aporta un guion. */
-  protected porcentaje(periodo: ValidacionDePeriodo | null | undefined): string {
-    if (!periodo || periodo.evaluadas === 0) return '—';
-    return `${periodo.porcentajeAprobado.toFixed(1)} %`;
+  /** Un grupo sin estados no aporta un porcentaje, aporta un guion. */
+  protected porcentaje(grupo: ValidacionDeGrupo | null | undefined): string {
+    if (!grupo || grupo.evaluadas === 0) return '—';
+    return `${grupo.porcentajeAprobado.toFixed(1)} %`;
   }
 
   protected porcentajeFila(aprobadas: number, evaluadas: number): string {
@@ -142,6 +161,11 @@ export class TableroDistributivoComponent {
     return ETIQUETAS_ESTADO_VALIDACION[codigo] ?? codigo;
   }
 
+  /** Los codigos del grupo, para titular columnas sin repetir la logica. */
+  protected codigosDe(grupo: ValidacionDeGrupo | null | undefined): string {
+    return grupo?.codigos.join(' · ') || 'sin periodos';
+  }
+
   /**
    * Las cinco filas de la tabla de estados, incluidas las que valen cero.
    *
@@ -153,8 +177,8 @@ export class TableroDistributivoComponent {
     const d = this.datos();
     const orden = ['OK', 'OK_EXCEPCION', 'PENDIENTE', 'ERROR', 'SIN_ESTADO'];
 
-    const valores = (periodo: ValidacionDePeriodo | null) =>
-      new Map((periodo?.porEstado ?? []).map((c) => [c.etiqueta, c.valor]));
+    const valores = (grupo: ValidacionDeGrupo | null) =>
+      new Map((grupo?.porEstado ?? []).map((c) => [c.etiqueta, c.valor]));
 
     const actual = valores(d?.actual ?? null);
     const anterior = valores(d?.anterior ?? null);
@@ -170,4 +194,34 @@ export class TableroDistributivoComponent {
       porcentajeAnterior: totalAnterior ? ((anterior.get(codigo) ?? 0) / totalAnterior) * 100 : 0,
     }));
   });
+
+  // ------------------------------------------------------------- descarga
+  /**
+   * Descarga una de las dos tablas del tablero.
+   *
+   * Sale del mismo caso de uso que la pantalla, no de los datos ya cargados:
+   * asi el archivo no puede decir otra cosa que lo que se esta viendo.
+   */
+  protected descargar(resumen: TipoResumen, formato: FormatoReporte): void {
+    if (this.descargando()) return;
+    this.descargando.set(formato);
+
+    this.repositorio
+      .exportarResumen(
+        { resumen, grupoA: this.grupoA(), grupoB: this.grupoB(), grupo: 'b' },
+        formato,
+      )
+      .subscribe({
+        next: (archivo) => {
+          this.descarga.guardar(archivo);
+          this.descargando.set(null);
+        },
+        error: (error: ErrorApi) => {
+          this.descargando.set(null);
+          this.notificaciones.error(error.mensaje ?? 'No se pudo generar el archivo');
+        },
+      });
+  }
+
+  protected readonly TipoResumen = TipoResumen;
 }

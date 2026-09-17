@@ -1,0 +1,63 @@
+<p class="texto-sm texto-tenue nota-grupos">
+  Un semestre son varios periodos —tecnologia, grado y posgrado, mas sus
+  interciclos—. Marque el semestre entero de un clic, o abra el detalle para elegir
+  periodo a periodo.
+</p>
+
+<div class="grupos">
+  @for (grupo of GRUPOS; track grupo) {
+    <div class="grupo">
+      <div class="fila entre hueco-sm grupo__cabecera">
+        <h3 class="grupo__titulo">{{ etiqueta(grupo) }}</h3>
+        <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiar(grupo)">
+          Limpiar
+        </button>
+      </div>
+
+      <div class="chips">
+        @for (semestre of semestres(); track semestre.clave) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--activo]="semestreCompleto(grupo, semestre)"
+            (click)="alternarSemestre(grupo, semestre)"
+          >
+            {{ semestre.clave }}
+            <span class="chip__cuenta">{{ semestre.filas | number }}</span>
+          </button>
+        }
+      </div>
+
+      <details class="detalle">
+        <summary class="texto-sm texto-suave">Elegir periodo a periodo</summary>
+        <ul class="periodos">
+          @for (semestre of semestres(); track semestre.clave) {
+            @for (p of semestre.periodos; track p.id) {
+              <li>
+                <label class="periodo">
+                  <input
+                    type="checkbox"
+                    [checked]="seleccionado(grupo, p.id)"
+                    (change)="alternarPeriodo(grupo, p.id)"
+                  />
+                  <span class="mono">{{ p.codigo }}</span>
+                  <span class="periodo__nombre">{{ p.nombre }}</span>
+                  <span class="texto-xs texto-tenue">{{ p.filas | number }}</span>
+                </label>
+              </li>
+            }
+          }
+        </ul>
+      </details>
+    </div>
+  }
+</div>
+
+<button
+  type="button"
+  class="btn btn--primario"
+  [disabled]="!puedeComparar()"
+  (click)="comparar.emit()"
+>
+  Comparar
+</button>

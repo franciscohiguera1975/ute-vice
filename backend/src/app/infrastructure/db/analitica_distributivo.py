@@ -22,7 +22,7 @@ from app.domain.ports.analitica import (
     FilaComparativa,
     GrupoDePeriodos,
     PeriodoDisponible,
-    ValidacionDePeriodo,
+    ValidacionDeGrupo,
 )
 from app.infrastructure.db.modelos_distributivo import (
     CarreraModel,
@@ -94,13 +94,20 @@ class RepositorioAnaliticaDistributivoSQL:
         ]
 
     # ---------------------------------------------------------- validacion
-    async def validacion_de_periodo(self, pao_id: UUID) -> ValidacionDePeriodo | None:
+    async def validacion_de_grupo(self, paos: Sequence[UUID]) -> ValidacionDeGrupo | None:
+        """Como quedo la validacion del grupo entero.
+
+        Los docentes se cuentan distintos sobre el grupo, no sumando periodo a
+        periodo: quien dicta en grado y en posgrado el mismo semestre es una
+        persona, no dos.
+        """
+        if not paos:
+            return None
+
         estado = FilaDistributivoModel.estado_validacion
         fila = (
             await self._s.execute(
                 select(
-                    PaoModel.codigo,
-                    PaoModel.nombre,
                     func.count().label("total"),
                     _cuenta_si(estado == EstadoValidacion.OK.value).label("solo_ok"),
                     _cuenta_si(estado == EstadoValidacion.OK_EXCEPCION.value).label("excepciones"),
@@ -109,91 +116,80 @@ class RepositorioAnaliticaDistributivoSQL:
                     _cuenta_si(estado.is_(None)).label("sin_estado"),
                     func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
                     func.coalesce(func.sum(FilaDistributivoModel.total_horas), 0.0).label("horas"),
-                )
-                .join(PaoModel, PaoModel.id == FilaDistributivoModel.pao_id)
-                .where(FilaDistributivoModel.pao_id == pao_id)
-                .group_by(PaoModel.codigo, PaoModel.nombre)
+                ).where(FilaDistributivoModel.pao_id.in_(list(paos)))
             )
-        ).one_or_none()
+        ).one()
 
-        if fila is None:
+        if not fila.total:
             return None
 
-        return ValidacionDePeriodo(
-            pao_id=pao_id,
-            codigo=fila.codigo,
-            nombre=fila.nombre,
+        etiquetas = (
+            await self._s.execute(
+                select(PaoModel.codigo, PaoModel.nombre)
+                .where(PaoModel.id.in_(list(paos)))
+                .order_by(PaoModel.codigo)
+            )
+        ).all()
+
+        return ValidacionDeGrupo(
+            codigos=tuple(e.codigo for e in etiquetas),
+            nombres=tuple(e.nombre for e in etiquetas),
             total=fila.total,
             aprobadas=fila.solo_ok + fila.excepciones,
             pendientes=fila.pendientes,
             con_error=fila.con_error,
             sin_estado=fila.sin_estado,
-            docentes=fila.docentes,
+            docentes=fila.docentes or 0,
             horas=round(float(fila.horas), 2),
             por_estado=_estados_con_porcentaje(fila),
         )
 
     async def validacion_por_facultad(
-        self, *, actual: UUID, anterior: UUID | None
+        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
     ) -> list[FilaComparativa]:
+        if not grupo_a and not grupo_b:
+            return []
+
         estado = FilaDistributivoModel.estado_validacion
         pao = FilaDistributivoModel.pao_id
-        # `anterior` puede faltar —el primer periodo cargado no tiene con que
-        # compararse—. Se usa el propio `actual` como marcador imposible para no
-        # ramificar la consulta: las columnas «anterior» salen todas en cero.
-        comparado = anterior if anterior is not None else actual
-        sin_comparacion = anterior is None
-
-        def columnas(destino: UUID, *, vacia: bool) -> tuple[Any, Any, Any]:
-            if vacia:
-                cero = func.count().filter(pao.is_(None))
-                return cero, cero, cero
-            es = pao == destino
-            return (
-                _cuenta_si(es),
-                _cuenta_si(es & estado.in_(_APROBADOS)),
-                _cuenta_si(es & estado.is_not(None)),
-            )
-
-        total_a, aprob_a, eval_a = columnas(actual, vacia=False)
-        total_b, aprob_b, eval_b = columnas(comparado, vacia=sin_comparacion)
+        en_a, en_b = pao.in_(list(grupo_a)), pao.in_(list(grupo_b))
 
         consulta: Select[Any] = (
             select(
                 FacultadModel.nombre.label("etiqueta"),
-                total_a.label("total_actual"),
-                aprob_a.label("aprobadas_actual"),
-                eval_a.label("evaluadas_actual"),
-                total_b.label("total_anterior"),
-                aprob_b.label("aprobadas_anterior"),
-                eval_b.label("evaluadas_anterior"),
+                _cuenta_si(en_a).label("total_actual"),
+                _cuenta_si(en_a & estado.in_(_APROBADOS)).label("aprobadas_actual"),
+                _cuenta_si(en_a & estado.is_not(None)).label("evaluadas_actual"),
+                _cuenta_si(en_b).label("total_anterior"),
+                _cuenta_si(en_b & estado.in_(_APROBADOS)).label("aprobadas_anterior"),
+                _cuenta_si(en_b & estado.is_not(None)).label("evaluadas_anterior"),
             )
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
-            .where(pao.in_([actual, comparado]))
+            .where(or_(en_a, en_b))
             .group_by(FacultadModel.nombre)
             .order_by(func.count().desc())
         )
 
         return [
             FilaComparativa(
-                etiqueta=fila.etiqueta,
-                total_actual=fila.total_actual,
-                aprobadas_actual=fila.aprobadas_actual,
-                evaluadas_actual=fila.evaluadas_actual,
-                total_anterior=fila.total_anterior,
-                aprobadas_anterior=fila.aprobadas_anterior,
-                evaluadas_anterior=fila.evaluadas_anterior,
+                etiqueta=f.etiqueta,
+                total_actual=f.total_actual,
+                aprobadas_actual=f.aprobadas_actual,
+                evaluadas_actual=f.evaluadas_actual,
+                total_anterior=f.total_anterior,
+                aprobadas_anterior=f.aprobadas_anterior,
+                evaluadas_anterior=f.evaluadas_anterior,
             )
-            for fila in (await self._s.execute(consulta)).all()
+            for f in (await self._s.execute(consulta)).all()
         ]
 
     # ---------------------------------------------------------- desgloses
-    async def distribucion_de_periodo(
-        self, pao_id: UUID, *, campo: str, limite: int = 12
+    async def distribucion_de_grupo(
+        self, paos: Sequence[UUID], *, campo: str, limite: int = 12
     ) -> list[ConteoEtiquetado]:
         destino = _DESGLOSES.get(campo)
-        if destino is None:
+        if destino is None or not paos:
             return []
         columna, modelo = destino
 
@@ -201,7 +197,7 @@ class RepositorioAnaliticaDistributivoSQL:
             select(modelo.nombre.label("etiqueta"), func.count().label("valor"))
             .select_from(FilaDistributivoModel)
             .join(modelo, modelo.id == columna)
-            .where(FilaDistributivoModel.pao_id == pao_id)
+            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
             .group_by(modelo.nombre)
             .order_by(func.count().desc())
             .limit(limite)

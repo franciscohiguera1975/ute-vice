@@ -136,8 +136,8 @@ export abstract class RepositorioDistributivo {
    * tipo —grado con grado, interciclo con interciclo—.
    */
   abstract tablero(
-    paoId?: string,
-    paoAnteriorId?: string,
+    grupoA: readonly string[],
+    grupoB: readonly string[],
   ): Observable<TableroDistributivo>;
 
   /** Sube un distributivo exportado por el sistema academico. */

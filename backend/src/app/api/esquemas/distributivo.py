@@ -19,7 +19,7 @@ from app.domain.ports.analitica import (
     GrupoDePeriodos,
     ResumenComparativo,
     TableroDistributivo,
-    ValidacionDePeriodo,
+    ValidacionDeGrupo,
 )
 from app.domain.ports.distributivo import FilaDistributivoResuelta, ResumenDistributivo
 from app.domain.ports.importacion import ResultadoImportacionDistributivo
@@ -538,10 +538,9 @@ class PeriodoDisponibleSalida(EsquemaBase):
     filas: int
 
 
-class ValidacionDePeriodoSalida(EsquemaBase):
-    pao_id: UUID
-    codigo: str
-    nombre: str
+class ValidacionDeGrupoSalida(EsquemaBase):
+    codigos: list[str]
+    nombres: list[str]
     total: int
     aprobadas: int
     pendientes: int
@@ -554,11 +553,10 @@ class ValidacionDePeriodoSalida(EsquemaBase):
     por_estado: list[dict[str, Any]]
 
     @classmethod
-    def desde(cls, v: ValidacionDePeriodo) -> ValidacionDePeriodoSalida:
+    def desde(cls, v: ValidacionDeGrupo) -> ValidacionDeGrupoSalida:
         return cls(
-            pao_id=v.pao_id,
-            codigo=v.codigo,
-            nombre=v.nombre,
+            codigos=list(v.codigos),
+            nombres=list(v.nombres),
             total=v.total,
             aprobadas=v.aprobadas,
             pendientes=v.pendientes,
@@ -605,8 +603,8 @@ class FilaComparativaSalida(EsquemaBase):
 
 class TableroDistributivoSalida(EsquemaBase):
     periodos: list[PeriodoDisponibleSalida]
-    actual: ValidacionDePeriodoSalida | None
-    anterior: ValidacionDePeriodoSalida | None
+    actual: ValidacionDeGrupoSalida | None
+    anterior: ValidacionDeGrupoSalida | None
     por_facultad: list[FilaComparativaSalida]
     por_sede: list[dict[str, Any]]
     por_dedicacion: list[dict[str, Any]]
@@ -631,8 +629,8 @@ class TableroDistributivoSalida(EsquemaBase):
                 )
                 for p in t.periodos
             ],
-            actual=ValidacionDePeriodoSalida.desde(t.actual) if t.actual else None,
-            anterior=ValidacionDePeriodoSalida.desde(t.anterior) if t.anterior else None,
+            actual=ValidacionDeGrupoSalida.desde(t.actual) if t.actual else None,
+            anterior=ValidacionDeGrupoSalida.desde(t.anterior) if t.anterior else None,
             por_facultad=[FilaComparativaSalida.desde(f) for f in t.por_facultad],
             por_sede=conteos(t.por_sede),
             por_dedicacion=conteos(t.por_dedicacion),

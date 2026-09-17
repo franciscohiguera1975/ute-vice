@@ -172,10 +172,10 @@ dentro del periodo vigente. Use `?forzar=true` con justificacion.
 Los reportes devuelven el archivo binario con `Content-Disposition`. Parametro
 `formato`: `XLSX`, `CSV` o `PDF`.
 
-`GET /distributivo/tablero` acepta `pao_id` y `pao_anterior_id`. Sin ellos toma
-el periodo mas reciente con carga y el anterior del mismo nivel. Pide
-`distributivo:leer` y no `dashboard:ver` para que el rol de consulta del
-distributivo pueda verlo.
+`GET /distributivo/tablero` acepta `grupo_a` —la referencia— y `grupo_b` —el que
+se examina—, repetibles. Sin ellos compara los dos ultimos semestres enteros, la
+misma eleccion que hacen los resumenes. Pide `distributivo:leer` y no
+`dashboard:ver` para que el rol de consulta del distributivo pueda verlo.
 
 `GET /distributivo/resumenes` acepta `grupo_a` y `grupo_b`, repetibles para
 varios periodos cada uno. Sin ellos compara los dos ultimos semestres enteros.
@@ -188,8 +188,10 @@ repetibles. Devuelve `facultades` —las que tienen filas en esos periodos— y
 juntas para que no puedan contradecirse entre si.
 
 `GET /distributivo/resumenes/exportar` toma los mismos `grupo_a` y `grupo_b`,
-mas `resumen` (`avance` o `estados`), `grupo` (`a` o `b`, para el desglose de
-estados) y `formato` (`XLSX`, `CSV` o `PDF`). Devuelve el archivo binario con
+mas `resumen`, `grupo` (`a` o `b`, para el desglose de estados) y `formato`
+(`XLSX`, `CSV` o `PDF`). Hay cuatro resumenes: `avance` y `estados` son los de la
+pantalla de resumenes; `aprobacion` y `comparativo`, las dos tablas del tablero.
+Cada uno sale del mismo caso de uso que alimenta su pantalla. Devuelve el archivo binario con
 `Content-Disposition`; **422** si los periodos elegidos no tienen datos.
 
 `POST /distributivo/importaciones/pao` es `multipart/form-data`: `archivo`

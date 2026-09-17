@@ -338,17 +338,16 @@ export interface PeriodoConFilas {
 }
 
 /**
- * Como quedo la validacion de un periodo.
+ * Como quedo la validacion de un grupo de periodos.
  *
  * `evaluadas` es el denominador del porcentaje y **no** es `total`: los
  * periodos anteriores a 2026-2 no traen estado, y contarlos como reprobados
  * pintaria todo el historico en rojo. Cuando `evaluadas` es cero, la pantalla
  * muestra un guion en lugar de «0 %».
  */
-export interface ValidacionDePeriodo {
-  readonly paoId: string;
-  readonly codigo: string;
-  readonly nombre: string;
+export interface ValidacionDeGrupo {
+  readonly codigos: readonly string[];
+  readonly nombres: readonly string[];
   readonly total: number;
   readonly aprobadas: number;
   readonly pendientes: number;
@@ -378,8 +377,8 @@ export interface FilaComparativa {
 
 export interface TableroDistributivo {
   readonly periodos: readonly PeriodoConFilas[];
-  readonly actual: ValidacionDePeriodo | null;
-  readonly anterior: ValidacionDePeriodo | null;
+  readonly actual: ValidacionDeGrupo | null;
+  readonly anterior: ValidacionDeGrupo | null;
   readonly porFacultad: readonly FilaComparativa[];
   readonly porSede: readonly Conteo[];
   readonly porDedicacion: readonly Conteo[];
@@ -523,6 +522,9 @@ export interface PeticionResumen {
 export const TipoResumen = {
   AVANCE: 'avance',
   ESTADOS: 'estados',
+  /** Las dos del tablero. */
+  APROBACION: 'aprobacion',
+  COMPARATIVO: 'comparativo',
 } as const;
 
 export type TipoResumen = (typeof TipoResumen)[keyof typeof TipoResumen];

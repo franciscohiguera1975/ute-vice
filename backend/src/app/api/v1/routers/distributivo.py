@@ -79,7 +79,9 @@ from app.application.casos_uso.reporte_distributivo import (
     VistaPreviaReporteDistributivo,
 )
 from app.application.casos_uso.reporte_resumenes import (
+    RESUMEN_APROBACION,
     RESUMEN_AVANCE,
+    RESUMEN_COMPARATIVO,
     RESUMEN_ESTADOS,
     EntradaExportarResumen,
     ExportarResumenDistributivo,
@@ -374,31 +376,33 @@ async def capturar_asignaturas(
 @router.get(
     "/distributivo/tablero",
     response_model=TableroDistributivoSalida,
-    summary="Avance de la validacion en dos periodos",
+    summary="Avance de la validacion en dos grupos de periodos",
     dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
 )
 async def tablero_distributivo(
     contenedor: ContenedorDep,
     contexto: ContextoDep,
-    pao_id: Annotated[
-        UUID | None, Query(description="Periodo a examinar. Por defecto, el mas reciente.")
+    grupo_a: Annotated[
+        list[UUID] | None,
+        Query(description="Periodos de referencia. Repetir el parametro para varios."),
     ] = None,
-    pao_anterior_id: Annotated[
-        UUID | None,
-        Query(description="Periodo con el que comparar. Por defecto, el anterior del mismo tipo."),
-    ] = None,
+    grupo_b: Annotated[list[UUID] | None, Query(description="Periodos que se examinan.")] = None,
 ) -> TableroDistributivoSalida:
     """Todos los indicadores en una sola llamada.
 
     Se agrupan igual que en el tablero general: con cinco peticiones
     concurrentes, las cifras de la misma pantalla podrian no cuadrar entre si.
+
+    Sin grupos, se comparan los dos ultimos semestres enteros — la misma
+    eleccion que hacen los resumenes, para que las dos pantallas no digan
+    cifras distintas del mismo periodo.
     """
     uow = contenedor.unidad_de_trabajo()
     async with uow:
         analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
         caso = ObtenerTableroDistributivo(analitica, contenedor.reloj)
         resultado = await caso(
-            EntradaTableroDistributivo(pao_id=pao_id, pao_anterior_id=pao_anterior_id),
+            EntradaTableroDistributivo(grupo_a=tuple(grupo_a or ()), grupo_b=tuple(grupo_b or ())),
             contexto,
         )
     return TableroDistributivoSalida.desde(resultado)
@@ -451,7 +455,13 @@ async def exportar_resumen(
     contenedor: ContenedorDep,
     contexto: ContextoDep,
     resumen: Annotated[
-        str, Query(description=f"`{RESUMEN_AVANCE}` o `{RESUMEN_ESTADOS}`")
+        str,
+        Query(
+            description=(
+                f"De resumenes: `{RESUMEN_AVANCE}`, `{RESUMEN_ESTADOS}`. "
+                f"Del tablero: `{RESUMEN_APROBACION}`, `{RESUMEN_COMPARATIVO}`."
+            )
+        ),
     ] = RESUMEN_AVANCE,
     grupo_a: Annotated[list[UUID] | None, Query(description="Periodos del primer grupo")] = None,
     grupo_b: Annotated[list[UUID] | None, Query(description="Periodos del segundo grupo")] = None,

@@ -186,10 +186,13 @@ export class DistributivoHttp extends RepositorioDistributivo {
     );
   }
 
-  tablero(paoId?: string, paoAnteriorId?: string): Observable<TableroDistributivo> {
+  tablero(
+    grupoA: readonly string[],
+    grupoB: readonly string[],
+  ): Observable<TableroDistributivo> {
     return this.api.get<TableroDistributivo>('/distributivo/tablero', {
-      paoId,
-      paoAnteriorId,
+      grupoA,
+      grupoB,
     });
   }
 

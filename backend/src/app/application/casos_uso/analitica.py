@@ -65,14 +65,19 @@ class EntradaRangoFechas:
 
 @dataclass(frozen=True, slots=True)
 class EntradaTableroDistributivo:
-    """Los dos periodos que se comparan. Ambos opcionales: ver `_elegir`."""
+    """Los dos grupos de periodos que se comparan.
 
-    pao_id: UUID | None = None
-    pao_anterior_id: UUID | None = None
+    Grupos y no periodos sueltos, por lo mismo que en los resumenes: un
+    semestre son tres periodos —tecnologia, grado y posgrado— mas sus
+    interciclos, y mirar solo el de grado deja fuera media institucion.
+    """
+
+    grupo_a: tuple[UUID, ...] = ()
+    grupo_b: tuple[UUID, ...] = ()
 
 
 class ObtenerTableroDistributivo(CasoDeUso[EntradaTableroDistributivo, TableroDistributivo]):
-    """Indicadores de validacion de dos periodos, uno frente al otro.
+    """Indicadores de validacion de dos grupos de periodos, uno frente al otro.
 
     Lo pide `distributivo:leer` y no `dashboard:ver`: es una lectura del
     distributivo, y el rol de consulta —que no tiene tablero general— debe
@@ -80,7 +85,7 @@ class ObtenerTableroDistributivo(CasoDeUso[EntradaTableroDistributivo, TableroDi
     """
 
     nombre = "analitica.tablero_distributivo"
-    descripcion = "Avance de la validacion del distributivo en dos periodos"
+    descripcion = "Avance de la validacion del distributivo en dos grupos de periodos"
     permiso_requerido = Permiso.DISTRIBUTIVO_LEER
 
     def __init__(self, analitica: RepositorioAnaliticaDistributivo, reloj: Reloj) -> None:
@@ -94,60 +99,26 @@ class ObtenerTableroDistributivo(CasoDeUso[EntradaTableroDistributivo, TableroDi
         if not periodos:
             return TableroDistributivo(generado_en=self._reloj.ahora().isoformat())
 
-        actual, anterior = _elegir(periodos, entrada)
+        # Misma eleccion que los resumenes: los dos ultimos semestres enteros.
+        # Que las dos pantallas propongan lo mismo no es cosmetico — si una
+        # dijera «2026-2 POSGRADO» y la otra «2026-2 completo», sus cifras no
+        # cuadrarian y nadie sabria cual creer.
+        anterior, actual = _grupos(
+            periodos,
+            EntradaResumenComparativo(grupo_a=entrada.grupo_a, grupo_b=entrada.grupo_b),
+        )
 
         return TableroDistributivo(
             periodos=periodos,
-            actual=await self._analitica.validacion_de_periodo(actual.id),
-            anterior=(
-                await self._analitica.validacion_de_periodo(anterior.id) if anterior else None
-            ),
+            actual=await self._analitica.validacion_de_grupo(actual),
+            anterior=await self._analitica.validacion_de_grupo(anterior),
             por_facultad=await self._analitica.validacion_por_facultad(
-                actual=actual.id, anterior=anterior.id if anterior else None
+                grupo_a=actual, grupo_b=anterior
             ),
-            por_sede=await self._analitica.distribucion_de_periodo(actual.id, campo="sede"),
-            por_dedicacion=await self._analitica.distribucion_de_periodo(
-                actual.id, campo="dedicacion"
-            ),
+            por_sede=await self._analitica.distribucion_de_grupo(actual, campo="sede"),
+            por_dedicacion=await self._analitica.distribucion_de_grupo(actual, campo="dedicacion"),
             generado_en=self._reloj.ahora().isoformat(),
         )
-
-
-def _elegir(
-    periodos: list[PeriodoDisponible], entrada: EntradaTableroDistributivo
-) -> tuple[PeriodoDisponible, PeriodoDisponible | None]:
-    """Decide que dos periodos se comparan.
-
-    `periodos` llega ordenado de mas nuevo a mas viejo por codigo.
-
-    El anterior por defecto **no es el periodo inmediatamente anterior de la
-    lista**, sino el anterior *del mismo tipo*: el codigo institucional es
-    `AA P NN D`, donde `NN` distingue tecnologia, grado y posgrado y `D`
-    distingue ordinario de interciclo. La familia es `NN D` —los tres ultimos
-    digitos—, porque lo unico que cambia entre un periodo y su anterior son el
-    anio y el semestre. Comparar `2026-2 GRADO` con `2026-2 POSGRADO` —que es
-    lo que saldria de tomar el siguiente de la lista— no dice nada;
-    compararlo con `2026-1 GRADO` si.
-    """
-    por_id = {p.id: p for p in periodos}
-    actual = por_id.get(entrada.pao_id) if entrada.pao_id else periodos[0]
-    if actual is None:
-        actual = periodos[0]
-
-    if entrada.pao_anterior_id:
-        return actual, por_id.get(entrada.pao_anterior_id)
-
-    familia = actual.codigo[3:] if len(actual.codigo) == 6 else None
-    candidatos = [
-        p
-        for p in periodos
-        if p.id != actual.id
-        and p.codigo < actual.codigo
-        and (familia is None or p.codigo[3:] == familia)
-    ]
-    if not candidatos:
-        candidatos = [p for p in periodos if p.id != actual.id and p.codigo < actual.codigo]
-    return actual, candidatos[0] if candidatos else None
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +198,9 @@ def _grupos(
     def del_semestre(clave: str) -> list[UUID]:
         return [p.id for p in periodos if (p.semestre or p.codigo[:3]) == clave]
 
+    # Con un solo semestre cargado, ese es el **actual** y no hay referencia.
+    # Al reves —referencia llena y actual vacio— el avance saldria 0 % y la
+    # pantalla diria que no se ha planificado nada, que es justo lo contrario.
     if len(semestres) < 2:
-        return del_semestre(semestres[0]), []
+        return [], del_semestre(semestres[0])
     return del_semestre(semestres[1]), del_semestre(semestres[0])

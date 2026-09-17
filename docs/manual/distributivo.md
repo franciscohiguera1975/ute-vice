@@ -320,20 +320,25 @@ la carga es valida por una excepcion concedida.
 
 ### Que hay en la pantalla
 
-* Cuatro cifras del periodo: filas —con la diferencia frente al anterior—,
+* Cuatro cifras del grupo 2: filas —con la diferencia frente al grupo 1—,
   porcentaje aprobado, pendientes y filas sin estado.
-* **Aprobacion de los dos periodos**: una fila por periodo, con filas, filas con
+* **Aprobación de los dos grupos**: una fila por grupo, con filas, filas con
   estado, aprobadas, porcentaje, docentes y horas.
 * **Desglose por estado**: los cinco estados con su conteo y su peso, en las dos
   columnas de periodo. Se muestran siempre los cinco, incluidos los que valen
   cero: que «Con error» valga cero es justamente lo que se quiere leer.
-* **Facultades, los dos periodos**, con la variacion en puntos porcentuales.
+* **Facultades, los dos grupos**, con la variación en puntos porcentuales.
 * Cuatro graficos: estados, aprobacion por facultad, filas por sede y filas por
   dedicacion.
 
-> **La diferencia de filas entre los dos periodos es lo primero que hay que
-> mirar** al recibir un PAO nuevo. Si el periodo entrante trae mucha menos carga
-> que el anterior, la exportacion vino incompleta.
+> **La diferencia de filas entre los dos grupos es lo primero que hay que
+> mirar** al recibir un PAO nuevo. Si el semestre entrante trae mucha menos carga
+> que el anterior, la exportación vino incompleta.
+
+**Las dos tablas se descargan** en Excel, CSV y PDF, con el botón que lleva cada
+una al lado de su título. Requieren `reportes:generar`; sin ese permiso los
+botones no aparecen. Salen del mismo cálculo que la pantalla, con la misma
+paleta que los resúmenes.
 
 ---
 

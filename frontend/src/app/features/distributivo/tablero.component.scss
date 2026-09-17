@@ -1,13 +1,16 @@
 .encabezado { margin-bottom: 1.25rem; }
 .seccion { margin-bottom: 1.25rem; }
 
-.selectores {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+.descargas {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
-.selectores .campo { margin-bottom: 0; }
+.descargas__rotulo {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
 
 /* Alineacion a la derecha para las columnas de cifras. La tabla se lee de un
    vistazo solo si los digitos quedan en columna. */

@@ -20,38 +20,21 @@
       mensaje="Cuando se importe un periodo, sus indicadores apareceran aqui."
     />
   } @else {
-    <!-- ------------------------------------------------ eleccion de periodos -->
-    <section class="selectores no-imprimir" aria-label="Periodos que se comparan">
-      <label class="campo">
-        <span class="campo__etiqueta">Periodo actual</span>
-        <select
-          class="entrada"
-          [ngModel]="paoId()"
-          (ngModelChange)="cambiarActual($event)"
-          name="paoActual"
-        >
-          @for (p of d.periodos; track p.id) {
-            <option [value]="p.id">{{ p.nombre }} · {{ p.filas | number }} filas</option>
-          }
-        </select>
-      </label>
-
-      <label class="campo">
-        <span class="campo__etiqueta">Comparado con</span>
-        <select
-          class="entrada"
-          [ngModel]="paoAnteriorId()"
-          (ngModelChange)="cambiarAnterior($event)"
-          name="paoAnterior"
-        >
-          <option value="">Sin comparacion</option>
-          @for (p of d.periodos; track p.id) {
-            @if (p.id !== paoId()) {
-              <option [value]="p.id">{{ p.nombre }} · {{ p.filas | number }} filas</option>
-            }
-          }
-        </select>
-      </label>
+    <!-- ------------------------------------------------ grupos de periodos -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Periodos que se comparan</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-selector-grupos
+          [periodos]="d.periodos"
+          [(grupoA)]="grupoA"
+          [(grupoB)]="grupoB"
+          etiquetaA="Grupo 1 · referencia"
+          etiquetaB="Grupo 2 · el que se examina"
+          (comparar)="cargar()"
+        />
+      </div>
     </section>
 
     @if (d.actual; as actual) {
@@ -122,7 +105,10 @@
             </thead>
             <tbody>
               <tr>
-                <th scope="row">{{ actual.nombre }} <span class="mono texto-xs texto-tenue">{{ actual.codigo }}</span></th>
+                <th scope="row">
+                  Grupo 2
+                  <span class="mono texto-xs texto-tenue">{{ codigosDe(actual) }}</span>
+                </th>
                 <td class="der mono">{{ actual.total | number }}</td>
                 <td class="der mono">{{ actual.evaluadas | number }}</td>
                 <td class="der mono">{{ actual.aprobadas | number }}</td>
@@ -133,7 +119,10 @@
 
               @if (d.anterior; as anterior) {
                 <tr class="tabla__fila--tenue">
-                  <th scope="row">{{ anterior.nombre }} <span class="mono texto-xs texto-tenue">{{ anterior.codigo }}</span></th>
+                  <th scope="row">
+                    Grupo 1
+                    <span class="mono texto-xs texto-tenue">{{ codigosDe(anterior) }}</span>
+                  </th>
                   <td class="der mono">{{ anterior.total | number }}</td>
                   <td class="der mono">{{ anterior.evaluadas | number }}</td>
                   <td class="der mono">{{ anterior.aprobadas | number }}</td>
@@ -148,27 +137,40 @@
 
         @if (!hayComparacion() && d.anterior) {
           <p class="nota texto-sm texto-tenue">
-            {{ d.anterior.nombre }} no trae estado de validacion: el sistema academico
-            empezo a entregarlo en 2026-2, asi que su porcentaje no es comparable y se
-            muestra como «—».
+            El grupo 1 no trae estado de validacion: el sistema academico empezo a
+            entregarlo en 2026-2, asi que su porcentaje no es comparable y se muestra
+            como «—».
           </p>
         }
       </section>
 
       <!-- ----------------------------------------- tabla: desglose por estado -->
       <section class="tarjeta seccion">
-        <div class="tarjeta__cabecera">
+        <div class="tarjeta__cabecera fila entre envolver hueco-sm">
           <h2 class="tarjeta__titulo">Desglose por estado</h2>
+          <div class="descargas no-imprimir" *utePermiso="Permiso.REPORTES_GENERAR">
+            <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+            @for (f of formatos; track f.valor) {
+              <button
+                type="button"
+                class="btn btn--secundario btn--sm"
+                [disabled]="descargando() !== null"
+                (click)="descargar(TipoResumen.COMPARATIVO, f.valor)"
+              >
+                {{ descargando() === f.valor ? 'Generando…' : f.etiqueta }}
+              </button>
+            }
+          </div>
         </div>
         <div class="tabla-envoltura">
           <table class="tabla">
             <thead>
               <tr>
                 <th scope="col">Estado</th>
-                <th scope="col" class="der">{{ actual.codigo }}</th>
+                <th scope="col" class="der">Grupo 2</th>
                 <th scope="col" class="der">%</th>
                 @if (d.anterior; as anterior) {
-                  <th scope="col" class="der">{{ anterior.codigo }}</th>
+                  <th scope="col" class="der">Grupo 1</th>
                   <th scope="col" class="der">%</th>
                 }
               </tr>
@@ -210,7 +212,7 @@
       <section class="rejilla rejilla--2 seccion" aria-label="Graficos">
         <article class="tarjeta">
           <div class="tarjeta__cabecera">
-            <h2 class="tarjeta__titulo">Estados de {{ actual.codigo }}</h2>
+            <h2 class="tarjeta__titulo">Estados del grupo 2</h2>
           </div>
           <div class="tarjeta__cuerpo">
             <ute-grafico-anillo
@@ -251,18 +253,31 @@
 
       <!-- --------------------------------------- tabla: comparativa facultad -->
       <section class="tarjeta seccion">
-        <div class="tarjeta__cabecera">
-          <h2 class="tarjeta__titulo">Facultades, los dos periodos</h2>
+        <div class="tarjeta__cabecera fila entre envolver hueco-sm">
+          <h2 class="tarjeta__titulo">Facultades, los dos grupos</h2>
+          <div class="descargas no-imprimir" *utePermiso="Permiso.REPORTES_GENERAR">
+            <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+            @for (f of formatos; track f.valor) {
+              <button
+                type="button"
+                class="btn btn--secundario btn--sm"
+                [disabled]="descargando() !== null"
+                (click)="descargar(TipoResumen.APROBACION, f.valor)"
+              >
+                {{ descargando() === f.valor ? 'Generando…' : f.etiqueta }}
+              </button>
+            }
+          </div>
         </div>
         <div class="tabla-envoltura">
           <table class="tabla">
             <thead>
               <tr>
                 <th scope="col">Facultad</th>
-                <th scope="col" class="der">Filas {{ actual.codigo }}</th>
+                <th scope="col" class="der">Filas grupo 2</th>
                 <th scope="col" class="der">% aprobado</th>
                 @if (d.anterior; as anterior) {
-                  <th scope="col" class="der">Filas {{ anterior.codigo }}</th>
+                  <th scope="col" class="der">Filas grupo 1</th>
                   <th scope="col" class="der">% aprobado</th>
                   <th scope="col" class="der">Variacion</th>
                 }

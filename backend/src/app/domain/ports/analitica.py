@@ -138,8 +138,12 @@ class PeriodoDisponible:
 
 
 @dataclass(frozen=True, slots=True)
-class ValidacionDePeriodo:
-    """Como quedo la validacion de un periodo.
+class ValidacionDeGrupo:
+    """Como quedo la validacion de un grupo de periodos.
+
+    Es un grupo y no un periodo suelto porque un semestre son varios: `2026-1`
+    es tecnologia, grado y posgrado, mas sus interciclos. Mirar solo el de
+    grado deja fuera media institucion.
 
     `aprobadas` suma `OK` y `OK_EXCEPCION`: las dos dicen que la carga es
     valida, y la segunda solo anade que lo es por una excepcion concedida.
@@ -149,9 +153,8 @@ class ValidacionDePeriodo:
     todo el historico apareciera como rechazado.
     """
 
-    pao_id: UUID
-    codigo: str
-    nombre: str
+    codigos: tuple[str, ...]
+    nombres: tuple[str, ...]
     total: int
     aprobadas: int
     pendientes: int
@@ -175,7 +178,7 @@ class ValidacionDePeriodo:
 
 @dataclass(frozen=True, slots=True)
 class FilaComparativa:
-    """Una facultad con sus cifras en los dos periodos que se comparan."""
+    """Una facultad con sus cifras en los dos grupos que se comparan."""
 
     etiqueta: str
     total_actual: int
@@ -208,8 +211,8 @@ class TableroDistributivo:
     """Todo lo que pinta el tablero del distributivo, en una sola respuesta."""
 
     periodos: list[PeriodoDisponible] = field(default_factory=list)
-    actual: ValidacionDePeriodo | None = None
-    anterior: ValidacionDePeriodo | None = None
+    actual: ValidacionDeGrupo | None = None
+    anterior: ValidacionDeGrupo | None = None
     por_facultad: list[FilaComparativa] = field(default_factory=list)
     por_sede: list[ConteoEtiquetado] = field(default_factory=list)
     por_dedicacion: list[ConteoEtiquetado] = field(default_factory=list)
@@ -221,14 +224,14 @@ class RepositorioAnaliticaDistributivo(Protocol):
 
     async def periodos_con_filas(self) -> list[PeriodoDisponible]: ...
 
-    async def validacion_de_periodo(self, pao_id: UUID) -> ValidacionDePeriodo | None: ...
+    async def validacion_de_grupo(self, paos: Sequence[UUID]) -> ValidacionDeGrupo | None: ...
 
     async def validacion_por_facultad(
-        self, *, actual: UUID, anterior: UUID | None
+        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
     ) -> list[FilaComparativa]: ...
 
-    async def distribucion_de_periodo(
-        self, pao_id: UUID, *, campo: str, limite: int = 12
+    async def distribucion_de_grupo(
+        self, paos: Sequence[UUID], *, campo: str, limite: int = 12
     ) -> list[ConteoEtiquetado]: ...
 
     async def totales_de_grupo(self, paos: Sequence[UUID]) -> GrupoDePeriodos: ...

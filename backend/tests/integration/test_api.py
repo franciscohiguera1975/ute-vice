@@ -460,8 +460,9 @@ class TestTableroDelDistributivo:
         cuerpo = respuesta.json()
 
         # Un archivo de grado produce el periodo `262651`: `26` anio, `2`
-        # semestre, `65` grado, `1` ordinario.
-        assert cuerpo["actual"]["codigo"] == "262651"
+        # semestre, `65` grado, `1` ordinario. El tablero compara grupos, asi
+        # que llega como lista aunque el grupo tenga un solo periodo.
+        assert cuerpo["actual"]["codigos"] == ["262651"]
         assert cuerpo["actual"]["total"] == 1
         assert cuerpo["actual"]["aprobadas"] == 1
         assert cuerpo["actual"]["porcentaje_aprobado"] == 100.0
@@ -478,8 +479,8 @@ class TestTableroDelDistributivo:
 
         cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)).json()
 
-        assert cuerpo["actual"]["codigo"] == "262651"
-        assert cuerpo["anterior"]["codigo"] == "261651"
+        assert cuerpo["actual"]["codigos"] == ["262651"]
+        assert cuerpo["anterior"]["codigos"] == ["261651"]
         assert cuerpo["actual"]["porcentaje_aprobado"] == 100.0
         assert cuerpo["anterior"]["porcentaje_aprobado"] == 0.0
         assert cuerpo["por_facultad"][0]["variacion"] == 100.0
@@ -659,8 +660,9 @@ class TestResumenesDelDistributivo:
             await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
         ).json()
 
-        assert sorted(cuerpo["grupo_a"]["codigos"]) == ["261151", "261651"]
-        assert cuerpo["grupo_a"]["docentes"] == 2
+        # Un solo semestre cargado: es el actual —grupo 2—, sin referencia.
+        assert sorted(cuerpo["grupo_b"]["codigos"]) == ["261151", "261651"]
+        assert cuerpo["grupo_b"]["docentes"] == 2
         assert {f["codigo"] for f in cuerpo["avance"]} == {"FAU", "UAEFTT"}
 
     async def test_los_docentes_distintos_no_son_la_suma_por_facultad(
@@ -684,8 +686,8 @@ class TestResumenesDelDistributivo:
             await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
         ).json()
 
-        assert cuerpo["grupo_a"]["docentes"] == 1
-        assert sum(f["docentes_a"] for f in cuerpo["avance"]) == 2
+        assert cuerpo["grupo_b"]["docentes"] == 1
+        assert sum(f["docentes_b"] for f in cuerpo["avance"]) == 2
 
     async def test_desglosa_todos_los_estados_por_facultad(self, sembrado, cabeceras_admin) -> None:
         _, cliente = sembrado
@@ -982,3 +984,93 @@ class TestAmbitoDelReporte:
         ).json()
 
         assert len(cuerpo["facultades"]) == 1
+
+
+class TestExportarDelTablero:
+    """Las dos tablas del tablero, tambien como archivo.
+
+    Salen del mismo caso de uso que la pantalla —`ObtenerTableroDistributivo`—
+    y no de una consulta paralela: dos caminos al mismo numero acaban
+    divergiendo, y entonces nadie sabe cual creer.
+    """
+
+    async def _preparar(self, cliente, cabeceras) -> None:  # type: ignore[no-untyped-def]
+        carga = TestTableroDelDistributivo()
+        await carga._cargar(cliente, cabeceras, "2026-1", estado="Validación Pendiente")
+        await carga._cargar(cliente, cabeceras, "2026-2")
+
+    @pytest.mark.parametrize("resumen", ["aprobacion", "comparativo"])
+    async def test_los_dos_resumenes_del_tablero(
+        self, sembrado, cabeceras_admin, resumen: str
+    ) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            f"/api/v1/distributivo/resumenes/exportar?resumen={resumen}&formato=XLSX",
+            headers=cabeceras_admin,
+        )
+
+        assert respuesta.status_code == 200, respuesta.text
+        assert respuesta.content.startswith(b"PK")
+
+    async def test_el_desglose_por_estado_lista_los_cinco_siempre(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Que «Con error» valga cero es justamente lo que se quiere leer."""
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar?resumen=comparativo&formato=CSV",
+            headers=cabeceras_admin,
+        )
+        texto = respuesta.content.decode("utf-8-sig")
+
+        for etiqueta in (
+            "Validado",
+            "Validado con excepcion",
+            "Validacion pendiente",
+            "Con error",
+            "Sin estado registrado",
+        ):
+            assert etiqueta in texto, etiqueta
+
+    async def test_la_aprobacion_nombra_los_grupos_y_no_los_periodos(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Un grupo son hasta seis codigos: no caben en una cabecera."""
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar?resumen=aprobacion&formato=CSV",
+            headers=cabeceras_admin,
+        )
+        texto = respuesta.content.decode("utf-8-sig")
+
+        assert "Filas grupo 2" in texto
+        assert "Variacion (puntos)" in texto
+        # Los codigos van en el subtitulo y en la constancia de filtros.
+        assert "262651" in texto
+        assert "261651" in texto
+
+    async def test_el_tablero_acepta_grupos_de_varios_periodos(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("tec.xlsx", _pao_de_tecnologia(identificacion=OTRA_CEDULA))},
+            data={"semestre": "2026-2", "actualizar_existentes": "true"},
+        )
+
+        cuerpo = (await cliente.get("/api/v1/distributivo/tablero", headers=cabeceras_admin)).json()
+
+        # 2026-2 son ahora dos periodos —grado y tecnologia— y el grupo los
+        # reune: es lo que distingue comparar semestres de comparar periodos.
+        assert sorted(cuerpo["actual"]["codigos"]) == ["262151", "262651"]
+        assert cuerpo["actual"]["total"] == 2
+        assert cuerpo["anterior"]["codigos"] == ["261651"]
