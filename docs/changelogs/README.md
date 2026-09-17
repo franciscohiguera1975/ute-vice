@@ -41,3 +41,4 @@ pendiente.
 | [21](21-pfcsee-en-fcsee.md) | PFCSEE se integra en FCSEE | ✅ |
 | [22](22-categorias-duplicadas.md) | Unificar las categorias duplicadas | ✅ |
 | [23](23-periodos-2026-2-e-interciclo.md) | 2026-2, el interciclo y los campos del sistema academico | ✅ |
+| [24](24-unificar-carreras.md) | Unificar carreras que son la misma | ✅ |

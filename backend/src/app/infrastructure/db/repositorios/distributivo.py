@@ -854,6 +854,37 @@ class RepositorioDistributivoSQL:
         )
         return dict((await self._s.execute(consulta)).all())  # type: ignore[arg-type]
 
+    async def filas_de_carreras(self, carreras_ids: list[UUID]) -> list[FilaDistributivo]:
+        """Todas las filas que apuntan a alguna de esas carreras.
+
+        Con sus asignaturas cargadas: al unificar dos filas hay que unir sus
+        listas, y sin ellas guardar la resultante las borraria.
+        """
+        if not carreras_ids:
+            return []
+        consulta = select(FilaDistributivoModel).where(
+            FilaDistributivoModel.carrera_id.in_(carreras_ids)
+        )
+        modelos = (await self._s.scalars(consulta)).all()
+        if not modelos:
+            return []
+
+        enlaces = await self._s.execute(
+            select(distributivo_asignaturas.c.fila_id, distributivo_asignaturas.c.asignatura_id)
+            .where(distributivo_asignaturas.c.fila_id.in_([m.id for m in modelos]))
+            .order_by(distributivo_asignaturas.c.fila_id, distributivo_asignaturas.c.orden)
+        )
+        por_fila: dict[UUID, list[UUID]] = {}
+        for fila_id, asignatura_id in enlaces.all():
+            por_fila.setdefault(fila_id, []).append(asignatura_id)
+
+        filas = []
+        for modelo in modelos:
+            fila = m.fila_a_dominio(modelo)
+            fila.asignaturas_ids = por_fila.get(modelo.id, [])
+            filas.append(fila)
+        return filas
+
     async def indice_para_materias(self) -> list[tuple[UUID, str, str]]:
         """`(fila_id, identificacion, codigo_del_periodo)` de todas las filas.
 

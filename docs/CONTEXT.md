@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 23 — cerradas
+### Fases 12 a 24 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -291,6 +291,19 @@ dice el origen y existe el nivel `TECNOLOGIA`
 >
 > Y traduce las categorias: el ERP antepone «TITULAR», y sin eso vuelven las
 > duplicadas que unifico la fase 22.
+
+**24**: `unificar-carreras` deja una sola donde el catalogo tiene varias con el
+mismo sentido ([changelog](changelogs/24-unificar-carreras.md)).
+
+> **No es un UPDATE**: al reasignar, dos filas del mismo docente y periodo que
+> estaban en variantes distintas pasan a compartir la clave natural. Se fusionan
+> sumando horas, como hace la importacion. Y se conserva la fila que ya estaba
+> en el destino, para que sus materias enlazadas no cambien de id.
+>
+> **Cuales son la misma carrera lo decide quien ejecuta.** Normalizando nombres
+> salen 39 grupos con 6.900 filas, pero esa cifra mezcla grado con posgrado:
+> `UIO:ARQUITECTURA - POSGRADO` y `ARQUITECTURA (R) - PRESENCIAL` no son lo
+> mismo.
 
 ### Fase 14 — espera confirmacion funcional
 

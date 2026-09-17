@@ -265,6 +265,10 @@ class RepositorioDistributivo(Protocol):
 
     async def eliminar(self, fila_id: UUID) -> None: ...
 
+    async def filas_de_carreras(self, carreras_ids: list[UUID]) -> list[FilaDistributivo]:
+        """Las filas de esas carreras, con sus asignaturas cargadas."""
+        ...
+
     async def indice_para_materias(self) -> list[tuple[UUID, str, str]]:
         """`(fila_id, identificacion, codigo_del_periodo)` de todas las filas."""
         ...

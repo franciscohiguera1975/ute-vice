@@ -655,6 +655,60 @@ async def importar_pao() -> None:
     await contenedor.cerrar()
 
 
+async def unificar_carreras() -> None:
+    """Deja una sola carrera donde el catalogo tiene varias con el mismo sentido.
+
+        python -m app.cli unificar-carreras "INGENIERÍA MECATRÓNICA" \
+            "MECATRÓNICA" "MECATRÓNICA (R) - PRESENCIAL"
+
+    El primer argumento es la que se conserva; los demas se absorben. Las filas
+    se reasignan, y las que queden con la misma clave natural —mismo docente,
+    periodo y sede— se fusionan sumando sus horas, igual que hace la importacion
+    cuando el origen repite una clave.
+
+    **Cuales son la misma carrera lo decide quien ejecuta.** No se deduce del
+    nombre: `UIO:ARQUITECTURA - POSGRADO - HÍBRIDA` y `ARQUITECTURA (R) -
+    PRESENCIAL` comparten el nombre desnudo y son programas distintos.
+    """
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.unificar_carreras import (
+        EntradaUnificarCarreras,
+        UnificarCarreras,
+    )
+
+    if len(sys.argv) < 4:
+        print('  Uso: python -m app.cli unificar-carreras "<destino>" "<variante>" [...]')
+        sys.exit(1)
+
+    destino, variantes = sys.argv[2], tuple(sys.argv[3:])
+    contenedor = Contenedor(get_settings())
+    print(f"  se conserva : {destino}")
+    for v in variantes:
+        print(f"  se absorbe  : {v}")
+
+    caso = UnificarCarreras(contenedor.unidad_de_trabajo())
+    resultado = await caso(
+        EntradaUnificarCarreras(destino=destino, variantes=variantes),
+        ContextoEjecucion.sistema(),
+    )
+
+    print()
+    print(f"  filas reasignadas   : {resultado.filas_reasignadas:,}".replace(",", "."))
+    print(f"  filas fusionadas    : {resultado.filas_fusionadas:,}".replace(",", "."))
+    print(f"  variantes retiradas : {resultado.variantes_retiradas}")
+
+    if resultado.fusiones:
+        print(f"\n  {len(resultado.fusiones)} fusion(es): dos filas del mismo docente y periodo")
+        print("  quedaron con la misma clave y se sumaron sus horas.")
+        for f in resultado.fusiones[:8]:
+            previas = " + ".join(f"{h:g}" for h in f.horas_previas)
+            print(f"      {previas} = {f.horas_resultantes:g} h")
+        if len(resultado.fusiones) > 8:
+            print(f"      … y {len(resultado.fusiones) - 8} mas")
+
+    await contenedor.cerrar()
+
+
 _COMANDOS = {
     "seed": (sembrar, "Crea permisos, roles y el superusuario inicial"),
     "seed-demo": (sembrar_demo, "Carga personas ficticias para pruebas"),
@@ -669,6 +723,10 @@ _COMANDOS = {
     "importar-pao": (
         importar_pao,
         "Carga un distributivo exportado por el sistema academico",
+    ),
+    "unificar-carreras": (
+        unificar_carreras,
+        "Unifica varias carreras del catalogo en una sola",
     ),
     "vaciar-distributivo": (
         vaciar_distributivo,

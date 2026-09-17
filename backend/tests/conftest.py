@@ -595,6 +595,9 @@ class RepoDistributivo:
     async def filas_resueltas(self, filtro):  # type: ignore[no-untyped-def]
         return list(self.resueltas)
 
+    async def filas_de_carreras(self, carreras_ids):  # type: ignore[no-untyped-def]
+        return [f for f in self.datos.values() if f.carrera_id in set(carreras_ids)]
+
     async def indice_para_materias(self):  # type: ignore[no-untyped-def]
         from app.domain.entities.catalogo import TipoCatalogo
 
