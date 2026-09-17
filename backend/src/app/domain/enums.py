@@ -45,6 +45,33 @@ class RolCodigo(StrEnum):
     """
 
 
+class EstadoValidacion(StrEnum):
+    """Como quedo la fila al validarla en el sistema academico.
+
+    Lo trae el distributivo oficial desde 2026-2. Las filas anteriores lo tienen
+    vacio: no es que estuvieran sin validar, es que el dato no existia.
+    """
+
+    OK = "OK"
+    OK_EXCEPCION = "OK_EXCEPCION"
+    """Valida, pero por una excepcion concedida, no por cumplir la regla."""
+
+    PENDIENTE = "PENDIENTE"
+    ERROR = "ERROR"
+
+    @property
+    def etiqueta(self) -> str:
+        return _ETIQUETAS_VALIDACION[self]
+
+
+_ETIQUETAS_VALIDACION: dict[EstadoValidacion, str] = {
+    EstadoValidacion.OK: "OK",
+    EstadoValidacion.OK_EXCEPCION: "Ok, excepción",
+    EstadoValidacion.PENDIENTE: "Validación pendiente",
+    EstadoValidacion.ERROR: "Error",
+}
+
+
 class Permiso(StrEnum):
     """Permisos atomicos. La autorizacion se evalua siempre contra estos.
 

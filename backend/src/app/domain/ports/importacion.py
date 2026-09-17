@@ -7,6 +7,18 @@ from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
+class DatosSistemaAcademico:
+    """Lo que el distributivo oficial aporta y el consolidado no tenia."""
+
+    estado_validacion: str | None = None
+    fase: str | None = None
+    semanas: int | None = None
+    relacion_laboral: str | None = None
+    tutor_posgrado: bool = False
+    tutor_medicina: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class FilaCrudaDistributivo:
     """Una fila del consolidado, tal como viene del archivo.
 
@@ -32,6 +44,14 @@ class FilaCrudaDistributivo:
     genero: str | None = None
     medida: str | None = None
     horas: dict[str, float] = field(default_factory=dict)
+
+    #: El periodo corto entre dos ordinarios. No se deduce del archivo: sus
+    #: filas dicen el mismo semestre que el ordinario, y la duracion —cuatro
+    #: semanas— no siempre lo distingue. Lo indica quien importa.
+    interciclo: bool = False
+
+    #: Solo lo trae el distributivo oficial; el consolidado lo deja vacio.
+    sistema: DatosSistemaAcademico = field(default_factory=DatosSistemaAcademico)
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,6 +4,7 @@
     python -m app.cli seed-demo   # datos ficticios para probar la aplicacion
     python -m app.cli importar-distributivo <archivo.xlsx>   # consolidado real
     python -m app.cli importar-materias <archivo.xlsx>       # materias por docente
+    python -m app.cli importar-pao <archivo.xlsx> <pao>      # distributivo del ERP
     python -m app.cli limpiar     # mantenimiento: purga tokens vencidos
     python -m app.cli info        # configuracion efectiva, sin secretos
 
@@ -587,6 +588,73 @@ async def importar_materias() -> None:
     await contenedor.cerrar()
 
 
+async def importar_pao() -> None:
+    """Carga un distributivo exportado por el sistema academico.
+
+        python -m app.cli importar-pao <archivo.xlsx> <pao> [--interciclo] [hoja]
+
+    `pao` es el semestre —`2026-2`—, que el archivo no trae. El nivel de cada
+    fila lo decide su facultad, como en el consolidado, asi que un archivo
+    produce hasta tres periodos.
+
+    `--interciclo` marca el periodo corto que corre entre dos ordinarios: su
+    codigo termina en `0` en lugar de `1`.
+    """
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.importar_distributivo import (
+        EntradaImportacion,
+        ImportarDistributivo,
+    )
+    from app.infrastructure.importadores.pao_excel import LectorPaoExcel
+
+    argumentos = [a for a in sys.argv[2:] if not a.startswith("--")]
+    interciclo = "--interciclo" in sys.argv
+    reemplazar = "--reemplazar" in sys.argv
+    if len(argumentos) < 2:
+        print("  Uso: python -m app.cli importar-pao <archivo.xlsx> <pao> [--interciclo]")
+        sys.exit(1)
+
+    ruta, pao = argumentos[0], argumentos[1]
+    hoja = argumentos[2] if len(argumentos) > 2 else None
+
+    contenedor = Contenedor(get_settings())
+    print(f"  leyendo {ruta}  (pao {pao}{', interciclo' if interciclo else ''})…")
+    filas, rechazadas = LectorPaoExcel().leer(ruta, pao=pao, interciclo=interciclo, hoja=hoja)
+    print(f"  {len(filas):,} filas leidas".replace(",", "."))
+
+    if rechazadas:
+        print(f"\n  {len(rechazadas)} fila(s) con varias carreras o sedes en una celda:")
+        for numero, identificacion, motivo in rechazadas[:8]:
+            print(f"      fila {numero:>6} {identificacion:12s} {motivo[:66]}")
+        if len(rechazadas) > 8:
+            print(f"      … y {len(rechazadas) - 8} mas")
+        print("  Quedan fuera: su clave natural exige una carrera y una sede.")
+
+    caso = ImportarDistributivo(contenedor.unidad_de_trabajo())
+    resultado = await caso(
+        EntradaImportacion(filas=tuple(filas), reemplazar_existentes=reemplazar),
+        ContextoEjecucion.sistema(),
+    )
+
+    print()
+    print(f"  filas creadas        : {resultado.filas_creadas:,}".replace(",", "."))
+    if reemplazar:
+        print(f"  filas actualizadas   : {resultado.filas_actualizadas:,}".replace(",", "."))
+    print(f"  docentes nuevos      : {resultado.docentes_creados:,}".replace(",", "."))
+
+    if resultado.elementos_catalogo_creados:
+        print("\n  catalogos poblados:")
+        for tipo, cantidad in sorted(resultado.elementos_catalogo_creados.items()):
+            print(f"      {tipo:24s} {cantidad:>6,}".replace(",", "."))
+
+    if resultado.rechazadas:
+        print(f"\n  RECHAZADAS por el importador: {len(resultado.rechazadas)}")
+        for error in resultado.rechazadas[:8]:
+            print(f"      fila {error.numero_fila:>6} {error.identificacion:12s} {error.motivo}")
+
+    await contenedor.cerrar()
+
+
 _COMANDOS = {
     "seed": (sembrar, "Crea permisos, roles y el superusuario inicial"),
     "seed-demo": (sembrar_demo, "Carga personas ficticias para pruebas"),
@@ -597,6 +665,10 @@ _COMANDOS = {
     "importar-materias": (
         importar_materias,
         "Carga las materias que imparte cada docente desde un Excel",
+    ),
+    "importar-pao": (
+        importar_pao,
+        "Carga un distributivo exportado por el sistema academico",
     ),
     "vaciar-distributivo": (
         vaciar_distributivo,

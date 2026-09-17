@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from app.domain.enums import EstadoValidacion
 from app.domain.errors import ErrorValidacion
 from app.domain.value_objects import ahora_utc, normalizar_texto
 from app.domain.value_objects_distributivo import (
@@ -168,6 +169,28 @@ class FilaDistributivo:
     medida: str | None = None
     observaciones: str | None = None
 
+    # --- Campos que aporta el sistema academico, desde 2026-2 -------------
+    #: Como quedo la fila al validarla. Vacio en lo anterior a 2026-2: el dato
+    #: no existia, que no es lo mismo que estar sin validar.
+    estado_validacion: EstadoValidacion | None = None
+
+    #: Etapa del ciclo de planificacion. Hoy todas las filas dicen
+    #: «Planificación»; se guarda como texto porque el origen no declara el
+    #: conjunto de valores posibles.
+    fase: str | None = None
+
+    #: Duracion del periodo. Distingue el ordinario del interciclo mejor que
+    #: cualquier etiqueta: 16 semanas frente a 4.
+    semanas: int | None = None
+
+    #: Vinculo contractual: dependencia laboral o servicios profesionales. No
+    #: es lo mismo que la dedicacion —cuantas horas— ni que la titularidad.
+    relacion_laboral: str | None = None
+
+    #: Marcas del origen para la tutoria de tesis, que se contabiliza aparte.
+    tutor_posgrado: bool = False
+    tutor_medicina: bool = False
+
     id: UUID = field(default_factory=uuid4)
     creado_en: datetime = field(default_factory=ahora_utc)
     actualizado_en: datetime = field(default_factory=ahora_utc)
@@ -176,6 +199,10 @@ class FilaDistributivo:
     def __post_init__(self) -> None:
         if self.medida is not None:
             self.medida = " ".join(self.medida.split()) or None
+        for campo in ("fase", "relacion_laboral"):
+            valor = getattr(self, campo)
+            if valor is not None:
+                setattr(self, campo, " ".join(valor.split()).upper() or None)
 
     # ----------------------------------------------------------- propiedades
     @property

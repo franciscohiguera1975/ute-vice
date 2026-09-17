@@ -40,3 +40,4 @@ pendiente.
 | [20](20-nombres-en-mayusculas.md) | Nombres en mayusculas, la sede real y el nivel tecnologia | ✅ |
 | [21](21-pfcsee-en-fcsee.md) | PFCSEE se integra en FCSEE | ✅ |
 | [22](22-categorias-duplicadas.md) | Unificar las categorias duplicadas | ✅ |
+| [23](23-periodos-2026-2-e-interciclo.md) | 2026-2, el interciclo y los campos del sistema academico | ✅ |

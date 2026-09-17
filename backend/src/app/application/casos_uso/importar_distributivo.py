@@ -32,7 +32,7 @@ from app.domain.entities.distributivo import (
     clasificar_periodo,
     separar_titulos,
 )
-from app.domain.enums import Permiso
+from app.domain.enums import EstadoValidacion, Permiso
 from app.domain.errors import ErrorValidacion
 from app.domain.ports.importacion import (
     AvisoConsolidacion,
@@ -149,7 +149,9 @@ def _codigo_de_periodo(fila: FilaCrudaDistributivo) -> str:
     """
     semestre = PeriodoAcademico.desde_codigo(fila.pao)
     nivel = clasificar_periodo(fila.facultad, fila.nivel, fila.carrera)
-    return PeriodoAcademico(semestre.anio, semestre.periodo, nivel).codigo
+    return PeriodoAcademico(
+        semestre.anio, semestre.periodo, nivel, interciclo=fila.interciclo
+    ).codigo
 
 
 class CacheDeCatalogos:
@@ -478,6 +480,17 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
                     ),
                     horas=horas,
                     medida=principal.medida,
+                    # Del sistema academico; el consolidado los deja vacios.
+                    estado_validacion=(
+                        EstadoValidacion(principal.sistema.estado_validacion)
+                        if principal.sistema.estado_validacion
+                        else None
+                    ),
+                    fase=principal.sistema.fase,
+                    semanas=principal.sistema.semanas,
+                    relacion_laboral=principal.sistema.relacion_laboral,
+                    tutor_posgrado=principal.sistema.tutor_posgrado,
+                    tutor_medicina=principal.sistema.tutor_medicina,
                     creado_por=contexto.actor_id,
                 )
             )

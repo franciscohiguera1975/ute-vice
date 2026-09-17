@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import Docente, FilaDistributivo
+from app.domain.enums import EstadoValidacion
 from app.domain.value_objects import normalizar_texto
 from app.domain.value_objects_distributivo import DistribucionHoras, Identificacion
 from app.infrastructure.db.base import Base
@@ -113,6 +114,14 @@ def fila_a_dominio(modelo: FilaDistributivoModel) -> FilaDistributivo:
         ),
         medida=modelo.medida,
         observaciones=modelo.observaciones,
+        estado_validacion=(
+            EstadoValidacion(modelo.estado_validacion) if modelo.estado_validacion else None
+        ),
+        fase=modelo.fase,
+        semanas=modelo.semanas,
+        relacion_laboral=modelo.relacion_laboral,
+        tutor_posgrado=bool(modelo.tutor_posgrado),
+        tutor_medicina=bool(modelo.tutor_medicina),
         creado_en=modelo.creado_en,
         actualizado_en=modelo.actualizado_en,
         creado_por=modelo.creado_por,
@@ -149,6 +158,15 @@ def fila_a_modelo(
 
     modelo.medida = entidad.medida
     modelo.observaciones = entidad.observaciones
+
+    modelo.estado_validacion = (
+        entidad.estado_validacion.value if entidad.estado_validacion else None
+    )
+    modelo.fase = entidad.fase
+    modelo.semanas = entidad.semanas
+    modelo.relacion_laboral = entidad.relacion_laboral
+    modelo.tutor_posgrado = entidad.tutor_posgrado
+    modelo.tutor_medicina = entidad.tutor_medicina
     modelo.creado_por = entidad.creado_por
     return modelo
 

@@ -86,7 +86,9 @@ class Identificacion:
 _PATRON_PAO = re.compile(r"^(\d{4})\s*-\s*([12])$")
 
 #: El codigo institucional: anio (2), periodo (1), nivel (2) y una constante.
-_PATRON_PAO_LARGO = re.compile(r"^(\d{2})([12])(15|65|75)1$")
+#: El ultimo digito distingue el periodo ordinario (`1`) del interciclo
+#: (`0`), como los nombra el SICAF: `242650` es «2024-2 GRADO INTERCICLO».
+_PATRON_PAO_LARGO = re.compile(r"^(\d{2})([12])(15|65|75)([01])$")
 
 
 class NivelPeriodo(StrEnum):
@@ -160,6 +162,14 @@ class PeriodoAcademico:
     periodo: int
     nivel: NivelPeriodo = NivelPeriodo.GRADO
 
+    interciclo: bool = False
+    """Periodo corto que corre entre dos ordinarios.
+
+    Tiene su propia planificacion y su propia carga, asi que es un periodo
+    aparte y no una variante del ordinario: un docente puede aparecer en ambos
+    con carreras y horas distintas.
+    """
+
     def __post_init__(self) -> None:
         if not 2000 <= self.anio <= 2100:
             raise ErrorValidacion(f"Anio fuera de rango: {self.anio}", campo="pao")
@@ -182,6 +192,7 @@ class PeriodoAcademico:
                 anio=2000 + int(largo.group(1)),
                 periodo=int(largo.group(2)),
                 nivel=_POR_DIGITOS[largo.group(3)],
+                interciclo=largo.group(4) == "0",
             )
 
         corto = _PATRON_PAO.match((codigo or "").strip())
@@ -196,8 +207,12 @@ class PeriodoAcademico:
 
     @property
     def codigo(self) -> str:
-        """El codigo institucional: `2026-1` de grado → `261651`."""
-        return f"{self.anio % 100:02d}{self.periodo}{self.nivel.digitos}1"
+        """El codigo institucional: `2026-1` de grado → `261651`.
+
+        El interciclo del mismo semestre y nivel es `261650`.
+        """
+        final = "0" if self.interciclo else "1"
+        return f"{self.anio % 100:02d}{self.periodo}{self.nivel.digitos}{final}"
 
     @property
     def semestre(self) -> str:
@@ -210,8 +225,9 @@ class PeriodoAcademico:
 
     @property
     def nombre(self) -> str:
-        """Como se lee en pantalla: `2026-1 GRADO`."""
-        return f"{self.semestre} {self.nivel.etiqueta}"
+        """Como se lee en pantalla: `2026-1 GRADO`, o `2026-1 GRADO INTERCICLO`."""
+        sufijo = " INTERCICLO" if self.interciclo else ""
+        return f"{self.semestre} {self.nivel.etiqueta}{sufijo}"
 
     @property
     def orden(self) -> int:
@@ -225,6 +241,9 @@ class PeriodoAcademico:
         return self.anio * 10 + self.periodo
 
     def __lt__(self, otro: PeriodoAcademico) -> bool:
+        # El codigo desempata dentro del semestre. Como el interciclo termina en
+        # `0` y el ordinario en `1`, el interciclo queda antes, que es el orden
+        # en que ocurren: el interciclo de 2026-1 precede al 2026-2.
         return (self.orden, self.codigo) < (otro.orden, otro.codigo)
 
     def __str__(self) -> str:

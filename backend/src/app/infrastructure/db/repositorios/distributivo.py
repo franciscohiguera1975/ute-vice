@@ -702,6 +702,12 @@ class RepositorioDistributivoSQL:
             "total_horas",
             "medida",
             "observaciones",
+            "estado_validacion",
+            "fase",
+            "semanas",
+            "relacion_laboral",
+            "tutor_posgrado",
+            "tutor_medicina",
         )
 
         for inicio in range(0, len(filas), 500):

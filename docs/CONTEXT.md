@@ -182,7 +182,7 @@ el uso, en [`manual/usuarios-y-roles.md`](manual/usuarios-y-roles.md).
 Lo que quedo abierto: `personas` y `titulos` no se acotan —su `unidad` es texto
 libre y habria que normalizarla antes—, y no hay alcance por sede.
 
-### Fases 12 a 22 — cerradas
+### Fases 12 a 23 — cerradas
 
 **12**: asignatura pasa a catalogo con varias materias por fila; la exportacion
 admite varios periodos, facultades y carreras; las personas se crean desde el
@@ -276,6 +276,21 @@ dice el origen y existe el nivel `TECNOLOGIA`
 > es `pk_<tabla>`, no `<tabla>_pkey`. Y los parametros repetidos en una sentencia
 > necesitan `CAST(... AS varchar)`, o asyncpg falla con
 > `AmbiguousParameterError` — es la segunda vez que ocurre.
+
+**23**: entran 2026-2 y el interciclo de 2026-1, con seis campos nuevos
+([changelog](changelogs/23-periodos-2026-2-e-interciclo.md)).
+
+> El **interciclo es un periodo propio**: su codigo termina en `0` y el
+> ordinario en `1`, como los nombra el SICAF. No se deduce del archivo —sus
+> filas dicen el mismo semestre— asi que lo indica quien importa.
+>
+> El ERP entrega sede, nivel y modalidad en columnas aparte; `LectorPaoExcel`
+> las recompone en la cadena del consolidado. **No lo cambie sin medir**: se
+> comparo contra las 278 carreras y esa forma acierta 471 frente a 357 de la
+> alternativa.
+>
+> Y traduce las categorias: el ERP antepone «TITULAR», y sin eso vuelven las
+> duplicadas que unifico la fase 22.
 
 ### Fase 14 — espera confirmacion funcional
 

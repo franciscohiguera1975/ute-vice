@@ -401,3 +401,100 @@ class TestReemplazarExistentes:
         # Mismo docente, periodo y carrera, pero otro campus: es otra fila.
         assert resultado.filas_creadas == 1
         assert len(uow.distributivo.datos) == 2
+
+
+class TestPeriodoInterciclo:
+    """El periodo corto entre dos ordinarios."""
+
+    async def test_va_a_un_periodo_propio(self, uow) -> None:
+        await importar(uow, [cruda(pao="2026-1", horas={"Da": 10.0})])
+
+        caso = ImportarDistributivo(uow)
+        await caso(
+            EntradaImportacion(
+                filas=(
+                    FilaCrudaDistributivo(
+                        numero_fila=3,
+                        identificacion="1710034065",
+                        pao="2026-1",
+                        facultad="FCSEE",
+                        carrera="MEDICINA",
+                        interciclo=True,
+                        horas={"Da": 4.0},
+                    ),
+                ),
+            ),
+            ContextoEjecucion.sistema(),
+        )
+
+        paos = await uow.catalogos.listar_todos(TipoCatalogo.PAO)
+        codigos = sorted(p.codigo for p in paos)
+        # El ordinario termina en 1 y el interciclo en 0, como los nombra el
+        # SICAF. Son dos periodos, no dos formas de escribir uno.
+        assert codigos == ["261650", "261651"]
+        assert len(uow.distributivo.datos) == 2
+
+    async def test_el_nombre_lo_distingue_en_pantalla(self, uow) -> None:
+        caso = ImportarDistributivo(uow)
+        await caso(
+            EntradaImportacion(
+                filas=(
+                    FilaCrudaDistributivo(
+                        numero_fila=2,
+                        identificacion="1710034065",
+                        pao="2026-1",
+                        facultad="FCSEE",
+                        carrera="MEDICINA",
+                        interciclo=True,
+                        horas={"Da": 4.0},
+                    ),
+                ),
+            ),
+            ContextoEjecucion.sistema(),
+        )
+        paos = await uow.catalogos.listar_todos(TipoCatalogo.PAO)
+        assert paos[0].nombre == "2026-1 GRADO INTERCICLO"
+
+
+class TestCamposDelSistemaAcademico:
+    async def test_llegan_a_la_fila(self, uow) -> None:
+        from app.domain.enums import EstadoValidacion
+        from app.domain.ports.importacion import DatosSistemaAcademico
+
+        caso = ImportarDistributivo(uow)
+        await caso(
+            EntradaImportacion(
+                filas=(
+                    FilaCrudaDistributivo(
+                        numero_fila=2,
+                        identificacion="1710034065",
+                        pao="2026-2",
+                        facultad="FAU",
+                        carrera="ARQUITECTURA",
+                        horas={"Da": 10.0},
+                        sistema=DatosSistemaAcademico(
+                            estado_validacion="OK_EXCEPCION",
+                            fase="Planificación",
+                            semanas=16,
+                            relacion_laboral="Dependencia Laboral",
+                            tutor_posgrado=True,
+                        ),
+                    ),
+                ),
+            ),
+            ContextoEjecucion.sistema(),
+        )
+        f = next(iter(uow.distributivo.datos.values()))
+        assert f.estado_validacion is EstadoValidacion.OK_EXCEPCION
+        assert f.semanas == 16
+        assert f.tutor_posgrado is True
+        assert f.tutor_medicina is False
+
+    async def test_el_consolidado_los_deja_vacios(self, uow) -> None:
+        # Vacio significa «el dato no existia», no «sin validar».
+        await importar(uow, [cruda(horas={"Da": 8.0})])
+        f = next(iter(uow.distributivo.datos.values()))
+
+        assert f.estado_validacion is None
+        assert f.semanas is None
+        assert f.fase is None

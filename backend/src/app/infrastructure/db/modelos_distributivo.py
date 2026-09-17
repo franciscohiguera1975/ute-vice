@@ -389,6 +389,16 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     total_horas: Mapped[float] = mapped_column(Float, default=0.0, nullable=False, index=True)
 
     medida: Mapped[str | None] = mapped_column(Text)
+
+    # --- Campos del sistema academico, desde 2026-2 ---------------------
+    # Nulos en todo lo anterior: el dato no existia, que no es lo mismo que
+    # estar sin validar o sin fase.
+    estado_validacion: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    fase: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    semanas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    relacion_laboral: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tutor_posgrado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    tutor_medicina: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     observaciones: Mapped[str | None] = mapped_column(Text)
 
     creado_por: Mapped[UUID | None] = mapped_column(

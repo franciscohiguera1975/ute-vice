@@ -83,11 +83,28 @@ class TestPeriodoAcademico:
         assert PeriodoAcademico.desde_codigo(" 261651 ").codigo == "261651"
 
     @pytest.mark.parametrize(
-        "codigo", ["2026", "2026-3", "26-1", "", "abc", "2026/1", "261951", "261650"]
+        # `261650` ya no esta aqui: el ultimo digito distingue el interciclo
+        # (`0`) del ordinario (`1`), asi que es un codigo valido.
+        "codigo",
+        ["2026", "2026-3", "26-1", "", "abc", "2026/1", "261951", "261652"],
     )
     def test_rechaza_codigos_invalidos(self, codigo: str) -> None:
         with pytest.raises(ErrorValidacion, match="PAO"):
             PeriodoAcademico.desde_codigo(codigo)
+
+    def test_el_ultimo_digito_marca_el_interciclo(self) -> None:
+        ordinario = PeriodoAcademico.desde_codigo("261651")
+        corto = PeriodoAcademico.desde_codigo("261650")
+
+        assert ordinario.interciclo is False
+        assert corto.interciclo is True
+        assert corto.nombre == "2026-1 GRADO INTERCICLO"
+        # Comparten semestre y nivel: son dos periodos del mismo momento.
+        assert (corto.anio, corto.periodo, corto.nivel) == (
+            ordinario.anio,
+            ordinario.periodo,
+            ordinario.nivel,
+        )
 
     def test_se_ordena_cronologicamente(self) -> None:
         """Ordenar por texto acertaria por casualidad; el reporte deriva de aqui
