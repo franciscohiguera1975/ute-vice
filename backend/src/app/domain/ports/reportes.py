@@ -51,6 +51,14 @@ class TablaReporte:
     generado_por: str | None = None
     totales: dict[str, Any] = field(default_factory=dict)
 
+    color_banda: str | None = None
+    """Color de las filas pares, en RRGGBB.
+
+    `None` deja el gris del exportador. Existe para los resumenes, que se leen
+    como un cuadro y no como un listado: alli las bandas en tono pastel del
+    mismo bloque de columnas ayudan a seguir la fila.
+    """
+
     solo_datos: bool = False
     """Omite el preambulo y el pie, dejando la cabecera en la primera fila.
 

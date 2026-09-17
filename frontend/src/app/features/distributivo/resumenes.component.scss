@@ -165,3 +165,78 @@
   font-weight: 600;
   box-shadow: var(--sombra-1);
 }
+
+/* ============================================================== paleta === */
+/* Los mismos tonos que el archivo exportado. La tabla en pantalla y el Excel
+   tienen que leerse como la misma cosa, o nadie confia en que lo sean.
+
+   Los pasteles llevan tinta oscura fija y no un token de tema: sobre un fondo
+   claro fijo, la tinta tiene que ser oscura en los dos temas. */
+:host {
+  --pastel-azul: #bdd7ee;
+  --pastel-verde: #c6e0b4;
+  --pastel-verde-claro: #e2efda;
+  --pastel-ambar: #ffe699;
+  --pastel-salmon: #f8cbad;
+  --pastel-neutro: #e7e6e6;
+  --pastel-tinta: #1f2937;
+
+  --banda: #eaf3fa;
+  --identidad: #1f3864;
+}
+
+/* En oscuro los pasteles se apagan: a pleno tono deslumbran sobre el fondo
+   y la banda clara borraria el texto. */
+:host-context([data-tema='oscuro']) {
+  --pastel-azul: #2a4560;
+  --pastel-verde: #2f4a35;
+  --pastel-verde-claro: #28382a;
+  --pastel-ambar: #4d3f1c;
+  --pastel-salmon: #4d3026;
+  --pastel-neutro: #2f3542;
+  --pastel-tinta: #e8eaf0;
+
+  --banda: #1d2430;
+  --identidad: #16243c;
+}
+
+.tabla--resumen th[scope='col'] {
+  color: var(--pastel-tinta);
+  border-bottom: none;
+}
+.tabla--resumen th.bloque-identidad { background: var(--identidad); color: #fff; }
+.tabla--resumen .bloque-uno { background: var(--pastel-azul); }
+.tabla--resumen .bloque-dos { background: var(--pastel-verde); }
+.tabla--resumen .bloque-dos-claro { background: var(--pastel-verde-claro); }
+.tabla--resumen .bloque-calculo { background: var(--pastel-ambar); }
+.tabla--resumen .bloque-ok { background: var(--pastel-verde); }
+.tabla--resumen .bloque-ok-claro { background: var(--pastel-verde-claro); }
+.tabla--resumen .bloque-pendiente { background: var(--pastel-ambar); }
+.tabla--resumen .bloque-error { background: var(--pastel-salmon); }
+.tabla--resumen .bloque-neutro { background: var(--pastel-neutro); }
+
+/* Bandas alternas. `:hover` de la tabla global las tapa a proposito: seguir la
+   fila bajo el cursor pesa mas que la banda. */
+.tabla--resumen tbody tr:nth-child(even) { background: var(--banda); }
+
+/* La primera columna se repite en las dos tablas y ancla la lectura. */
+.tabla--resumen tbody th[scope='row'] {
+  font-weight: 600;
+  font-family: var(--fuente-mono);
+  font-size: 0.86em;
+}
+
+.descargas {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.descargas__rotulo {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}

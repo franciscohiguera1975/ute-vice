@@ -498,6 +498,15 @@ export interface ResumenComparativo {
   readonly generadoEn: string;
 }
 
+/** Lo que identifica el resumen que se quiere descargar. */
+export interface PeticionResumen {
+  readonly resumen: TipoResumen;
+  readonly grupoA: readonly string[];
+  readonly grupoB: readonly string[];
+  /** Para el resumen de estados: cual de los dos grupos se desglosa. */
+  readonly grupo: 'a' | 'b';
+}
+
 /** Los resumenes que ofrece la pantalla. El valor viaja en la URL. */
 export const TipoResumen = {
   AVANCE: 'avance',

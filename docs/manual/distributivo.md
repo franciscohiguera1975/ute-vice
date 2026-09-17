@@ -355,8 +355,28 @@ Un conmutador elige cual de los dos grupos se desglosa.
 
 ### Descarga
 
-**Descargar CSV** baja la tabla que se este viendo, con BOM para que Excel
-respete los acentos. Se arma en el navegador con los datos ya cargados. Los
-formatos `xlsx` y `pdf` de la pantalla de Reportes **no** estan disponibles aqui:
-esos salen de las plantillas del distributivo, que trabajan sobre las filas y no
-sobre agregados.
+Tres botones —**Excel**, **CSV** y **PDF**— bajan la tabla que se este viendo.
+Los genera el servidor a partir del **mismo calculo que alimenta la pantalla**,
+no de lo que ya tenia cargado el navegador: asi el archivo no puede decir otra
+cosa que lo que se esta viendo.
+
+Requieren `reportes:generar`; sin ese permiso los botones no aparecen.
+
+El Excel lleva la cabecera en bloques de color y las filas alternas en tono
+pastel, los mismos que la tabla en pantalla:
+
+| Bloque | Color | Que agrupa |
+|---|---|---|
+| Identidad | Azul institucional, letra blanca | Facultad y su nombre |
+| Grupo 1 | Azul pastel | Lo que tenia el primer grupo |
+| Grupo 2 | Verde pastel | Lo que tiene el segundo |
+| Calculo | Ambar pastel | Los porcentajes |
+| Estados | Verde, ambar, salmon y gris | Validado, pendiente, con error, sin estado |
+
+Que la pantalla y el archivo usen la misma paleta no es decoracion: es lo que
+permite comprobar de un vistazo que el archivo descargado es el cuadro que se
+estaba mirando.
+
+Los **dos totales del pie** van en el pie y no como una fila mas de la tabla:
+sumar la columna de docentes no da los docentes distintos, y mezclarlos en el
+cuerpo invita a leer mal el archivo.

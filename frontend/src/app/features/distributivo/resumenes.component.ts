@@ -2,7 +2,11 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { NotificacionesService } from '@core/notificaciones.service';
+import { PermisoDirective } from '@shared/directivas/permiso.directive';
+import { DescargaService } from '@core/descarga.service';
 import {
+  FormatoReporte,
+  Permiso,
   TipoResumen,
   type ErrorApi,
   type EstadosDeFacultad,
@@ -34,7 +38,7 @@ type Grupo = 'a' | 'b';
 @Component({
   selector: 'ute-resumenes-distributivo',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, CargandoComponent, VacioComponent],
+  imports: [DatePipe, DecimalPipe, CargandoComponent, VacioComponent, PermisoDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './resumenes.component.html',
   styleUrl: './resumenes.component.scss',
@@ -42,8 +46,19 @@ type Grupo = 'a' | 'b';
 export class ResumenesDistributivoComponent {
   private readonly repositorio = inject(RepositorioDistributivo);
   private readonly notificaciones = inject(NotificacionesService);
+  private readonly descarga = inject(DescargaService);
 
   protected readonly TipoResumen = TipoResumen;
+  protected readonly Permiso = Permiso;
+
+  /** Formato en curso, o `null`. Evita disparar dos descargas a la vez. */
+  protected readonly descargando = signal<FormatoReporte | null>(null);
+
+  protected readonly formatos = [
+    { valor: FormatoReporte.XLSX, etiqueta: 'Excel' },
+    { valor: FormatoReporte.CSV, etiqueta: 'CSV' },
+    { valor: FormatoReporte.PDF, etiqueta: 'PDF' },
+  ];
 
   /** Los dos grupos, para recorrerlos en la plantilla sin perder el tipo. */
   protected readonly GRUPOS: readonly Grupo[] = ['a', 'b'];
@@ -220,83 +235,36 @@ export class ResumenesDistributivoComponent {
 
   // ------------------------------------------------------------- descarga
   /**
-   * Descarga la tabla que se esta viendo, en CSV.
+   * Descarga el resumen que se esta viendo, en el formato elegido.
    *
-   * Se arma en el navegador con los datos ya cargados: pedirlos otra vez al
-   * servidor solo para volver a formatearlos no aportaria nada, y estos
-   * resumenes son decenas de filas, no miles.
+   * El archivo lo arma el backend a partir del **mismo caso de uso** que
+   * alimenta la pantalla, no de los datos ya cargados: asi no puede decir otra
+   * cosa que lo que se esta viendo, y de paso salen los tres formatos del
+   * mismo camino que el resto de los reportes.
    */
-  protected descargar(): void {
-    const d = this.datos();
-    if (!d) return;
+  protected descargar(formato: FormatoReporte): void {
+    if (this.descargando()) return;
+    this.descargando.set(formato);
 
-    const lineas: string[][] =
-      this.resumen() === TipoResumen.AVANCE
-        ? [
-            [
-              'FACULTAD',
-              'NOMBRE',
-              `DOCENTES ${this.codigosDe('a')}`,
-              `DOCENTES ${this.codigosDe('b')}`,
-              '% AVANCE',
-              'FILAS GRUPO 2',
-              'APROBADAS GRUPO 2',
-              '% APROBADO',
-            ],
-            ...d.avance.map((a) => [
-              a.codigo,
-              a.nombre,
-              String(a.docentesA),
-              String(a.docentesB),
-              a.porcentajeAvance.toFixed(1),
-              String(a.filasB),
-              String(a.filasAprobadasB),
-              a.porcentajeAprobadoB.toFixed(1),
-            ]),
-          ]
-        : [
-            [
-              'FACULTAD',
-              'NOMBRE',
-              'OK',
-              'OK EXCEPCION',
-              'PENDIENTE',
-              'ERROR',
-              'SIN ESTADO',
-              'TOTAL',
-              '% APROBADO',
-            ],
-            ...this.estadosMostrados().map((e) => [
-              e.codigo,
-              e.nombre,
-              String(e.ok),
-              String(e.okExcepcion),
-              String(e.pendiente),
-              String(e.conError),
-              String(e.sinEstado),
-              String(e.total),
-              e.porcentajeAprobado.toFixed(1),
-            ]),
-          ];
-
-    const csv = lineas.map((fila) => fila.map(this.escapar).join(';')).join('\r\n');
-    // El BOM hace que Excel abra el archivo como UTF-8 y no parta los acentos.
-    this.guardar(
-      new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' }),
-      `resumen-${this.resumen()}.csv`,
-    );
-  }
-
-  private escapar(valor: string): string {
-    return /[";\r\n]/.test(valor) ? `"${valor.replace(/"/g, '""')}"` : valor;
-  }
-
-  private guardar(contenido: Blob, nombre: string): void {
-    const url = URL.createObjectURL(contenido);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = nombre;
-    enlace.click();
-    URL.revokeObjectURL(url);
+    this.repositorio
+      .exportarResumen(
+        {
+          resumen: this.resumen(),
+          grupoA: this.grupoA(),
+          grupoB: this.grupoB(),
+          grupo: this.grupoDeEstados(),
+        },
+        formato,
+      )
+      .subscribe({
+        next: (archivo) => {
+          this.descarga.guardar(archivo);
+          this.descargando.set(null);
+        },
+        error: (error: ErrorApi) => {
+          this.descargando.set(null);
+          this.notificaciones.error(error.mensaje ?? 'No se pudo generar el archivo');
+        },
+      });
   }
 }

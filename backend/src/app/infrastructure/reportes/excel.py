@@ -125,7 +125,11 @@ class ExportadorExcel:
 
         fila = inicio + 1
         for indice_fila, datos in enumerate(tabla.filas):
-            banda = PatternFill("solid", fgColor=_GRIS) if indice_fila % 2 else None
+            banda = (
+                PatternFill("solid", fgColor=tabla.color_banda or _GRIS)
+                if indice_fila % 2
+                else None
+            )
             for indice_col, columna in enumerate(tabla.columnas, start=1):
                 celda = hoja.cell(
                     row=fila,

@@ -76,9 +76,16 @@ from app.application.casos_uso.reporte_distributivo import (
     ListarPlantillasReporte,
     VistaPreviaReporteDistributivo,
 )
+from app.application.casos_uso.reporte_resumenes import (
+    RESUMEN_AVANCE,
+    RESUMEN_ESTADOS,
+    EntradaExportarResumen,
+    ExportarResumenDistributivo,
+)
 from app.domain.enums import FormatoReporte, Permiso
 from app.domain.errors import ErrorValidacion
 from app.domain.ports.distributivo import FiltroDistributivo, FiltroDocentes
+from app.domain.ports.reportes import ArchivoReporte
 from app.infrastructure.importadores.pao_excel import LectorPaoExcel
 
 router = APIRouter(tags=["Distributivo docente"])
@@ -428,6 +435,51 @@ async def resumenes_del_distributivo(
     return ResumenComparativoSalida.desde(resultado)
 
 
+@router.get(
+    "/distributivo/resumenes/exportar",
+    summary="Descargar un resumen comparativo",
+    dependencies=[requiere(Permiso.REPORTES_GENERAR)],
+    response_class=Response,
+    responses={
+        200: {"description": "Archivo generado"},
+        422: {"description": "No hay datos con los periodos elegidos"},
+    },
+)
+async def exportar_resumen(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    resumen: Annotated[
+        str, Query(description=f"`{RESUMEN_AVANCE}` o `{RESUMEN_ESTADOS}`")
+    ] = RESUMEN_AVANCE,
+    grupo_a: Annotated[list[UUID] | None, Query(description="Periodos del primer grupo")] = None,
+    grupo_b: Annotated[list[UUID] | None, Query(description="Periodos del segundo grupo")] = None,
+    grupo: Annotated[
+        str, Query(description="Para el resumen de estados: que grupo se desglosa, `a` o `b`")
+    ] = "b",
+    formato: FormatoReporte = FormatoReporte.XLSX,
+) -> Response:
+    """El mismo resumen que muestra la pantalla, como archivo.
+
+    Sale del mismo caso de uso de lectura, para que el archivo no pueda decir
+    otra cosa que la pantalla.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ExportarResumenDistributivo(analitica, contenedor.exportadores, contenedor.reloj)
+        archivo = await caso(
+            EntradaExportarResumen(
+                grupo_a=tuple(grupo_a or ()),
+                grupo_b=tuple(grupo_b or ()),
+                resumen=resumen,
+                grupo=grupo,
+                formato=formato,
+            ),
+            contexto,
+        )
+    return _como_descarga(archivo)
+
+
 # ===========================================================================
 # Carga de un distributivo exportado por el sistema academico
 # ===========================================================================
@@ -706,6 +758,14 @@ async def generar_reporte(
         ),
         contexto,
     )
+    return _como_descarga(archivo)
+
+
+def _como_descarga(archivo: ArchivoReporte) -> Response:
+    """Respuesta de descarga con el nombre del archivo en la cabecera.
+
+    `filename*` es el que conserva los acentos; `filename` queda de respaldo.
+    """
     nombre = archivo.nombre_archivo
     return Response(
         content=archivo.contenido,

@@ -26,6 +26,7 @@ import type {
   PeticionReporteDistributivo,
   PlantillaReporte,
   PeticionCargaPao,
+  PeticionResumen,
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
   ResumenComparativo,
@@ -150,4 +151,10 @@ export abstract class RepositorioDistributivo {
     grupoA: readonly string[],
     grupoB: readonly string[],
   ): Observable<ResumenComparativo>;
+
+  /** Descarga un resumen. Sale del mismo calculo que la pantalla. */
+  abstract exportarResumen(
+    peticion: PeticionResumen,
+    formato: FormatoReporte,
+  ): Observable<ArchivoDescarga>;
 }

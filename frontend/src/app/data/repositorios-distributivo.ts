@@ -26,6 +26,7 @@ import type {
   AsignaturaCapturada,
   PeticionCargaPao,
   PeticionReporteDistributivo,
+  PeticionResumen,
   PlantillaReporte,
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
@@ -199,6 +200,17 @@ export class DistributivoHttp extends RepositorioDistributivo {
       grupoA,
       grupoB,
     });
+  }
+
+  exportarResumen(
+    peticion: PeticionResumen,
+    formato: FormatoReporte,
+  ): Observable<ArchivoDescarga> {
+    return this.api.descargar(
+      '/distributivo/resumenes/exportar',
+      { ...peticion, formato },
+      `resumen-${peticion.resumen}.${formato.toLowerCase()}`,
+    );
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

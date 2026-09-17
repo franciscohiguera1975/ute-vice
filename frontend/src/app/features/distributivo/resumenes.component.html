@@ -6,15 +6,20 @@
     </p>
   </div>
 
-  <div class="fila hueco-sm no-imprimir">
-    <button
-      type="button"
-      class="btn btn--secundario btn--sm"
-      [disabled]="!datos()"
-      (click)="descargar()"
-    >
-      Descargar CSV
-    </button>
+  <div class="fila hueco-sm envolver no-imprimir">
+    <div class="descargas" *utePermiso="Permiso.REPORTES_GENERAR">
+      <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+      @for (f of formatos; track f.valor) {
+        <button
+          type="button"
+          class="btn btn--secundario btn--sm"
+          [disabled]="!datos() || descargando() !== null"
+          (click)="descargar(f.valor)"
+        >
+          {{ descargando() === f.valor ? 'Generando…' : f.etiqueta }}
+        </button>
+      }
+    </div>
     <button type="button" class="btn btn--secundario btn--sm" (click)="cargar()">
       Actualizar
     </button>
@@ -158,16 +163,16 @@
           <h2 class="tarjeta__titulo">Avance por facultad</h2>
         </div>
         <div class="tabla-envoltura">
-          <table class="tabla">
+          <table class="tabla tabla--resumen">
             <thead>
               <tr>
-                <th scope="col">Facultad</th>
-                <th scope="col" class="der">Docentes grupo 1</th>
-                <th scope="col" class="der">Docentes grupo 2</th>
-                <th scope="col" class="der">% Avance</th>
-                <th scope="col" class="der">Filas grupo 2</th>
-                <th scope="col" class="der">Aprobadas grupo 2</th>
-                <th scope="col" class="der">% Aprobado</th>
+                <th scope="col" class="bloque-identidad">Facultad</th>
+                <th scope="col" class="der bloque-uno">Docentes grupo 1</th>
+                <th scope="col" class="der bloque-dos">Docentes grupo 2</th>
+                <th scope="col" class="der bloque-calculo">% Avance</th>
+                <th scope="col" class="der bloque-dos-claro">Filas grupo 2</th>
+                <th scope="col" class="der bloque-dos-claro">Aprobadas grupo 2</th>
+                <th scope="col" class="der bloque-calculo">% Aprobado</th>
               </tr>
             </thead>
             <tbody>
@@ -270,17 +275,17 @@
         </p>
 
         <div class="tabla-envoltura">
-          <table class="tabla">
+          <table class="tabla tabla--resumen">
             <thead>
               <tr>
-                <th scope="col">Facultad</th>
-                <th scope="col" class="der">Validado</th>
-                <th scope="col" class="der">Con excepcion</th>
-                <th scope="col" class="der">Pendiente</th>
-                <th scope="col" class="der">Con error</th>
-                <th scope="col" class="der">Sin estado</th>
-                <th scope="col" class="der">Total</th>
-                <th scope="col" class="der">% Aprobado</th>
+                <th scope="col" class="bloque-identidad">Facultad</th>
+                <th scope="col" class="der bloque-ok">Validado</th>
+                <th scope="col" class="der bloque-ok-claro">Con excepcion</th>
+                <th scope="col" class="der bloque-pendiente">Pendiente</th>
+                <th scope="col" class="der bloque-error">Con error</th>
+                <th scope="col" class="der bloque-neutro">Sin estado</th>
+                <th scope="col" class="der bloque-uno">Total</th>
+                <th scope="col" class="der bloque-uno">% Aprobado</th>
               </tr>
             </thead>
             <tbody>

@@ -770,3 +770,127 @@ def _pao_de_tecnologia(*, identificacion: str) -> bytes:
     memoria = BytesIO()
     libro.save(memoria)
     return memoria.getvalue()
+
+
+class TestExportarResumenes:
+    """Descarga de los resumenes en los tres formatos.
+
+    Salen del mismo caso de uso que la pantalla: el archivo no puede decir otra
+    cosa que lo que se esta viendo.
+    """
+
+    async def _preparar(self, cliente, cabeceras) -> None:  # type: ignore[no-untyped-def]
+        carga = TestTableroDelDistributivo()
+        await carga._cargar(cliente, cabeceras, "2026-1", estado="Validación Pendiente")
+        await carga._cargar(cliente, cabeceras, "2026-2")
+
+    @pytest.mark.parametrize(
+        ("formato", "firma"),
+        [("XLSX", b"PK"), ("CSV", b"\xef\xbb\xbf"), ("PDF", b"%PDF")],
+    )
+    async def test_los_tres_formatos(
+        self, sembrado, cabeceras_admin, formato: str, firma: bytes
+    ) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            f"/api/v1/distributivo/resumenes/exportar?formato={formato}",
+            headers=cabeceras_admin,
+        )
+
+        assert respuesta.status_code == 200, respuesta.text
+        assert respuesta.content.startswith(firma)
+        assert "attachment" in respuesta.headers["content-disposition"]
+
+    async def test_el_resumen_de_estados_elige_el_grupo(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar?resumen=estados&grupo=a&formato=CSV",
+            headers=cabeceras_admin,
+        )
+
+        assert respuesta.status_code == 200
+        texto = respuesta.content.decode("utf-8-sig")
+        assert "Estados del distributivo por facultad" in texto
+        # El grupo A es 2026-1, cuya unica fila quedo pendiente de validar.
+        assert "261651" in texto
+
+    async def test_el_excel_lleva_cabecera_de_color_y_bandas_pastel(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """La presentacion es parte del entregable: se revisa, no se supone."""
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar?formato=XLSX", headers=cabeceras_admin
+        )
+        hoja = load_workbook(BytesIO(respuesta.content)).active
+        assert hoja is not None
+
+        # La cabecera de la tabla es la primera fila cuya celda A tiene relleno
+        # propio; antes van el titulo, el subtitulo y la constancia de filtros.
+        cabecera = next(
+            fila
+            for fila in range(1, 15)
+            if hoja.cell(row=fila, column=1).value == "Facultad"
+        )
+
+        colores = {
+            hoja.cell(row=cabecera, column=col).fill.fgColor.rgb
+            for col in range(1, hoja.max_column + 1)
+        }
+        # Varios bloques de color, no una cabecera de un solo tono.
+        assert len({c for c in colores if c}) >= 3
+
+        primera, segunda = cabecera + 1, cabecera + 2
+        if hoja.cell(row=segunda, column=1).value is not None:
+            banda = hoja.cell(row=segunda, column=1).fill.fgColor.rgb
+            sin_banda = hoja.cell(row=primera, column=1).fill.fgColor.rgb
+            assert banda != sin_banda
+            assert str(banda).endswith("EAF3FA")
+
+    async def test_el_rol_de_consulta_puede_descargarlos(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Tiene `reportes:generar` justamente para esto."""
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+        await cliente.post(
+            "/api/v1/usuarios",
+            headers=cabeceras_admin,
+            json={
+                "email": "descarga@ute.edu.ec",
+                "nombre_completo": "Descarga Resumenes",
+                "contrasena": "Lectura#2026.Ok",
+                "roles": ["CONSULTA_DISTRIBUTIVO"],
+            },
+        )
+        acceso = await cliente.post(
+            "/api/v1/auth/login",
+            json={"email": "descarga@ute.edu.ec", "contrasena": "Lectura#2026.Ok"},
+        )
+        cabeceras = {"Authorization": f"Bearer {acceso.json()['tokens']['acceso']}"}
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar?formato=XLSX", headers=cabeceras
+        )
+        assert respuesta.status_code == 200
+
+    async def test_sin_datos_no_se_genera_un_archivo_vacio(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar", headers=cabeceras_admin
+        )
+        assert respuesta.status_code == 422
