@@ -104,9 +104,31 @@
             <thead>
               <tr>
                 <th scope="col" class="bloque-identidad">Facultad</th>
-                <th scope="col" class="der bloque-uno">Docentes grupo 1</th>
-                <th scope="col" class="der bloque-dos">Docentes grupo 2</th>
-                <th scope="col" class="der bloque-dos-claro">Aprobadas grupo 2</th>
+                <th scope="col" class="der bloque-uno">
+                  Docentes
+                  <input
+                    type="text"
+                    class="rotulo"
+                    [value]="rotuloA()"
+                    (input)="etiquetaA.set($any($event.target).value)"
+                    [title]="'Periodos: ' + codigosDe('a')"
+                    aria-label="Nombre del grupo 1"
+                    maxlength="40"
+                  />
+                </th>
+                <th scope="col" class="der bloque-dos">
+                  Docentes
+                  <input
+                    type="text"
+                    class="rotulo"
+                    [value]="rotuloB()"
+                    (input)="etiquetaB.set($any($event.target).value)"
+                    [title]="'Periodos: ' + codigosDe('b')"
+                    aria-label="Nombre del grupo 2"
+                    maxlength="40"
+                  />
+                </th>
+                <th scope="col" class="der bloque-dos-claro">Aprobadas {{ rotuloB() }}</th>
                 <th scope="col" class="der bloque-calculo">% Aprobado</th>
               </tr>
             </thead>
@@ -169,6 +191,10 @@
           <strong>Las dos filas de total dicen cosas distintas y no coinciden.</strong>
           Un docente que dicta en dos facultades cuenta una vez en cada una, asi que la
           suma de la columna es mayor que el numero de docentes distintos.
+          <br />
+          <strong>Los nombres de las dos columnas se pueden escribir.</strong> Salen del
+          semestre de los periodos elegidos; si el grupo reune varios, o si prefiere
+          otro rotulo, escriba encima. Lo que quede es lo que llevara el archivo.
         </p>
       </section>
     }

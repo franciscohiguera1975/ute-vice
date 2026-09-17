@@ -1036,7 +1036,7 @@ class TestExportarDelTablero:
         ):
             assert etiqueta in texto, etiqueta
 
-    async def test_la_aprobacion_nombra_los_grupos_y_no_los_periodos(
+    async def test_las_columnas_llevan_el_semestre_y_no_los_codigos(
         self, sembrado, cabeceras_admin
     ) -> None:
         """Un grupo son hasta seis codigos: no caben en una cabecera."""
@@ -1049,11 +1049,35 @@ class TestExportarDelTablero:
         )
         texto = respuesta.content.decode("utf-8-sig")
 
-        assert "Filas grupo 2" in texto
+        assert "Filas 2026-2" in texto
+        assert "Filas 2026-1" in texto
         assert "Variacion (puntos)" in texto
         # Los codigos van en el subtitulo y en la constancia de filtros.
         assert "262651" in texto
         assert "261651" in texto
+
+    async def test_se_puede_titular_cada_grupo_a_mano(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Un grupo puede reunir periodos de varios semestres: el rotulo se edita."""
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/resumenes/exportar",
+            headers=cabeceras_admin,
+            params={
+                "resumen": "aprobacion",
+                "formato": "CSV",
+                "etiqueta_a": "Antes",
+                "etiqueta_b": "Ahora",
+            },
+        )
+        texto = respuesta.content.decode("utf-8-sig")
+
+        assert "Filas Ahora" in texto
+        assert "Filas Antes" in texto
+        assert "Filas 2026-2" not in texto
 
     async def test_el_tablero_acepta_grupos_de_varios_periodos(
         self, sembrado, cabeceras_admin

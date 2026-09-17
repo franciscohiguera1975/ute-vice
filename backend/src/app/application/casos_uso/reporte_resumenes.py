@@ -15,7 +15,7 @@ que grupo pertenece cada cifra.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -69,6 +69,16 @@ class EntradaExportarResumen:
     resumen: str = RESUMEN_AVANCE
     grupo: str = "b"
     """Para el resumen de estados: cual de los dos grupos se desglosa."""
+
+    etiqueta_a: str = ""
+    etiqueta_b: str = ""
+    """Como titular cada grupo en las columnas. Vacio usa el semestre.
+
+    Lo elige quien exporta porque la pantalla lo deja editar: un grupo puede
+    reunir periodos de varios semestres, y entonces ningun rotulo automatico
+    dice lo que el usuario tenia en la cabeza al armarlo.
+    """
+
     formato: FormatoReporte = FormatoReporte.XLSX
 
 
@@ -102,7 +112,7 @@ class ExportarResumenDistributivo(CasoDeUso[EntradaExportarResumen, ArchivoRepor
                 EntradaTableroDistributivo(grupo_a=entrada.grupo_a, grupo_b=entrada.grupo_b),
                 contexto,
             )
-            tabla = constructor_tablero(tablero, contexto)
+            tabla = constructor_tablero(tablero, entrada, contexto)
             if not tabla.filas:
                 raise ErrorValidacion(
                     "No hay datos para exportar con los periodos elegidos", campo="grupos"
@@ -116,7 +126,7 @@ class ExportarResumenDistributivo(CasoDeUso[EntradaExportarResumen, ArchivoRepor
         )
         constructor = _DE_RESUMENES.get(entrada.resumen, _tabla_de_avance)
 
-        tabla = constructor(datos, entrada.grupo, contexto)
+        tabla = constructor(datos, entrada, contexto)
 
         if not tabla.filas:
             raise ErrorValidacion(
@@ -137,21 +147,47 @@ def _codigos(datos: ResumenComparativo, grupo: str) -> str:
     return " · ".join(elegido.codigos) if elegido and elegido.codigos else "sin periodos"
 
 
+def _semestres(codigos: Sequence[str]) -> str:
+    """Los semestres que reune un grupo: `262651` y `262151` son `2026-2`.
+
+    Es el rotulo por defecto de las columnas. Seis codigos no caben en una
+    cabecera; el semestre si, y es como se nombra el periodo al hablarlo.
+    """
+    vistos: list[str] = []
+    for codigo in codigos:
+        if len(codigo) < 3:
+            continue
+        semestre = f"20{codigo[:2]}-{codigo[2]}"
+        if semestre not in vistos:
+            vistos.append(semestre)
+    return " · ".join(vistos)
+
+
+def _rotulo(entrada: EntradaExportarResumen, grupo: str, codigos: Sequence[str]) -> str:
+    """Como se titula un grupo: lo que pidio quien exporta, o el semestre."""
+    elegido = (entrada.etiqueta_a if grupo == "a" else entrada.etiqueta_b).strip()
+    return elegido or _semestres(codigos) or f"grupo {1 if grupo == 'a' else 2}"
+
+
 def _tabla_de_avance(
-    datos: ResumenComparativo, _grupo: str, contexto: ContextoEjecucion
+    datos: ResumenComparativo, entrada: EntradaExportarResumen, contexto: ContextoEjecucion
 ) -> TablaReporte:
     uno, dos = _codigos(datos, "a"), _codigos(datos, "b")
+    # Los titulos llevan el semestre y no los codigos: un grupo son hasta seis,
+    # y la cabecera acabaria ocupando mas que los datos. Los codigos viajan en
+    # el subtitulo y en la constancia de filtros, que es donde se buscan.
+    rotulo_a = _rotulo(entrada, "a", datos.grupo_a.codigos if datos.grupo_a else ())
+    rotulo_b = _rotulo(entrada, "b", datos.grupo_b.codigos if datos.grupo_b else ())
 
     columnas = [
         ColumnaReporte("facultad", "Facultad", 12, "texto", "izquierda", _AZUL_OSCURO),
         ColumnaReporte("nombre", "Nombre de la facultad", 46, "texto", "izquierda", _AZUL_OSCURO),
-        # Los titulos no llevan los codigos: un grupo son hasta seis, y la
-        # cabecera acabaria ocupando mas que los datos. Los codigos viajan en
-        # el subtitulo y en la constancia de filtros, que es donde se buscan.
-        ColumnaReporte("docentes_a", "Docentes grupo 1", 17, "numero", "derecha", _PASTEL_AZUL),
-        ColumnaReporte("docentes_b", "Docentes grupo 2", 17, "numero", "derecha", _PASTEL_VERDE),
+        ColumnaReporte("docentes_a", f"Docentes {rotulo_a}", 18, "numero", "derecha", _PASTEL_AZUL),
         ColumnaReporte(
-            "aprobadas_b", "Aprobadas grupo 2", 18, "numero", "derecha", _PASTEL_VERDE_CLARO
+            "docentes_b", f"Docentes {rotulo_b}", 18, "numero", "derecha", _PASTEL_VERDE
+        ),
+        ColumnaReporte(
+            "aprobadas_b", f"Aprobadas {rotulo_b}", 19, "numero", "derecha", _PASTEL_VERDE_CLARO
         ),
         ColumnaReporte("aprobado", "% Aprobado", 12, "porcentaje", "derecha", _PASTEL_AMBAR),
     ]
@@ -176,20 +212,20 @@ def _tabla_de_avance(
     aprobadas = sum(a.filas_aprobadas_b for a in datos.avance)
     evaluadas = sum(a.filas_evaluadas_b for a in datos.avance)
     totales = {
-        "Suma de la columna, grupo 1": sum(a.docentes_a for a in datos.avance),
-        "Suma de la columna, grupo 2": sum(a.docentes_b for a in datos.avance),
-        "Docentes distintos, grupo 1": distintos_a,
-        "Docentes distintos, grupo 2": distintos_b,
-        "Aprobadas grupo 2": aprobadas,
-        "% Aprobado grupo 2": round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0,
+        f"Suma de la columna, {rotulo_a}": sum(a.docentes_a for a in datos.avance),
+        f"Suma de la columna, {rotulo_b}": sum(a.docentes_b for a in datos.avance),
+        f"Docentes distintos, {rotulo_a}": distintos_a,
+        f"Docentes distintos, {rotulo_b}": distintos_b,
+        f"Aprobadas {rotulo_b}": aprobadas,
+        "% Aprobado": round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0,
     }
 
     return TablaReporte(
         titulo="Avance del distributivo por facultad",
-        subtitulo=f"Grupo 1: {uno}   ·   Grupo 2: {dos}",
+        subtitulo=f"{rotulo_a}: {uno}   ·   {rotulo_b}: {dos}",
         columnas=columnas,
         filas=filas,
-        filtros_aplicados={"Grupo 1": uno, "Grupo 2": dos},
+        filtros_aplicados={rotulo_a: uno, rotulo_b: dos},
         generado_por=contexto.actor.nombre_completo if contexto.actor else "Sistema",
         totales=totales,
         color_banda=_BANDA,
@@ -197,8 +233,9 @@ def _tabla_de_avance(
 
 
 def _tabla_de_estados(
-    datos: ResumenComparativo, grupo: str, contexto: ContextoEjecucion
+    datos: ResumenComparativo, entrada: EntradaExportarResumen, contexto: ContextoEjecucion
 ) -> TablaReporte:
+    grupo = entrada.grupo
     filas_origen = datos.estados_a if grupo == "a" else datos.estados_b
     periodos = _codigos(datos, grupo)
 
@@ -260,19 +297,25 @@ def _codigos_del_tablero(tablero: TableroDistributivo, grupo: str) -> str:
     return " · ".join(validacion.codigos) if validacion else "sin periodos"
 
 
-def _tabla_de_aprobacion(tablero: TableroDistributivo, contexto: ContextoEjecucion) -> TablaReporte:
+def _tabla_de_aprobacion(
+    tablero: TableroDistributivo,
+    entrada: EntradaExportarResumen,
+    contexto: ContextoEjecucion,
+) -> TablaReporte:
     """La comparativa por facultad del tablero: filas, aprobadas y variacion."""
     uno, dos = _codigos_del_tablero(tablero, "a"), _codigos_del_tablero(tablero, "b")
+    rotulo_a = _rotulo(entrada, "a", tablero.anterior.codigos if tablero.anterior else ())
+    rotulo_b = _rotulo(entrada, "b", tablero.actual.codigos if tablero.actual else ())
 
     columnas = [
         ColumnaReporte("facultad", "Facultad", 46, "texto", "izquierda", _AZUL_OSCURO),
-        ColumnaReporte("filas_b", "Filas grupo 2", 14, "numero", "derecha", _PASTEL_VERDE),
+        ColumnaReporte("filas_b", f"Filas {rotulo_b}", 16, "numero", "derecha", _PASTEL_VERDE),
         ColumnaReporte(
-            "aprobado_b", "% Aprobado grupo 2", 18, "porcentaje", "derecha", _PASTEL_VERDE_CLARO
+            "aprobado_b", f"% Aprobado {rotulo_b}", 20, "porcentaje", "derecha", _PASTEL_VERDE_CLARO
         ),
-        ColumnaReporte("filas_a", "Filas grupo 1", 14, "numero", "derecha", _PASTEL_AZUL),
+        ColumnaReporte("filas_a", f"Filas {rotulo_a}", 16, "numero", "derecha", _PASTEL_AZUL),
         ColumnaReporte(
-            "aprobado_a", "% Aprobado grupo 1", 18, "porcentaje", "derecha", _PASTEL_AZUL
+            "aprobado_a", f"% Aprobado {rotulo_a}", 20, "porcentaje", "derecha", _PASTEL_AZUL
         ),
         ColumnaReporte(
             "variacion", "Variacion (puntos)", 18, "porcentaje", "derecha", _PASTEL_AMBAR
@@ -295,19 +338,21 @@ def _tabla_de_aprobacion(tablero: TableroDistributivo, contexto: ContextoEjecuci
 
     actual, anterior = tablero.actual, tablero.anterior
     totales = {
-        "Filas grupo 2": actual.total if actual else 0,
-        "Filas grupo 1": anterior.total if anterior else 0,
-        "Docentes distintos, grupo 2": actual.docentes if actual else 0,
-        "Docentes distintos, grupo 1": anterior.docentes if anterior else 0,
-        "% Aprobado grupo 2": actual.porcentaje_aprobado if actual and actual.evaluadas else 0.0,
+        f"Filas {rotulo_b}": actual.total if actual else 0,
+        f"Filas {rotulo_a}": anterior.total if anterior else 0,
+        f"Docentes distintos, {rotulo_b}": actual.docentes if actual else 0,
+        f"Docentes distintos, {rotulo_a}": anterior.docentes if anterior else 0,
+        f"% Aprobado {rotulo_b}": (
+            actual.porcentaje_aprobado if actual and actual.evaluadas else 0.0
+        ),
     }
 
     return TablaReporte(
         titulo="Aprobacion del distributivo por facultad",
-        subtitulo=f"Grupo 1: {uno}   ·   Grupo 2: {dos}",
+        subtitulo=f"{rotulo_a}: {uno}   ·   {rotulo_b}: {dos}",
         columnas=columnas,
         filas=filas,
-        filtros_aplicados={"Grupo 1": uno, "Grupo 2": dos},
+        filtros_aplicados={rotulo_a: uno, rotulo_b: dos},
         generado_por=contexto.actor.nombre_completo if contexto.actor else "Sistema",
         totales=totales,
         color_banda=_BANDA,
@@ -325,7 +370,9 @@ _ORDEN_ESTADOS: tuple[tuple[str, str], ...] = (
 
 
 def _tabla_comparativa_de_estados(
-    tablero: TableroDistributivo, contexto: ContextoEjecucion
+    tablero: TableroDistributivo,
+    entrada: EntradaExportarResumen,
+    contexto: ContextoEjecucion,
 ) -> TablaReporte:
     """El desglose por estado del tablero: un estado por fila, dos grupos.
 
@@ -334,13 +381,15 @@ def _tabla_comparativa_de_estados(
     «en que estado esta el periodo».
     """
     uno, dos = _codigos_del_tablero(tablero, "a"), _codigos_del_tablero(tablero, "b")
+    rotulo_a = _rotulo(entrada, "a", tablero.anterior.codigos if tablero.anterior else ())
+    rotulo_b = _rotulo(entrada, "b", tablero.actual.codigos if tablero.actual else ())
 
     columnas = [
         ColumnaReporte("estado", "Estado", 26, "texto", "izquierda", _AZUL_OSCURO),
-        ColumnaReporte("filas_b", "Filas grupo 2", 14, "numero", "derecha", _PASTEL_VERDE),
-        ColumnaReporte("pct_b", "% grupo 2", 12, "porcentaje", "derecha", _PASTEL_VERDE_CLARO),
-        ColumnaReporte("filas_a", "Filas grupo 1", 14, "numero", "derecha", _PASTEL_AZUL),
-        ColumnaReporte("pct_a", "% grupo 1", 12, "porcentaje", "derecha", _PASTEL_AZUL),
+        ColumnaReporte("filas_b", f"Filas {rotulo_b}", 16, "numero", "derecha", _PASTEL_VERDE),
+        ColumnaReporte("pct_b", f"% {rotulo_b}", 14, "porcentaje", "derecha", _PASTEL_VERDE_CLARO),
+        ColumnaReporte("filas_a", f"Filas {rotulo_a}", 16, "numero", "derecha", _PASTEL_AZUL),
+        ColumnaReporte("pct_a", f"% {rotulo_a}", 14, "porcentaje", "derecha", _PASTEL_AZUL),
     ]
 
     def contar(validacion: ValidacionDeGrupo | None) -> tuple[dict[str, int], int]:
@@ -364,24 +413,28 @@ def _tabla_comparativa_de_estados(
 
     return TablaReporte(
         titulo="Estados del distributivo",
-        subtitulo=f"Grupo 1: {uno}   ·   Grupo 2: {dos}",
+        subtitulo=f"{rotulo_a}: {uno}   ·   {rotulo_b}: {dos}",
         columnas=columnas,
         filas=filas,
-        filtros_aplicados={"Grupo 1": uno, "Grupo 2": dos},
+        filtros_aplicados={rotulo_a: uno, rotulo_b: dos},
         generado_por=contexto.actor.nombre_completo if contexto.actor else "Sistema",
-        totales={"Total grupo 2": total_b, "Total grupo 1": total_a},
+        totales={f"Total {rotulo_b}": total_b, f"Total {rotulo_a}": total_a},
         color_banda=_BANDA,
     )
 
 
 #: Cada resumen con la tabla que lo construye, agrupados por la pantalla de la
 #: que salen. Agregar uno es una linea en el diccionario que corresponda.
-_DE_RESUMENES: dict[str, Callable[[ResumenComparativo, str, ContextoEjecucion], TablaReporte]] = {
+_DE_RESUMENES: dict[
+    str, Callable[[ResumenComparativo, EntradaExportarResumen, ContextoEjecucion], TablaReporte]
+] = {
     RESUMEN_AVANCE: _tabla_de_avance,
     RESUMEN_ESTADOS: _tabla_de_estados,
 }
 
-_DEL_TABLERO: dict[str, Callable[[TableroDistributivo, ContextoEjecucion], TablaReporte]] = {
+_DEL_TABLERO: dict[
+    str, Callable[[TableroDistributivo, EntradaExportarResumen, ContextoEjecucion], TablaReporte]
+] = {
     RESUMEN_APROBACION: _tabla_de_aprobacion,
     RESUMEN_COMPARATIVO: _tabla_comparativa_de_estados,
 }

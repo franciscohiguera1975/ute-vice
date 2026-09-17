@@ -519,6 +519,25 @@ export interface PeticionResumen {
   readonly grupoB: readonly string[];
   /** Para el resumen de estados: cual de los dos grupos se desglosa. */
   readonly grupo: 'a' | 'b';
+  /** Como titular cada grupo. Vacio deja que el servidor use el semestre. */
+  readonly etiquetaA?: string;
+  readonly etiquetaB?: string;
+}
+
+/**
+ * El semestre que reune un grupo de periodos: `262651` y `262151` son `2026-2`.
+ *
+ * Es el rotulo por defecto de las columnas. Seis codigos no caben en una
+ * cabecera; el semestre si, y es como se nombra el periodo al hablarlo.
+ */
+export function semestresDe(codigos: readonly string[]): string {
+  const vistos: string[] = [];
+  for (const codigo of codigos) {
+    if (codigo.length < 3) continue;
+    const semestre = `20${codigo.slice(0, 2)}-${codigo.slice(2, 3)}`;
+    if (!vistos.includes(semestre)) vistos.push(semestre);
+  }
+  return vistos.join(' · ');
 }
 
 /** Los resumenes que ofrece la pantalla. El valor viaja en la URL. */

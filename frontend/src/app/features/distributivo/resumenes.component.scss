@@ -170,3 +170,29 @@
   letter-spacing: 0.05em;
   font-weight: 600;
 }
+
+/* Rotulo editable de las dos columnas de grupo.
+
+   Es un `input` y no un texto con boton de editar: el campo ya parece
+   escribible al pasar el raton, y quien no quiera tocarlo lo lee igual. */
+input.rotulo {
+  /* Justo lo que ocupa `2026-1`. Mas ancho y la tabla se desborda; el texto
+     largo se lee igual porque el campo se desplaza al escribir. */
+  width: 4.4rem;
+  padding: 0.05rem 0.2rem;
+  font: inherit;
+  font-weight: inherit;
+  text-align: right;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radio-sm);
+}
+input.rotulo:hover { border-color: rgb(0 0 0 / 18%); }
+input.rotulo:focus {
+  outline: none;
+  background: var(--superficie);
+  border-color: var(--azul-600);
+  color: var(--texto);
+}
+:host-context([data-tema='oscuro']) input.rotulo:hover { border-color: rgb(255 255 255 / 22%); }

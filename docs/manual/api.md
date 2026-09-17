@@ -188,7 +188,8 @@ repetibles. Devuelve `facultades` —las que tienen filas en esos periodos— y
 juntas para que no puedan contradecirse entre si.
 
 `GET /distributivo/resumenes/exportar` toma los mismos `grupo_a` y `grupo_b`,
-mas `resumen`, `grupo` (`a` o `b`, para el desglose de estados) y `formato`
+mas `resumen`, `grupo` (`a` o `b`, para el desglose de estados), `etiqueta_a` y
+`etiqueta_b` —como titular cada grupo; vacio usa el semestre— y `formato`
 (`XLSX`, `CSV` o `PDF`). Hay cuatro resumenes: `avance` y `estados` son los de la
 pantalla de resumenes; `aprobacion` y `comparativo`, las dos tablas del tablero.
 Cada uno sale del mismo caso de uso que alimenta su pantalla. Devuelve el archivo binario con

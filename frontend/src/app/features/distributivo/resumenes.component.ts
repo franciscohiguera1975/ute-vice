@@ -8,6 +8,7 @@ import {
   FormatoReporte,
   Permiso,
   TipoResumen,
+  semestresDe,
   type ErrorApi,
   type EstadosDeFacultad,
   type ResumenComparativo,
@@ -68,6 +69,24 @@ export class ResumenesDistributivoComponent {
 
   /** Que grupo muestra el desglose por estados. */
   protected readonly grupoDeEstados = signal<Grupo>('b');
+
+  /**
+   * Rotulo de cada grupo, editable en la propia cabecera de la tabla.
+   *
+   * Vacio significa «el que corresponda»: el semestre de los periodos
+   * elegidos. Un grupo puede reunir periodos de varios semestres, y entonces
+   * ningun rotulo automatico dice lo que el usuario tenia en la cabeza al
+   * armarlo — por eso se puede escribir encima.
+   */
+  protected readonly etiquetaA = signal('');
+  protected readonly etiquetaB = signal('');
+
+  protected readonly rotuloA = computed(
+    () => this.etiquetaA().trim() || semestresDe(this.datos()?.grupoA?.codigos ?? []) || 'grupo 1',
+  );
+  protected readonly rotuloB = computed(
+    () => this.etiquetaB().trim() || semestresDe(this.datos()?.grupoB?.codigos ?? []) || 'grupo 2',
+  );
 
   protected readonly opcionesResumen = [
     {
@@ -196,6 +215,10 @@ export class ResumenesDistributivoComponent {
           grupoA: this.grupoA(),
           grupoB: this.grupoB(),
           grupo: this.grupoDeEstados(),
+          // Se manda lo que se ve, no lo que se escribio: si el campo esta
+          // vacio, el archivo lleva el mismo semestre que la pantalla.
+          etiquetaA: this.rotuloA(),
+          etiquetaB: this.rotuloB(),
         },
         formato,
       )

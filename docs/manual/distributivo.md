@@ -365,9 +365,15 @@ Una fila por facultad:
 
 | Columna | Que dice |
 |---|---|
-| **Docentes grupo 1 / grupo 2** | Docentes **distintos** con carga en cada grupo |
-| **Aprobadas grupo 2** | Filas con estado `OK` u `OK, excepcion` |
+| **Docentes `2026-1` / `2026-2`** | Docentes **distintos** con carga en cada grupo |
+| **Aprobadas `2026-2`** | Filas con estado `OK` u `OK, excepcion` |
 | **% Aprobado** | Sobre las filas con estado, no sobre el total |
+
+Las dos columnas de grupo llevan el **semestre** de los periodos elegidos, y el
+rotulo **se puede escribir**: basta pulsar sobre el y teclear. Hace falta porque
+un grupo puede reunir periodos de varios semestres, y entonces ningun rotulo
+automatico dice lo que quien lo armo tenia en la cabeza. Lo que quede en la
+cabecera es lo que llevara el archivo descargado.
 
 > **Hubo una columna «% Avance» y se retiro.** Era `docentes grupo 2 ÷
 > docentes grupo 1`: el cociente de dos recuentos, no la interseccion de dos

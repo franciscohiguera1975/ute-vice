@@ -468,6 +468,12 @@ async def exportar_resumen(
     grupo: Annotated[
         str, Query(description="Para el resumen de estados: que grupo se desglosa, `a` o `b`")
     ] = "b",
+    etiqueta_a: Annotated[
+        str, Query(description="Como titular el grupo 1. Vacio usa el semestre.", max_length=40)
+    ] = "",
+    etiqueta_b: Annotated[
+        str, Query(description="Como titular el grupo 2. Vacio usa el semestre.", max_length=40)
+    ] = "",
     formato: FormatoReporte = FormatoReporte.XLSX,
 ) -> Response:
     """El mismo resumen que muestra la pantalla, como archivo.
@@ -485,6 +491,8 @@ async def exportar_resumen(
                 grupo_b=tuple(grupo_b or ()),
                 resumen=resumen,
                 grupo=grupo,
+                etiqueta_a=etiqueta_a,
+                etiqueta_b=etiqueta_b,
                 formato=formato,
             ),
             contexto,
