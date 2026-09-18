@@ -276,9 +276,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .where(or_(en_a, en_b))
         )
         if dedicacion_ids:
-            consulta = consulta.where(
-                FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids))
-            )
+            consulta = consulta.where(FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids)))
         consulta = consulta.group_by(FacultadModel.codigo, FacultadModel.nombre).order_by(
             FacultadModel.codigo
         )
