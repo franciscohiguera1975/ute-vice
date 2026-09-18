@@ -1056,9 +1056,7 @@ class TestExportarDelTablero:
         assert "262651" in texto
         assert "261651" in texto
 
-    async def test_se_puede_titular_cada_grupo_a_mano(
-        self, sembrado, cabeceras_admin
-    ) -> None:
+    async def test_se_puede_titular_cada_grupo_a_mano(self, sembrado, cabeceras_admin) -> None:
         """Un grupo puede reunir periodos de varios semestres: el rotulo se edita."""
         _, cliente = sembrado
         await self._preparar(cliente, cabeceras_admin)
