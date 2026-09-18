@@ -314,9 +314,13 @@
 .lateral__pie { padding: 0.75rem 0.7rem 0; border-top: 1px solid var(--borde); }
 
 /* ----------------------------------------------------------- contenido --- */
+/* El margen lateral crece con la pantalla en lugar de quedarse en 24 px: en
+   un monitor ancho el contenido llegaba practicamente al borde del navegador y
+   las tablas no tenian donde respirar. El minimo es el valor de antes, asi que
+   en pantallas estrechas nada cambia. */
 .contenido {
   grid-area: contenido;
-  padding: 1.5rem;
+  padding: 1.5rem clamp(1.5rem, 4vw, 4rem);
   overflow-x: hidden;
 }
 
@@ -354,4 +358,11 @@
 @media (width <= 700px) {
   .usuario__nombre { display: none; }
   .contenido { padding: 1rem; }
+}
+
+/* La cabecera acompana al contenido solo cuando sobra ancho: con nueve
+   secciones en horizontal, recortarle 128 px por debajo de 1500 empujaria el
+   boton de usuario fuera de la barra. */
+@media (width >= 1500px) {
+  .cabecera { padding-inline: clamp(1rem, 4vw, 4rem); }
 }
