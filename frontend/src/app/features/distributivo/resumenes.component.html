@@ -71,6 +71,8 @@
           [periodos]="d.periodos"
           [(grupoA)]="grupoA"
           [(grupoB)]="grupoB"
+          [dedicaciones]="dedicaciones()"
+          [(dedicacionIds)]="dedicacionIds"
           (comparar)="cargar()"
         />
       </div>
@@ -128,8 +130,8 @@
                     maxlength="40"
                   />
                 </th>
-                <th scope="col" class="der bloque-dos-claro">Aprobadas {{ rotuloB() }}</th>
-                <th scope="col" class="der bloque-calculo">% Aprobado</th>
+                <th scope="col" class="der bloque-dos-claro">Validadas {{ rotuloB() }}</th>
+                <th scope="col" class="der bloque-calculo">% Validado</th>
               </tr>
             </thead>
             <tbody>
@@ -183,7 +185,7 @@
         </div>
 
         <p class="nota texto-sm texto-tenue">
-          <strong>% Aprobado</strong> se calcula sobre las filas del grupo 2 que
+          <strong>% Validado</strong> se calcula sobre las filas del grupo 2 que
           <em>traen estado</em>, no sobre el total: el sistema academico entrega ese
           dato desde 2026-2, y contar como reprobado lo que no lo tiene pintaria de
           rojo todo el historico. Un grupo sin ninguna muestra «—».
@@ -239,7 +241,7 @@
                 <th scope="col" class="der bloque-error">Con error</th>
                 <th scope="col" class="der bloque-neutro">Sin estado</th>
                 <th scope="col" class="der bloque-uno">Total</th>
-                <th scope="col" class="der bloque-uno">% Aprobado</th>
+                <th scope="col" class="der bloque-uno">% Validado</th>
               </tr>
             </thead>
             <tbody>

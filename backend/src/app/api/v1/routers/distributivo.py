@@ -422,20 +422,29 @@ async def resumenes_del_distributivo(
         Query(description="Periodos del primer grupo. Repetir el parametro para varios."),
     ] = None,
     grupo_b: Annotated[list[UUID] | None, Query(description="Periodos del segundo grupo.")] = None,
+    dedicacion_ids: Annotated[
+        list[UUID] | None,
+        Query(description="Filtra por dedicacion. Repetir el parametro para varias."),
+    ] = None,
 ) -> ResumenComparativoSalida:
     """Dos resumenes sobre los mismos grupos: avance y estados por facultad.
 
     Se piden grupos y no periodos sueltos porque un semestre son varios: el
     `2026-1` completo es tecnologia, grado y posgrado, mas sus interciclos.
 
-    Sin grupos, se comparan los dos ultimos semestres enteros.
+    Sin grupos, se comparan los dos ultimos semestres enteros. Sin
+    dedicaciones, se incluyen todas.
     """
     uow = contenedor.unidad_de_trabajo()
     async with uow:
         analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
         caso = ObtenerResumenComparativo(analitica, contenedor.reloj)
         resultado = await caso(
-            EntradaResumenComparativo(grupo_a=tuple(grupo_a or ()), grupo_b=tuple(grupo_b or ())),
+            EntradaResumenComparativo(
+                grupo_a=tuple(grupo_a or ()),
+                grupo_b=tuple(grupo_b or ()),
+                dedicacion_ids=tuple(dedicacion_ids or ()),
+            ),
             contexto,
         )
     return ResumenComparativoSalida.desde(resultado)
@@ -465,6 +474,10 @@ async def exportar_resumen(
     ] = RESUMEN_AVANCE,
     grupo_a: Annotated[list[UUID] | None, Query(description="Periodos del primer grupo")] = None,
     grupo_b: Annotated[list[UUID] | None, Query(description="Periodos del segundo grupo")] = None,
+    dedicacion_ids: Annotated[
+        list[UUID] | None,
+        Query(description="Filtra por dedicacion. Solo aplica a `avance` y `estados`."),
+    ] = None,
     grupo: Annotated[
         str, Query(description="Para el resumen de estados: que grupo se desglosa, `a` o `b`")
     ] = "b",
@@ -489,6 +502,7 @@ async def exportar_resumen(
             EntradaExportarResumen(
                 grupo_a=tuple(grupo_a or ()),
                 grupo_b=tuple(grupo_b or ()),
+                dedicacion_ids=tuple(dedicacion_ids or ()),
                 resumen=resumen,
                 grupo=grupo,
                 etiqueta_a=etiqueta_a,

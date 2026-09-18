@@ -210,7 +210,9 @@ class RepositorioAnaliticaDistributivoSQL:
         ]
 
     # -------------------------------------------------- grupos de periodos
-    async def totales_de_grupo(self, paos: Sequence[UUID]) -> GrupoDePeriodos:
+    async def totales_de_grupo(
+        self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
+    ) -> GrupoDePeriodos:
         """Filas y docentes distintos del grupo entero.
 
         Los docentes se cuentan aqui y no sumando la columna por facultad: un
@@ -219,12 +221,16 @@ class RepositorioAnaliticaDistributivoSQL:
         if not paos:
             return GrupoDePeriodos(codigos=(), filas=0, docentes=0)
 
+        condicion: Any = FilaDistributivoModel.pao_id.in_(list(paos))
+        if dedicacion_ids:
+            condicion = condicion & FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids))
+
         fila = (
             await self._s.execute(
                 select(
                     func.count().label("filas"),
                     func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
-                ).where(FilaDistributivoModel.pao_id.in_(list(paos)))
+                ).where(condicion)
             )
         ).one()
 
@@ -239,7 +245,11 @@ class RepositorioAnaliticaDistributivoSQL:
         )
 
     async def avance_por_facultad(
-        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
+        self,
+        *,
+        grupo_a: Sequence[UUID],
+        grupo_b: Sequence[UUID],
+        dedicacion_ids: Sequence[UUID] = (),
     ) -> list[AvanceDeFacultad]:
         if not grupo_a and not grupo_b:
             return []
@@ -264,8 +274,13 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(or_(en_a, en_b))
-            .group_by(FacultadModel.codigo, FacultadModel.nombre)
-            .order_by(FacultadModel.codigo)
+        )
+        if dedicacion_ids:
+            consulta = consulta.where(
+                FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids))
+            )
+        consulta = consulta.group_by(FacultadModel.codigo, FacultadModel.nombre).order_by(
+            FacultadModel.codigo
         )
 
         return [
@@ -280,11 +295,17 @@ class RepositorioAnaliticaDistributivoSQL:
             for f in (await self._s.execute(consulta)).all()
         ]
 
-    async def estados_por_facultad(self, paos: Sequence[UUID]) -> list[EstadosDeFacultad]:
+    async def estados_por_facultad(
+        self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
+    ) -> list[EstadosDeFacultad]:
         if not paos:
             return []
 
         estado = FilaDistributivoModel.estado_validacion
+        condicion: Any = FilaDistributivoModel.pao_id.in_(list(paos))
+        if dedicacion_ids:
+            condicion = condicion & FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids))
+
         consulta = (
             select(
                 FacultadModel.codigo.label("codigo"),
@@ -297,7 +318,7 @@ class RepositorioAnaliticaDistributivoSQL:
             )
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
-            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
+            .where(condicion)
             .group_by(FacultadModel.codigo, FacultadModel.nombre)
             .order_by(FacultadModel.codigo)
         )

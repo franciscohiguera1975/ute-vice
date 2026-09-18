@@ -234,13 +234,21 @@ class RepositorioAnaliticaDistributivo(Protocol):
         self, paos: Sequence[UUID], *, campo: str, limite: int = 12
     ) -> list[ConteoEtiquetado]: ...
 
-    async def totales_de_grupo(self, paos: Sequence[UUID]) -> GrupoDePeriodos: ...
+    async def totales_de_grupo(
+        self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
+    ) -> GrupoDePeriodos: ...
 
     async def avance_por_facultad(
-        self, *, grupo_a: Sequence[UUID], grupo_b: Sequence[UUID]
+        self,
+        *,
+        grupo_a: Sequence[UUID],
+        grupo_b: Sequence[UUID],
+        dedicacion_ids: Sequence[UUID] = (),
     ) -> list[AvanceDeFacultad]: ...
 
-    async def estados_por_facultad(self, paos: Sequence[UUID]) -> list[EstadosDeFacultad]: ...
+    async def estados_por_facultad(
+        self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
+    ) -> list[EstadosDeFacultad]: ...
 
 
 # ---------------------------------------------------------------------------

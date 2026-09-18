@@ -66,6 +66,8 @@ RESUMEN_COMPARATIVO = "comparativo"
 class EntradaExportarResumen:
     grupo_a: tuple[UUID, ...] = ()
     grupo_b: tuple[UUID, ...] = ()
+    dedicacion_ids: tuple[UUID, ...] = ()
+    """Solo se aplica a los resumenes (`avance`, `estados`); el tablero no la usa."""
     resumen: str = RESUMEN_AVANCE
     grupo: str = "b"
     """Para el resumen de estados: cual de los dos grupos se desglosa."""
@@ -121,7 +123,11 @@ class ExportarResumenDistributivo(CasoDeUso[EntradaExportarResumen, ArchivoRepor
             return self._exportadores.obtener(entrada.formato).exportar(tabla)
 
         datos = await ObtenerResumenComparativo(self._analitica, self._reloj)(
-            EntradaResumenComparativo(grupo_a=entrada.grupo_a, grupo_b=entrada.grupo_b),
+            EntradaResumenComparativo(
+                grupo_a=entrada.grupo_a,
+                grupo_b=entrada.grupo_b,
+                dedicacion_ids=entrada.dedicacion_ids,
+            ),
             contexto,
         )
         constructor = _DE_RESUMENES.get(entrada.resumen, _tabla_de_avance)

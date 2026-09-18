@@ -137,6 +137,8 @@ class EntradaResumenComparativo:
 
     grupo_a: tuple[UUID, ...] = ()
     grupo_b: tuple[UUID, ...] = ()
+    dedicacion_ids: tuple[UUID, ...] = ()
+    """Sin marcar ninguna, se incluyen todas las dedicaciones."""
 
 
 class ObtenerResumenComparativo(CasoDeUso[EntradaResumenComparativo, ResumenComparativo]):
@@ -159,14 +161,25 @@ class ObtenerResumenComparativo(CasoDeUso[EntradaResumenComparativo, ResumenComp
             return ResumenComparativo(generado_en=ahora)
 
         grupo_a, grupo_b = _grupos(periodos, entrada)
+        dedicacion_ids = entrada.dedicacion_ids
 
         return ResumenComparativo(
             periodos=periodos,
-            grupo_a=await self._analitica.totales_de_grupo(grupo_a),
-            grupo_b=await self._analitica.totales_de_grupo(grupo_b),
-            avance=await self._analitica.avance_por_facultad(grupo_a=grupo_a, grupo_b=grupo_b),
-            estados_a=await self._analitica.estados_por_facultad(grupo_a),
-            estados_b=await self._analitica.estados_por_facultad(grupo_b),
+            grupo_a=await self._analitica.totales_de_grupo(
+                grupo_a, dedicacion_ids=dedicacion_ids
+            ),
+            grupo_b=await self._analitica.totales_de_grupo(
+                grupo_b, dedicacion_ids=dedicacion_ids
+            ),
+            avance=await self._analitica.avance_por_facultad(
+                grupo_a=grupo_a, grupo_b=grupo_b, dedicacion_ids=dedicacion_ids
+            ),
+            estados_a=await self._analitica.estados_por_facultad(
+                grupo_a, dedicacion_ids=dedicacion_ids
+            ),
+            estados_b=await self._analitica.estados_por_facultad(
+                grupo_b, dedicacion_ids=dedicacion_ids
+            ),
             generado_en=ahora,
         )
 

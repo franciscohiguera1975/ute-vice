@@ -152,6 +152,7 @@ export abstract class RepositorioDistributivo {
   abstract resumenes(
     grupoA: readonly string[],
     grupoB: readonly string[],
+    dedicacionIds?: readonly string[],
   ): Observable<ResumenComparativo>;
 
   /** Descarga un resumen. Sale del mismo calculo que la pantalla. */

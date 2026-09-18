@@ -53,6 +53,37 @@
   }
 </div>
 
+@if (dedicaciones().length > 0) {
+  <div class="dedicacion">
+    <div class="fila entre hueco-sm grupo__cabecera">
+      <h3 class="grupo__titulo">Dedicación</h3>
+      @if (dedicacionIds().length > 0) {
+        <button type="button" class="btn btn--fantasma btn--sm" (click)="dedicacionIds.set([])">
+          Limpiar
+        </button>
+      }
+    </div>
+    <p class="texto-sm texto-tenue nota-grupos">
+      Sin marcar ninguna se incluyen todas. Puede elegir varias, igual que al elegir
+      periodo a periodo.
+    </p>
+    <ul class="periodos">
+      @for (d of dedicaciones(); track d.id) {
+        <li>
+          <label class="periodo">
+            <input
+              type="checkbox"
+              [checked]="dedicacionSeleccionada(d.id)"
+              (change)="alternarDedicacion(d.id)"
+            />
+            <span class="periodo__nombre">{{ d.nombre }}</span>
+          </label>
+        </li>
+      }
+    </ul>
+  </div>
+}
+
 <button
   type="button"
   class="btn btn--primario"

@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 
-import type { PeriodoConFilas } from '@domain/modelos';
+import type { OpcionSelector, PeriodoConFilas } from '@domain/modelos';
 
 /** Un semestre con todos sus periodos: lo que se marca de un clic. */
 interface Semestre {
@@ -41,6 +41,16 @@ export class SelectorGruposComponent {
 
   readonly grupoA = model<readonly string[]>([]);
   readonly grupoB = model<readonly string[]>([]);
+
+  /**
+   * Catalogo de dedicaciones para filtrar, o vacio para no ofrecer el filtro.
+   *
+   * Es un filtro sobre las dos comparaciones a la vez, no por grupo: comparar
+   * «Grupo 1 · TIEMPO COMPLETO» contra «Grupo 2 · MEDIO TIEMPO» no tiene
+   * sentido, asi que hay una sola lista de dedicaciones marcadas.
+   */
+  readonly dedicaciones = input<readonly OpcionSelector[]>([]);
+  readonly dedicacionIds = model<readonly string[]>([]);
 
   /** Se emite al pulsar «Comparar»; la pantalla decide que hacer. */
   readonly comparar = output<void>();
@@ -96,6 +106,16 @@ export class SelectorGruposComponent {
 
   protected limpiar(grupo: Grupo): void {
     this.senal(grupo).set([]);
+  }
+
+  protected dedicacionSeleccionada(id: string): boolean {
+    return this.dedicacionIds().includes(id);
+  }
+
+  protected alternarDedicacion(id: string): void {
+    this.dedicacionIds.update((actual) =>
+      actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id],
+    );
   }
 
   protected readonly puedeComparar = computed(

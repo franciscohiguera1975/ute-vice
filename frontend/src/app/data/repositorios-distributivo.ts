@@ -199,10 +199,12 @@ export class DistributivoHttp extends RepositorioDistributivo {
   resumenes(
     grupoA: readonly string[],
     grupoB: readonly string[],
+    dedicacionIds: readonly string[] = [],
   ): Observable<ResumenComparativo> {
     return this.api.get<ResumenComparativo>('/distributivo/resumenes', {
       grupoA,
       grupoB,
+      dedicacionIds,
     });
   }
 

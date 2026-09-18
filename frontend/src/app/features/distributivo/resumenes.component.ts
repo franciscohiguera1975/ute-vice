@@ -1,12 +1,14 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import { PermisoDirective } from '@shared/directivas/permiso.directive';
 import { DescargaService } from '@core/descarga.service';
 import {
   FormatoReporte,
   Permiso,
+  TipoCatalogo,
   TipoResumen,
   semestresDe,
   type ErrorApi,
@@ -46,6 +48,7 @@ export class ResumenesDistributivoComponent {
   private readonly repositorio = inject(RepositorioDistributivo);
   private readonly notificaciones = inject(NotificacionesService);
   private readonly descarga = inject(DescargaService);
+  private readonly catalogos = inject(CatalogosStore);
 
   protected readonly TipoResumen = TipoResumen;
   protected readonly Permiso = Permiso;
@@ -66,6 +69,10 @@ export class ResumenesDistributivoComponent {
   /** Ids elegidos en cada grupo. Vacios: el backend propone los dos ultimos semestres. */
   protected readonly grupoA = signal<readonly string[]>([]);
   protected readonly grupoB = signal<readonly string[]>([]);
+
+  /** Dedicaciones marcadas. Vacio: se incluyen todas. */
+  protected readonly dedicacionIds = signal<readonly string[]>([]);
+  protected readonly dedicaciones = computed(() => this.catalogos.de(TipoCatalogo.DEDICACION));
 
   /** Que grupo muestra el desglose por estados. */
   protected readonly grupoDeEstados = signal<Grupo>('b');
@@ -94,24 +101,25 @@ export class ResumenesDistributivoComponent {
       etiqueta: 'Avance entre dos grupos de periodos',
       descripcion:
         'Cuantos de los docentes del primer grupo vuelven a tener carga en el segundo, ' +
-        'por facultad, con lo aprobado del segundo.',
+        'por facultad, con lo validado del segundo.',
     },
     {
       valor: TipoResumen.ESTADOS,
       etiqueta: 'Estados del distributivo',
       descripcion:
         'Las filas de cada facultad repartidas por estado de validacion, con su ' +
-        'porcentaje de aprobacion.',
+        'porcentaje de validacion.',
     },
   ];
 
   constructor() {
+    this.catalogos.cargar();
     this.cargar();
   }
 
   protected cargar(): void {
     this.cargando.set(true);
-    this.repositorio.resumenes(this.grupoA(), this.grupoB()).subscribe({
+    this.repositorio.resumenes(this.grupoA(), this.grupoB(), this.dedicacionIds()).subscribe({
       next: (datos) => {
         this.datos.set(datos);
         // El backend propone los dos ultimos semestres cuando no se pide nada;
@@ -219,6 +227,7 @@ export class ResumenesDistributivoComponent {
           // vacio, el archivo lleva el mismo semestre que la pantalla.
           etiquetaA: this.rotuloA(),
           etiquetaB: this.rotuloB(),
+          dedicacionIds: this.dedicacionIds(),
         },
         formato,
       )

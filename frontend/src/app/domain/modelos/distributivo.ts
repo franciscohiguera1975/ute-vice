@@ -522,6 +522,8 @@ export interface PeticionResumen {
   /** Como titular cada grupo. Vacio deja que el servidor use el semestre. */
   readonly etiquetaA?: string;
   readonly etiquetaB?: string;
+  /** Sin elegir ninguna, se incluyen todas las dedicaciones. */
+  readonly dedicacionIds?: readonly string[];
 }
 
 /**
