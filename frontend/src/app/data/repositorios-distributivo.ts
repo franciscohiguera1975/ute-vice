@@ -26,6 +26,7 @@ import type {
   ParametrosPaginacion,
   AsignaturaCapturada,
   PeticionCargaPao,
+  PeticionHorasPorDocentes,
   PeticionReporteDistributivo,
   PeticionResumen,
   PlantillaReporte,
@@ -220,11 +221,27 @@ export class DistributivoHttp extends RepositorioDistributivo {
     );
   }
 
-  horasPorDocentes(grupo: readonly string[], dedicacionId?: string): Observable<ResumenDeHoras> {
+  horasPorDocentes(
+    grupo: readonly string[],
+    dedicacionId?: string,
+    menosDe?: number,
+  ): Observable<ResumenDeHoras> {
     return this.api.get<ResumenDeHoras>('/distributivo/horas-por-docentes', {
       grupo,
       dedicacionId,
+      menosDe,
     });
+  }
+
+  exportarHorasPorDocentes(
+    peticion: PeticionHorasPorDocentes,
+    formato: FormatoReporte,
+  ): Observable<ArchivoDescarga> {
+    return this.api.descargar(
+      '/distributivo/horas-por-docentes/exportar',
+      { ...peticion, formato },
+      `horas-${peticion.resumen}.${formato.toLowerCase()}`,
+    );
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

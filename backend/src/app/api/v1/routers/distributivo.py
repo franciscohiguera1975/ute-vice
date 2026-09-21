@@ -81,6 +81,13 @@ from app.application.casos_uso.reporte_distributivo import (
     ListarPlantillasReporte,
     VistaPreviaReporteDistributivo,
 )
+from app.application.casos_uso.reporte_horas_por_docentes import (
+    RESUMEN_BAJO_HORAS,
+    RESUMEN_CARRERA,
+    RESUMEN_FACULTAD,
+    EntradaExportarHoras,
+    ExportarHorasPorDocentes,
+)
 from app.application.casos_uso.reporte_resumenes import (
     RESUMEN_APROBACION,
     RESUMEN_AVANCE,
@@ -469,6 +476,10 @@ async def horas_por_docentes_del_distributivo(
     dedicacion_id: Annotated[
         UUID | None, Query(description="Filtra por dedicacion. Sin ella, se incluyen todas.")
     ] = None,
+    menos_de: Annotated[
+        float | None,
+        Query(description="Ademas, lista los docentes con menos de N horas de Da."),
+    ] = None,
 ) -> ResumenDeHorasSalida:
     """Cuantos docentes hay y cuantas horas de `Da` cargan, por carrera y
     por facultad, acotado a una dedicacion o a todas.
@@ -483,10 +494,58 @@ async def horas_por_docentes_del_distributivo(
         analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
         caso = ObtenerHorasPorDedicacion(analitica, contenedor.reloj)
         resultado = await caso(
-            EntradaHorasPorDedicacion(grupo=tuple(grupo or ()), dedicacion_id=dedicacion_id),
+            EntradaHorasPorDedicacion(
+                grupo=tuple(grupo or ()), dedicacion_id=dedicacion_id, menos_de=menos_de
+            ),
             contexto,
         )
     return ResumenDeHorasSalida.desde(resultado)
+
+
+@router.get(
+    "/distributivo/horas-por-docentes/exportar",
+    summary="Descargar una tabla de horas por docentes",
+    dependencies=[requiere(Permiso.REPORTES_GENERAR)],
+    response_class=Response,
+    responses={422: {"description": "No hay datos con los periodos y el filtro elegidos"}},
+)
+async def exportar_horas_por_docentes(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    resumen: Annotated[
+        str,
+        Query(description=f"`{RESUMEN_FACULTAD}`, `{RESUMEN_CARRERA}` o `{RESUMEN_BAJO_HORAS}`."),
+    ] = RESUMEN_FACULTAD,
+    grupo: Annotated[list[UUID] | None, Query(description="Periodos que se examinan.")] = None,
+    dedicacion_id: Annotated[
+        UUID | None, Query(description="Filtra por dedicacion. Sin ella, se incluyen todas.")
+    ] = None,
+    menos_de: Annotated[
+        float | None,
+        Query(description=f"Obligatorio para `{RESUMEN_BAJO_HORAS}`."),
+    ] = None,
+    formato: FormatoReporte = FormatoReporte.XLSX,
+) -> Response:
+    """La misma tabla que muestra la pantalla, como archivo.
+
+    Sale del mismo caso de uso de lectura, para que el archivo no pueda decir
+    otra cosa que la pantalla.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ExportarHorasPorDocentes(analitica, contenedor.exportadores, contenedor.reloj)
+        archivo = await caso(
+            EntradaExportarHoras(
+                grupo=tuple(grupo or ()),
+                dedicacion_id=dedicacion_id,
+                menos_de=menos_de,
+                resumen=resumen,
+                formato=formato,
+            ),
+            contexto,
+        )
+    return _como_descarga(archivo)
 
 
 @router.get(

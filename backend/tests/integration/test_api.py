@@ -902,6 +902,109 @@ class TestHorasPorDocentes:
         facultades = {c["facultad_codigo"] for c in cuerpo["por_carrera"]}
         assert facultades == {"FAU", "FCSEE"}
 
+    async def test_sin_umbral_no_calcula_bajo_horas(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(
+            cliente,
+            cabeceras_admin,
+            "2026-2",
+            self._fila("1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"),
+        )
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes", headers=cabeceras_admin
+        )
+        assert respuesta.json()["bajo_horas"] == []
+
+    async def test_lista_los_docentes_bajo_el_umbral(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        # `_fila` carga 20 horas de Da; se sube una segunda con menos para
+        # poder distinguir quien queda bajo el umbral y quien no.
+        await self._cargar(
+            cliente,
+            cabeceras_admin,
+            "2026-2",
+            self._fila("1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"),
+        )
+        pocas_horas = self._fila(
+            "0926687856", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"
+        )
+        pocas_horas[self._CABECERA.index("Da")] = 3
+        await self._cargar(cliente, cabeceras_admin, "2026-2", pocas_horas)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes",
+            headers=cabeceras_admin,
+            params={"menos_de": 5},
+        )
+        assert respuesta.status_code == 200, respuesta.text
+        bajo_horas = respuesta.json()["bajo_horas"]
+
+        assert len(bajo_horas) == 1
+        assert bajo_horas[0]["identificacion"] == "0926687856"
+        assert bajo_horas[0]["horas_da"] == 3.0
+        assert bajo_horas[0]["carrera"] == "UIO:ARQUITECTURA - GRADO - PRESENCIAL"
+
+
+class TestExportarHorasPorDocentes:
+    """Descarga de las tres tablas de horas por docentes.
+
+    Salen del mismo caso de uso que la pantalla: el archivo no puede decir
+    otra cosa que lo que se esta viendo.
+    """
+
+    async def _preparar(self, cliente, cabeceras) -> None:  # type: ignore[no-untyped-def]
+        await TestHorasPorDocentes()._cargar(
+            cliente,
+            cabeceras,
+            "2026-2",
+            TestHorasPorDocentes._fila(
+                "1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"
+            ),
+        )
+
+    @pytest.mark.parametrize("resumen", ["facultad", "carrera"])
+    async def test_exporta_facultad_y_carrera(
+        self, sembrado, cabeceras_admin, resumen: str
+    ) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            f"/api/v1/distributivo/horas-por-docentes/exportar?resumen={resumen}&formato=XLSX",
+            headers=cabeceras_admin,
+        )
+
+        assert respuesta.status_code == 200, respuesta.text
+        assert respuesta.content.startswith(b"PK")
+        assert "attachment" in respuesta.headers["content-disposition"]
+
+    async def test_exporta_bajo_horas_con_umbral(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes/exportar",
+            headers=cabeceras_admin,
+            params={"resumen": "bajo_horas", "menos_de": 50, "formato": "CSV"},
+        )
+
+        assert respuesta.status_code == 200, respuesta.text
+        texto = respuesta.content.decode("utf-8-sig")
+        assert "1710034065" in texto
+
+    async def test_bajo_horas_sin_umbral_se_rechaza(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._preparar(cliente, cabeceras_admin)
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes/exportar?resumen=bajo_horas",
+            headers=cabeceras_admin,
+        )
+
+        assert respuesta.status_code == 422
+        assert respuesta.json()["detalles"]["campo"] == "menos_de"
+
 
 def _pao_de_tecnologia(*, identificacion: str) -> bytes:
     """Un PAO de la unidad tecnologica, que va a un periodo distinto."""

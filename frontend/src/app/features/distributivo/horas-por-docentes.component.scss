@@ -87,3 +87,40 @@
   font-variant-numeric: tabular-nums;
 }
 .metrica__pie { margin: 0.3rem 0 0; }
+
+/* ----------------------------------------------------------- descargas --- */
+.descargas {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.descargas__rotulo {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* -------------------------------------------------- umbral de horas --- */
+.umbral {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.umbral__campo {
+  width: 4.5rem;
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  text-align: right;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+}
+.umbral__campo:focus {
+  outline: none;
+  border-color: var(--azul-600);
+}

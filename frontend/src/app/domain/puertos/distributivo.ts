@@ -27,6 +27,7 @@ import type {
   PeticionReporteDistributivo,
   PlantillaReporte,
   PeticionCargaPao,
+  PeticionHorasPorDocentes,
   PeticionResumen,
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
@@ -167,10 +168,18 @@ export abstract class RepositorioDistributivo {
    *
    * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`: un
    * semestre son varios. Sin grupo, el backend propone el semestre mas
-   * reciente. Sin dedicacion, se incluyen todas.
+   * reciente. Sin dedicacion, se incluyen todas. `menosDe` ademas lista los
+   * docentes con menos de esas horas de `Da`.
    */
   abstract horasPorDocentes(
     grupo: readonly string[],
     dedicacionId?: string,
+    menosDe?: number,
   ): Observable<ResumenDeHoras>;
+
+  /** Descarga una tabla de «Horas por docentes». Sale del mismo calculo que la pantalla. */
+  abstract exportarHorasPorDocentes(
+    peticion: PeticionHorasPorDocentes,
+    formato: FormatoReporte,
+  ): Observable<ArchivoDescarga>;
 }

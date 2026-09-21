@@ -18,6 +18,7 @@ from app.domain.enums import EstadoValidacion
 from app.domain.ports.analitica import (
     AvanceDeFacultad,
     ConteoEtiquetado,
+    DocenteConPocasHoras,
     EstadosDeFacultad,
     FilaComparativa,
     GrupoDePeriodos,
@@ -31,6 +32,7 @@ from app.infrastructure.db.modelos_distributivo import (
     CarreraModel,
     CategoriaModel,
     DedicacionModel,
+    DocenteModel,
     FacultadModel,
     FilaDistributivoModel,
     NivelModel,
@@ -414,6 +416,43 @@ class RepositorioAnaliticaDistributivoSQL:
                 facultad_nombre=f.facultad_nombre,
                 carrera=f.carrera,
                 docentes=f.docentes,
+                horas_da=round(float(f.horas_da), 2),
+            )
+            for f in (await self._s.execute(consulta)).all()
+        ]
+
+    async def docentes_bajo_horas(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None, menos_de: float
+    ) -> list[DocenteConPocasHoras]:
+        if not paos:
+            return []
+
+        horas = _horas_da()
+        consulta = (
+            select(
+                DocenteModel.identificacion.label("identificacion"),
+                DocenteModel.nombre_completo.label("docente"),
+                FacultadModel.codigo.label("facultad_codigo"),
+                FacultadModel.nombre.label("facultad_nombre"),
+                CarreraModel.nombre.label("carrera"),
+                horas.label("horas_da"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
+            .where(_condicion_dedicacion(paos, dedicacion_id))
+            .where(horas < menos_de)
+            .order_by(FacultadModel.codigo, CarreraModel.nombre, DocenteModel.nombre_completo)
+        )
+
+        return [
+            DocenteConPocasHoras(
+                identificacion=f.identificacion,
+                docente=f.docente,
+                facultad_codigo=f.facultad_codigo,
+                facultad_nombre=f.facultad_nombre,
+                carrera=f.carrera,
                 horas_da=round(float(f.horas_da), 2),
             )
             for f in (await self._s.execute(consulta)).all()

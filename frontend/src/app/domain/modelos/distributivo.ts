@@ -531,6 +531,18 @@ export interface PeticionResumen {
 // filtradas por dedicacion (o todas)
 // ---------------------------------------------------------------------------
 
+/** Que tabla de «Horas por docentes» se quiere descargar. */
+export type TablaDeHoras = 'facultad' | 'carrera' | 'bajo_horas';
+
+/** Lo que identifica la tabla que se quiere descargar. */
+export interface PeticionHorasPorDocentes {
+  readonly resumen: TablaDeHoras;
+  readonly grupo: readonly string[];
+  readonly dedicacionId?: string;
+  /** Obligatorio para `bajo_horas`. */
+  readonly menosDe?: number;
+}
+
 export interface HorasPorFacultad {
   readonly codigo: string;
   readonly nombre: string;
@@ -548,6 +560,16 @@ export interface HorasPorCarrera {
   readonly horasDa: number;
 }
 
+/** Un docente con menos de N horas de `Da` en una carrera y facultad. */
+export interface DocenteConPocasHoras {
+  readonly identificacion: string;
+  readonly docente: string;
+  readonly facultadCodigo: string;
+  readonly facultadNombre: string;
+  readonly carrera: string;
+  readonly horasDa: number;
+}
+
 /** Docentes de un PAO, con sus horas de `Da` por carrera y facultad. Se puede
  * acotar a una dedicacion o dejarlas todas. */
 export interface ResumenDeHoras {
@@ -557,6 +579,8 @@ export interface ResumenDeHoras {
   readonly horasDa: number;
   readonly porFacultad: readonly HorasPorFacultad[];
   readonly porCarrera: readonly HorasPorCarrera[];
+  /** Vacio si no se pidio un umbral de horas. */
+  readonly bajoHoras: readonly DocenteConPocasHoras[];
   readonly generadoEn: string;
 }
 

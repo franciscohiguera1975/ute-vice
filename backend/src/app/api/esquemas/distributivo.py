@@ -14,6 +14,7 @@ from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
 from app.domain.entities.distributivo import Docente
 from app.domain.ports.analitica import (
     AvanceDeFacultad,
+    DocenteConPocasHoras,
     EstadosDeFacultad,
     FilaComparativa,
     GrupoDePeriodos,
@@ -765,6 +766,26 @@ class HorasPorCarreraSalida(EsquemaBase):
         )
 
 
+class DocenteConPocasHorasSalida(EsquemaBase):
+    identificacion: str
+    docente: str
+    facultad_codigo: str
+    facultad_nombre: str
+    carrera: str
+    horas_da: float
+
+    @classmethod
+    def desde(cls, d: DocenteConPocasHoras) -> DocenteConPocasHorasSalida:
+        return cls(
+            identificacion=d.identificacion,
+            docente=d.docente,
+            facultad_codigo=d.facultad_codigo,
+            facultad_nombre=d.facultad_nombre,
+            carrera=d.carrera,
+            horas_da=d.horas_da,
+        )
+
+
 class ResumenDeHorasSalida(EsquemaBase):
     periodos: list[PeriodoDisponibleSalida]
     grupo: GrupoDePeriodosSalida | None
@@ -772,6 +793,7 @@ class ResumenDeHorasSalida(EsquemaBase):
     horas_da: float
     por_facultad: list[HorasPorFacultadSalida]
     por_carrera: list[HorasPorCarreraSalida]
+    bajo_horas: list[DocenteConPocasHorasSalida]
     generado_en: str
 
     @classmethod
@@ -795,5 +817,6 @@ class ResumenDeHorasSalida(EsquemaBase):
             horas_da=r.horas_da,
             por_facultad=[HorasPorFacultadSalida.desde(f) for f in r.por_facultad],
             por_carrera=[HorasPorCarreraSalida.desde(c) for c in r.por_carrera],
+            bajo_horas=[DocenteConPocasHorasSalida.desde(d) for d in r.bajo_horas],
             generado_en=r.generado_en,
         )

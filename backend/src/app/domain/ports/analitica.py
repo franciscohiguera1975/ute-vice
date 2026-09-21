@@ -262,6 +262,10 @@ class RepositorioAnaliticaDistributivo(Protocol):
         self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
     ) -> list[HorasPorCarrera]: ...
 
+    async def docentes_bajo_horas(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None, menos_de: float
+    ) -> list[DocenteConPocasHoras]: ...
+
 
 # ---------------------------------------------------------------------------
 # Resumenes: dos grupos de periodos, uno frente al otro
@@ -392,6 +396,23 @@ class HorasPorCarrera:
 
 
 @dataclass(frozen=True, slots=True)
+class DocenteConPocasHoras:
+    """Un docente con menos de N horas de `Da` en una carrera y facultad.
+
+    Es la fila cruda y no un agregado: quien pide este reporte quiere saber
+    a quien contactar, y para eso hace falta el nombre y la identificacion,
+    no un conteo.
+    """
+
+    identificacion: str
+    docente: str
+    facultad_codigo: str
+    facultad_nombre: str
+    carrera: str
+    horas_da: float
+
+
+@dataclass(frozen=True, slots=True)
 class ResumenDeHoras:
     """Docentes de un PAO, con sus horas de `Da` por carrera y facultad.
 
@@ -405,4 +426,6 @@ class ResumenDeHoras:
     horas_da: float = 0.0
     por_facultad: list[HorasPorFacultad] = field(default_factory=list)
     por_carrera: list[HorasPorCarrera] = field(default_factory=list)
+    bajo_horas: list[DocenteConPocasHoras] = field(default_factory=list)
+    """Vacio si no se pidio un umbral: ver `menos_de` en `EntradaHorasPorDedicacion`."""
     generado_en: str = ""

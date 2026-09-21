@@ -130,8 +130,25 @@
 
     <!-- ------------------------------------------------------- por facultad -->
     <section class="tarjeta seccion">
-      <div class="tarjeta__cabecera">
+      <div class="tarjeta__cabecera fila entre envolver hueco-sm">
         <h2 class="tarjeta__titulo">Por facultad</h2>
+        <div class="descargas no-imprimir" *utePermiso="Permiso.REPORTES_GENERAR">
+          <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+          @for (f of formatos; track f.valor) {
+            <button
+              type="button"
+              class="btn btn--secundario btn--sm"
+              [disabled]="descargando() !== null"
+              (click)="descargar('facultad', f.valor)"
+            >
+              {{
+                descargando() === f.valor && tablaDescargando() === 'facultad'
+                  ? 'Generando…'
+                  : f.etiqueta
+              }}
+            </button>
+          }
+        </div>
       </div>
       <div class="tabla-envoltura">
         <table class="tabla">
@@ -161,8 +178,25 @@
 
     <!-- -------------------------------------------------------- por carrera -->
     <section class="tarjeta seccion">
-      <div class="tarjeta__cabecera">
+      <div class="tarjeta__cabecera fila entre envolver hueco-sm">
         <h2 class="tarjeta__titulo">Por carrera</h2>
+        <div class="descargas no-imprimir" *utePermiso="Permiso.REPORTES_GENERAR">
+          <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+          @for (f of formatos; track f.valor) {
+            <button
+              type="button"
+              class="btn btn--secundario btn--sm"
+              [disabled]="descargando() !== null"
+              (click)="descargar('carrera', f.valor)"
+            >
+              {{
+                descargando() === f.valor && tablaDescargando() === 'carrera'
+                  ? 'Generando…'
+                  : f.etiqueta
+              }}
+            </button>
+          }
+        </div>
       </div>
       <div class="tabla-envoltura">
         <table class="tabla">
@@ -185,6 +219,82 @@
             } @empty {
               <tr>
                 <td colspan="4" class="texto-tenue">Sin docentes en este periodo</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------- docentes bajo horas -->
+    <section class="tarjeta seccion">
+      <div class="tarjeta__cabecera fila entre envolver hueco-sm">
+        <h2 class="tarjeta__titulo">Docentes con pocas horas</h2>
+        <div class="descargas no-imprimir" *utePermiso="Permiso.REPORTES_GENERAR">
+          <span class="descargas__rotulo texto-xs texto-tenue">Descargar</span>
+          @for (f of formatos; track f.valor) {
+            <button
+              type="button"
+              class="btn btn--secundario btn--sm"
+              [disabled]="descargando() !== null"
+              (click)="descargar('bajo_horas', f.valor)"
+            >
+              {{
+                descargando() === f.valor && tablaDescargando() === 'bajo_horas'
+                  ? 'Generando…'
+                  : f.etiqueta
+              }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="tarjeta__cuerpo no-imprimir">
+        <label class="umbral">
+          Docentes con menos de
+          <input
+            type="number"
+            min="0"
+            step="0.5"
+            class="umbral__campo"
+            [value]="menosDe()"
+            (change)="actualizarMenosDe($event)"
+          />
+          horas de Da
+        </label>
+        <button type="button" class="btn btn--primario btn--sm boton-aplicar" (click)="cargar()">
+          Aplicar
+        </button>
+      </div>
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Facultad</th>
+              <th scope="col">Carrera</th>
+              <th scope="col">Identificacion</th>
+              <th scope="col">Docente</th>
+              <th scope="col" class="der">Horas de Da</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (
+              docente of d.bajoHoras;
+              track docente.identificacion + '|' + docente.facultadCodigo + '|' + docente.carrera
+            ) {
+              <tr>
+                <th scope="row" [title]="docente.facultadNombre">
+                  {{ docente.facultadCodigo }}
+                </th>
+                <td>{{ docente.carrera }}</td>
+                <td class="mono">{{ docente.identificacion }}</td>
+                <td>{{ docente.docente }}</td>
+                <td class="der mono">{{ docente.horasDa | number: '1.0-1' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="texto-tenue">
+                  Sin docentes por debajo de {{ menosDe() }} horas de Da
+                </td>
               </tr>
             }
           </tbody>

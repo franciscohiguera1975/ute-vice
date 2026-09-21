@@ -2,15 +2,20 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { CatalogosStore } from '@core/catalogos.store';
+import { DescargaService } from '@core/descarga.service';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
+  FormatoReporte,
+  Permiso,
   TipoCatalogo,
   type ErrorApi,
   type PeriodoConFilas,
   type ResumenDeHoras,
+  type TablaDeHoras,
 } from '@domain/modelos';
 import { RepositorioDistributivo } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
+import { PermisoDirective } from '@shared/directivas/permiso.directive';
 import { VacioComponent } from '@shared/componentes/vacio.component';
 
 /** Un semestre con todos sus periodos: lo que se marca de un clic. */
@@ -34,7 +39,7 @@ interface Semestre {
 @Component({
   selector: 'ute-horas-por-docentes-distributivo',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, CargandoComponent, VacioComponent],
+  imports: [DatePipe, DecimalPipe, CargandoComponent, VacioComponent, PermisoDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './horas-por-docentes.component.html',
   styleUrl: './horas-por-docentes.component.scss',
@@ -43,9 +48,23 @@ export class HorasPorDocentesDistributivoComponent {
   private readonly repositorio = inject(RepositorioDistributivo);
   private readonly notificaciones = inject(NotificacionesService);
   private readonly catalogos = inject(CatalogosStore);
+  private readonly descarga = inject(DescargaService);
+
+  protected readonly Permiso = Permiso;
 
   protected readonly datos = signal<ResumenDeHoras | null>(null);
   protected readonly cargando = signal(true);
+
+  /** Formato en curso, o `null`. Evita disparar dos descargas a la vez. */
+  protected readonly descargando = signal<FormatoReporte | null>(null);
+  /** Que tabla se esta descargando, para saber cual botonera deshabilitar. */
+  protected readonly tablaDescargando = signal<TablaDeHoras | null>(null);
+
+  protected readonly formatos = [
+    { valor: FormatoReporte.XLSX, etiqueta: 'Excel' },
+    { valor: FormatoReporte.CSV, etiqueta: 'CSV' },
+    { valor: FormatoReporte.PDF, etiqueta: 'PDF' },
+  ];
 
   /** Ids elegidos. Vacio: el backend propone el semestre mas reciente. */
   protected readonly grupo = signal<readonly string[]>([]);
@@ -53,6 +72,9 @@ export class HorasPorDocentesDistributivoComponent {
   /** `null` es «Todas»: no se filtra por dedicacion. */
   protected readonly dedicacionId = signal<string | null>(null);
   protected readonly dedicaciones = computed(() => this.catalogos.de(TipoCatalogo.DEDICACION));
+
+  /** Umbral del reporte de docentes con pocas horas de Da. */
+  protected readonly menosDe = signal(5);
 
   protected readonly semestres = computed<readonly Semestre[]>(() => {
     const por = new Map<string, PeriodoConFilas[]>();
@@ -78,22 +100,24 @@ export class HorasPorDocentesDistributivoComponent {
 
   protected cargar(): void {
     this.cargando.set(true);
-    this.repositorio.horasPorDocentes(this.grupo(), this.dedicacionId() ?? undefined).subscribe({
-      next: (datos) => {
-        this.datos.set(datos);
-        // El backend propone el semestre mas reciente cuando no se pide nada;
-        // se refleja en los chips para que la pantalla diga que examina.
-        if (this.grupo().length === 0) {
-          const buscados = new Set(datos.grupo?.codigos ?? []);
-          this.grupo.set(datos.periodos.filter((p) => buscados.has(p.codigo)).map((p) => p.id));
-        }
-        this.cargando.set(false);
-      },
-      error: (error: ErrorApi) => {
-        this.notificaciones.error(error.mensaje ?? 'No se pudo calcular las horas por docentes');
-        this.cargando.set(false);
-      },
-    });
+    this.repositorio
+      .horasPorDocentes(this.grupo(), this.dedicacionId() ?? undefined, this.menosDe())
+      .subscribe({
+        next: (datos) => {
+          this.datos.set(datos);
+          // El backend propone el semestre mas reciente cuando no se pide nada;
+          // se refleja en los chips para que la pantalla diga que examina.
+          if (this.grupo().length === 0) {
+            const buscados = new Set(datos.grupo?.codigos ?? []);
+            this.grupo.set(datos.periodos.filter((p) => buscados.has(p.codigo)).map((p) => p.id));
+          }
+          this.cargando.set(false);
+        },
+        error: (error: ErrorApi) => {
+          this.notificaciones.error(error.mensaje ?? 'No se pudo calcular las horas por docentes');
+          this.cargando.set(false);
+        },
+      });
   }
 
   protected seleccionado(id: string): boolean {
@@ -126,7 +150,48 @@ export class HorasPorDocentesDistributivoComponent {
     this.dedicacionId.set(id);
   }
 
+  protected actualizarMenosDe(evento: Event): void {
+    const valor = Number((evento.target as HTMLInputElement).value);
+    if (Number.isFinite(valor) && valor >= 0) this.menosDe.set(valor);
+  }
+
   protected codigosDelGrupo(): string {
     return this.datos()?.grupo?.codigos.join(' · ') || 'sin periodos';
+  }
+
+  // ------------------------------------------------------------- descarga
+  /**
+   * Descarga la tabla elegida, en el formato indicado.
+   *
+   * Sale del mismo caso de uso que alimenta la pantalla: el archivo no puede
+   * decir otra cosa que lo que se esta viendo.
+   */
+  protected descargar(resumen: TablaDeHoras, formato: FormatoReporte): void {
+    if (this.descargando()) return;
+    this.descargando.set(formato);
+    this.tablaDescargando.set(resumen);
+
+    this.repositorio
+      .exportarHorasPorDocentes(
+        {
+          resumen,
+          grupo: this.grupo(),
+          dedicacionId: this.dedicacionId() ?? undefined,
+          menosDe: resumen === 'bajo_horas' ? this.menosDe() : undefined,
+        },
+        formato,
+      )
+      .subscribe({
+        next: (archivo) => {
+          this.descarga.guardar(archivo);
+          this.descargando.set(null);
+          this.tablaDescargando.set(null);
+        },
+        error: (error: ErrorApi) => {
+          this.descargando.set(null);
+          this.tablaDescargando.set(null);
+          this.notificaciones.error(error.mensaje ?? 'No se pudo generar el archivo');
+        },
+      });
   }
 }

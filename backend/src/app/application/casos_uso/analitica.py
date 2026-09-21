@@ -233,6 +233,8 @@ class EntradaHorasPorDedicacion:
 
     grupo: tuple[UUID, ...] = ()
     dedicacion_id: UUID | None = None
+    menos_de: float | None = None
+    """Umbral del reporte de docentes con pocas horas. Sin el, no se calcula."""
 
 
 class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHoras]):
@@ -262,6 +264,14 @@ class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHo
         dedicacion_id = entrada.dedicacion_id
         totales = await self._analitica.totales_por_dedicacion(grupo, dedicacion_id=dedicacion_id)
 
+        bajo_horas = (
+            await self._analitica.docentes_bajo_horas(
+                grupo, dedicacion_id=dedicacion_id, menos_de=entrada.menos_de
+            )
+            if entrada.menos_de is not None
+            else []
+        )
+
         return ResumenDeHoras(
             periodos=periodos,
             grupo=await self._analitica.totales_de_grupo(grupo),
@@ -271,6 +281,7 @@ class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHo
                 grupo, dedicacion_id=dedicacion_id
             ),
             por_carrera=await self._analitica.horas_por_carrera(grupo, dedicacion_id=dedicacion_id),
+            bajo_horas=bajo_horas,
             generado_en=ahora,
         )
 
