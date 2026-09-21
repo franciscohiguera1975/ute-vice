@@ -33,6 +33,7 @@ import type {
   ResultadoCargaPao,
   ResumenComparativo,
   ResumenDistributivo,
+  ResumenTiempoParcial,
   TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
@@ -217,6 +218,10 @@ export class DistributivoHttp extends RepositorioDistributivo {
       { ...peticion, formato },
       `resumen-${peticion.resumen}.${formato.toLowerCase()}`,
     );
+  }
+
+  tiempoParcial(grupo: readonly string[]): Observable<ResumenTiempoParcial> {
+    return this.api.get<ResumenTiempoParcial>('/distributivo/tiempo-parcial', { grupo });
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

@@ -128,7 +128,7 @@ describe('la carga de un PAO', () => {
 describe('agrupacion del menu', () => {
   const grupo = SECCIONES.find((s) => s.hijos !== undefined);
 
-  it('el distributivo es el grupo, con sus cinco pantallas y asignaturas', () => {
+  it('el distributivo es el grupo, con sus seis pantallas y asignaturas', () => {
     expect(grupo?.ruta).toBe('/distributivo');
     expect(grupo?.hijos?.map((h) => h.etiqueta)).toEqual([
       'Registros',
@@ -136,6 +136,7 @@ describe('agrupacion del menu', () => {
       'Cargar PAO',
       'Reportes',
       'Resumenes',
+      'Tiempo parcial',
       'Asignaturas',
     ]);
   });

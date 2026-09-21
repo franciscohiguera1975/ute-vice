@@ -526,6 +526,37 @@ export interface PeticionResumen {
   readonly dedicacionIds?: readonly string[];
 }
 
+// ---------------------------------------------------------------------------
+// Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+// ---------------------------------------------------------------------------
+
+export interface TiempoParcialPorFacultad {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly docentes: number;
+  readonly horasDa: number;
+}
+
+/** Una carrera con sus docentes a tiempo parcial. Lleva su facultad porque una
+ * misma carrera se dicta en mas de una. */
+export interface TiempoParcialPorCarrera {
+  readonly facultadCodigo: string;
+  readonly facultadNombre: string;
+  readonly carrera: string;
+  readonly docentes: number;
+  readonly horasDa: number;
+}
+
+export interface ResumenTiempoParcial {
+  readonly periodos: readonly PeriodoConFilas[];
+  readonly grupo: GrupoDePeriodos | null;
+  readonly docentes: number;
+  readonly horasDa: number;
+  readonly porFacultad: readonly TiempoParcialPorFacultad[];
+  readonly porCarrera: readonly TiempoParcialPorCarrera[];
+  readonly generadoEn: string;
+}
+
 /**
  * El semestre que reune un grupo de periodos: `262651` y `262151` son `2026-2`.
  *

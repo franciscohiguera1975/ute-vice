@@ -24,6 +24,12 @@ export const rutas: Routes = [
     title: 'Resumenes del distributivo — UTE Vice',
   },
   {
+    path: 'tiempo-parcial',
+    loadComponent: () =>
+      import('./tiempo-parcial.component').then((m) => m.TiempoParcialDistributivoComponent),
+    title: 'Tiempo parcial del distributivo — UTE Vice',
+  },
+  {
     path: 'importar',
     canActivate: [guardaPermiso(Permiso.DISTRIBUTIVO_IMPORTAR)],
     loadComponent: () => import('./importar.component').then((m) => m.ImportarPaoComponent),

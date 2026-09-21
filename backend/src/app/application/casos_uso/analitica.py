@@ -13,6 +13,7 @@ from app.domain.ports.analitica import (
     RepositorioAnalitica,
     RepositorioAnaliticaDistributivo,
     ResumenComparativo,
+    ResumenTiempoParcial,
     TableroCompleto,
     TableroDistributivo,
 )
@@ -213,3 +214,69 @@ def _grupos(
     if len(semestres) < 2:
         return [], del_semestre(semestres[0])
     return del_semestre(semestres[1]), del_semestre(semestres[0])
+
+
+# ---------------------------------------------------------------------------
+# Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class EntradaTiempoParcial:
+    """El grupo de periodos que se examina.
+
+    Un grupo y no periodos sueltos, por lo mismo que en el resto de la
+    analitica: un semestre son varios —tecnologia, grado y posgrado, mas sus
+    interciclos—.
+    """
+
+    grupo: tuple[UUID, ...] = ()
+
+
+class ObtenerTiempoParcial(CasoDeUso[EntradaTiempoParcial, ResumenTiempoParcial]):
+    """Docentes a tiempo parcial de un PAO, con sus horas de `Da` por
+    carrera y facultad."""
+
+    nombre = "analitica.tiempo_parcial"
+    descripcion = "Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad"
+    permiso_requerido = Permiso.DISTRIBUTIVO_LEER
+
+    def __init__(self, analitica: RepositorioAnaliticaDistributivo, reloj: Reloj) -> None:
+        self._analitica = analitica
+        self._reloj = reloj
+
+    async def _ejecutar(
+        self, entrada: EntradaTiempoParcial, contexto: ContextoEjecucion
+    ) -> ResumenTiempoParcial:
+        periodos = await self._analitica.periodos_con_filas()
+        ahora = self._reloj.ahora().isoformat()
+        if not periodos:
+            return ResumenTiempoParcial(generado_en=ahora)
+
+        grupo = _grupo_unico(periodos, entrada.grupo)
+        totales = await self._analitica.totales_tiempo_parcial(grupo)
+
+        return ResumenTiempoParcial(
+            periodos=periodos,
+            grupo=await self._analitica.totales_de_grupo(grupo),
+            docentes=totales.docentes,
+            horas_da=totales.horas_da,
+            por_facultad=await self._analitica.tiempo_parcial_por_facultad(grupo),
+            por_carrera=await self._analitica.tiempo_parcial_por_carrera(grupo),
+            generado_en=ahora,
+        )
+
+
+def _grupo_unico(periodos: list[PeriodoDisponible], elegidos: tuple[UUID, ...]) -> list[UUID]:
+    """Un solo grupo, con el semestre mas reciente completo como propuesta.
+
+    `periodos` viene ordenado por codigo descendente, asi que el semestre del
+    primero es el mas reciente.
+    """
+    validos = {p.id for p in periodos}
+    ids = [i for i in elegidos if i in validos]
+    if ids:
+        return ids
+
+    semestre = periodos[0].semestre or periodos[0].codigo[:3]
+    return [p.id for p in periodos if (p.semestre or p.codigo[:3]) == semestre]

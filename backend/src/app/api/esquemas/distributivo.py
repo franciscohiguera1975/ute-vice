@@ -18,7 +18,10 @@ from app.domain.ports.analitica import (
     FilaComparativa,
     GrupoDePeriodos,
     ResumenComparativo,
+    ResumenTiempoParcial,
     TableroDistributivo,
+    TiempoParcialPorCarrera,
+    TiempoParcialPorFacultad,
     ValidacionDeGrupo,
 )
 from app.domain.ports.distributivo import FilaDistributivoResuelta, ResumenDistributivo
@@ -729,5 +732,68 @@ class ResumenComparativoSalida(EsquemaBase):
             avance=[AvanceDeFacultadSalida.desde(a) for a in r.avance],
             estados_a=[EstadosDeFacultadSalida.desde(e) for e in r.estados_a],
             estados_b=[EstadosDeFacultadSalida.desde(e) for e in r.estados_b],
+            generado_en=r.generado_en,
+        )
+
+
+class TiempoParcialPorFacultadSalida(EsquemaBase):
+    codigo: str
+    nombre: str
+    docentes: int
+    horas_da: float
+
+    @classmethod
+    def desde(cls, f: TiempoParcialPorFacultad) -> TiempoParcialPorFacultadSalida:
+        return cls(codigo=f.codigo, nombre=f.nombre, docentes=f.docentes, horas_da=f.horas_da)
+
+
+class TiempoParcialPorCarreraSalida(EsquemaBase):
+    facultad_codigo: str
+    facultad_nombre: str
+    carrera: str
+    docentes: int
+    horas_da: float
+
+    @classmethod
+    def desde(cls, c: TiempoParcialPorCarrera) -> TiempoParcialPorCarreraSalida:
+        return cls(
+            facultad_codigo=c.facultad_codigo,
+            facultad_nombre=c.facultad_nombre,
+            carrera=c.carrera,
+            docentes=c.docentes,
+            horas_da=c.horas_da,
+        )
+
+
+class ResumenTiempoParcialSalida(EsquemaBase):
+    periodos: list[PeriodoDisponibleSalida]
+    grupo: GrupoDePeriodosSalida | None
+    docentes: int
+    horas_da: float
+    por_facultad: list[TiempoParcialPorFacultadSalida]
+    por_carrera: list[TiempoParcialPorCarreraSalida]
+    generado_en: str
+
+    @classmethod
+    def desde(cls, r: ResumenTiempoParcial) -> ResumenTiempoParcialSalida:
+        grupo = (
+            GrupoDePeriodosSalida(
+                codigos=list(r.grupo.codigos), filas=r.grupo.filas, docentes=r.grupo.docentes
+            )
+            if r.grupo is not None
+            else None
+        )
+        return cls(
+            periodos=[
+                PeriodoDisponibleSalida(
+                    id=p.id, codigo=p.codigo, nombre=p.nombre, semestre=p.semestre, filas=p.filas
+                )
+                for p in r.periodos
+            ],
+            grupo=grupo,
+            docentes=r.docentes,
+            horas_da=r.horas_da,
+            por_facultad=[TiempoParcialPorFacultadSalida.desde(f) for f in r.por_facultad],
+            por_carrera=[TiempoParcialPorCarreraSalida.desde(c) for c in r.por_carrera],
             generado_en=r.generado_en,
         )

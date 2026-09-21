@@ -24,9 +24,9 @@ export interface Seccion {
 }
 
 /**
- * Las cinco pantallas del distributivo.
+ * Las seis pantallas del distributivo.
  *
- * Se agrupan en un desplegable y no en cinco entradas sueltas: en horizontal
+ * Se agrupan en un desplegable y no en seis entradas sueltas: en horizontal
  * no caben, y sueltas no se lee que todas trabajan sobre el mismo dato.
  */
 const DISTRIBUTIVO: readonly Seccion[] = [
@@ -60,6 +60,12 @@ const DISTRIBUTIVO: readonly Seccion[] = [
     ruta: '/distributivo/resumenes',
     etiqueta: 'Resumenes',
     icono: '▦',
+    permisos: [Permiso.DISTRIBUTIVO_LEER],
+  },
+  {
+    ruta: '/distributivo/tiempo-parcial',
+    etiqueta: 'Tiempo parcial',
+    icono: '◒',
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },
   {

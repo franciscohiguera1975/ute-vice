@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Float, Select, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EstadoValidacion
@@ -22,6 +22,9 @@ from app.domain.ports.analitica import (
     FilaComparativa,
     GrupoDePeriodos,
     PeriodoDisponible,
+    TiempoParcialPorCarrera,
+    TiempoParcialPorFacultad,
+    TotalesTiempoParcial,
     ValidacionDeGrupo,
 )
 from app.infrastructure.db.modelos_distributivo import (
@@ -39,6 +42,10 @@ from app.infrastructure.db.modelos_distributivo import (
 #: Estados que cuentan como carga valida. `OK_EXCEPCION` entra: dice que la
 #: fila es valida por una excepcion concedida, no que este mal.
 _APROBADOS = (EstadoValidacion.OK.value, EstadoValidacion.OK_EXCEPCION.value)
+
+#: Como escribe el catalogo la dedicacion de tiempo parcial. Es el filtro fijo
+#: de la pantalla de tiempo parcial, no un valor que se elija.
+_TIEMPO_PARCIAL = "TIEMPO PARCIAL"
 
 #: Catalogos por los que el tablero sabe desglosar un periodo. La clave es lo
 #: que llega por la API; evita construir el `join` desde texto libre.
@@ -333,6 +340,104 @@ class RepositorioAnaliticaDistributivoSQL:
             )
             for f in (await self._s.execute(consulta)).all()
         ]
+
+    # ----------------------------------------------------------- tiempo parcial
+    async def totales_tiempo_parcial(self, paos: Sequence[UUID]) -> TotalesTiempoParcial:
+        if not paos:
+            return TotalesTiempoParcial(docentes=0, horas_da=0.0)
+
+        fila = (
+            await self._s.execute(
+                select(
+                    func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
+                    func.coalesce(func.sum(_horas_da()), 0.0).label("horas_da"),
+                )
+                .select_from(FilaDistributivoModel)
+                .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
+                .where(FilaDistributivoModel.pao_id.in_(list(paos)))
+                .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+            )
+        ).one()
+
+        return TotalesTiempoParcial(
+            docentes=fila.docentes or 0, horas_da=round(float(fila.horas_da), 2)
+        )
+
+    async def tiempo_parcial_por_facultad(
+        self, paos: Sequence[UUID]
+    ) -> list[TiempoParcialPorFacultad]:
+        if not paos:
+            return []
+
+        consulta = (
+            select(
+                FacultadModel.codigo.label("codigo"),
+                FacultadModel.nombre.label("nombre"),
+                func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
+                func.coalesce(func.sum(_horas_da()), 0.0).label("horas_da"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
+            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
+            .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+            .group_by(FacultadModel.codigo, FacultadModel.nombre)
+            .order_by(FacultadModel.codigo)
+        )
+
+        return [
+            TiempoParcialPorFacultad(
+                codigo=f.codigo,
+                nombre=f.nombre,
+                docentes=f.docentes,
+                horas_da=round(float(f.horas_da), 2),
+            )
+            for f in (await self._s.execute(consulta)).all()
+        ]
+
+    async def tiempo_parcial_por_carrera(
+        self, paos: Sequence[UUID]
+    ) -> list[TiempoParcialPorCarrera]:
+        if not paos:
+            return []
+
+        consulta = (
+            select(
+                FacultadModel.codigo.label("facultad_codigo"),
+                FacultadModel.nombre.label("facultad_nombre"),
+                CarreraModel.nombre.label("carrera"),
+                func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
+                func.coalesce(func.sum(_horas_da()), 0.0).label("horas_da"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
+            .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
+            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
+            .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+            .group_by(FacultadModel.codigo, FacultadModel.nombre, CarreraModel.nombre)
+            .order_by(FacultadModel.codigo, CarreraModel.nombre)
+        )
+
+        return [
+            TiempoParcialPorCarrera(
+                facultad_codigo=f.facultad_codigo,
+                facultad_nombre=f.facultad_nombre,
+                carrera=f.carrera,
+                docentes=f.docentes,
+                horas_da=round(float(f.horas_da), 2),
+            )
+            for f in (await self._s.execute(consulta)).all()
+        ]
+
+
+def _horas_da() -> Any:
+    """Horas de la subactividad `Da`, la primera del bloque de docencia.
+
+    Vive en el JSONB `horas_docencia` y no en una columna propia: es el unico
+    detalle de ese bloque que esta pantalla necesita agregar.
+    """
+    return cast(FilaDistributivoModel.horas_docencia["Da"].astext, Float)
 
 
 def _estados_con_porcentaje(fila: Any) -> list[ConteoEtiquetado]:

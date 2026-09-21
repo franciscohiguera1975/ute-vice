@@ -33,14 +33,17 @@ from app.api.esquemas.distributivo import (
     ResultadoImportacionSalida,
     ResumenComparativoSalida,
     ResumenDistributivoSalida,
+    ResumenTiempoParcialSalida,
     TableroDistributivoSalida,
     VistaPreviaReporteSalida,
 )
 from app.application.casos_uso.analitica import (
     EntradaResumenComparativo,
     EntradaTableroDistributivo,
+    EntradaTiempoParcial,
     ObtenerResumenComparativo,
     ObtenerTableroDistributivo,
+    ObtenerTiempoParcial,
 )
 from app.application.casos_uso.distributivo import (
     ActualizarFilaDistributivo,
@@ -448,6 +451,36 @@ async def resumenes_del_distributivo(
             contexto,
         )
     return ResumenComparativoSalida.desde(resultado)
+
+
+@router.get(
+    "/distributivo/tiempo-parcial",
+    response_model=ResumenTiempoParcialSalida,
+    summary="Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def tiempo_parcial_del_distributivo(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    grupo: Annotated[
+        list[UUID] | None,
+        Query(description="Periodos que se examinan. Repetir el parametro para varios."),
+    ] = None,
+) -> ResumenTiempoParcialSalida:
+    """Cuantos docentes a tiempo parcial hay y cuantas horas de `Da` cargan,
+    por carrera y por facultad.
+
+    Se pide un grupo y no periodos sueltos porque un semestre son varios: el
+    `2026-1` completo es tecnologia, grado y posgrado, mas sus interciclos.
+
+    Sin grupo, se toma el semestre mas reciente completo.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ObtenerTiempoParcial(analitica, contenedor.reloj)
+        resultado = await caso(EntradaTiempoParcial(grupo=tuple(grupo or ())), contexto)
+    return ResumenTiempoParcialSalida.desde(resultado)
 
 
 @router.get(

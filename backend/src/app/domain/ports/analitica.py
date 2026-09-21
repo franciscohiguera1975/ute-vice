@@ -250,6 +250,16 @@ class RepositorioAnaliticaDistributivo(Protocol):
         self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
     ) -> list[EstadosDeFacultad]: ...
 
+    async def totales_tiempo_parcial(self, paos: Sequence[UUID]) -> TotalesTiempoParcial: ...
+
+    async def tiempo_parcial_por_facultad(
+        self, paos: Sequence[UUID]
+    ) -> list[TiempoParcialPorFacultad]: ...
+
+    async def tiempo_parcial_por_carrera(
+        self, paos: Sequence[UUID]
+    ) -> list[TiempoParcialPorCarrera]: ...
+
 
 # ---------------------------------------------------------------------------
 # Resumenes: dos grupos de periodos, uno frente al otro
@@ -332,4 +342,61 @@ class ResumenComparativo:
     avance: list[AvanceDeFacultad] = field(default_factory=list)
     estados_a: list[EstadosDeFacultad] = field(default_factory=list)
     estados_b: list[EstadosDeFacultad] = field(default_factory=list)
+    generado_en: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class TotalesTiempoParcial:
+    """Cuantos docentes a tiempo parcial hay en el grupo y cuantas horas de
+    `Da` cargan entre todos.
+
+    `Da` y no el total de docencia: es la subactividad que se pidio, la
+    primera del bloque — el total ya cuenta con su propia columna en el
+    distributivo y dice otra cosa.
+    """
+
+    docentes: int
+    horas_da: float
+
+
+@dataclass(frozen=True, slots=True)
+class TiempoParcialPorFacultad:
+    codigo: str
+    nombre: str
+    docentes: int
+    horas_da: float
+
+
+@dataclass(frozen=True, slots=True)
+class TiempoParcialPorCarrera:
+    """Una carrera con sus docentes a tiempo parcial.
+
+    Lleva la facultad consigo porque una misma carrera se dicta en mas de una:
+    sin ese dato, dos filas con el mismo nombre de carrera pero facultades
+    distintas se leerian como una sola.
+    """
+
+    facultad_codigo: str
+    facultad_nombre: str
+    carrera: str
+    docentes: int
+    horas_da: float
+
+
+@dataclass(frozen=True, slots=True)
+class ResumenTiempoParcial:
+    """Docentes a tiempo parcial de un PAO, con sus horas de `Da` por
+    carrera y facultad."""
+
+    periodos: list[PeriodoDisponible] = field(default_factory=list)
+    grupo: GrupoDePeriodos | None = None
+    docentes: int = 0
+    horas_da: float = 0.0
+    por_facultad: list[TiempoParcialPorFacultad] = field(default_factory=list)
+    por_carrera: list[TiempoParcialPorCarrera] = field(default_factory=list)
     generado_en: str = ""

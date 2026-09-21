@@ -32,6 +32,7 @@ import type {
   ResultadoCargaPao,
   ResumenComparativo,
   ResumenDistributivo,
+  ResumenTiempoParcial,
   TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
@@ -160,4 +161,14 @@ export abstract class RepositorioDistributivo {
     peticion: PeticionResumen,
     formato: FormatoReporte,
   ): Observable<ArchivoDescarga>;
+
+  /**
+   * Docentes a tiempo parcial de un PAO, con sus horas de `Da` por carrera y
+   * facultad.
+   *
+   * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`: un
+   * semestre son varios. Sin grupo, el backend propone el semestre mas
+   * reciente.
+   */
+  abstract tiempoParcial(grupo: readonly string[]): Observable<ResumenTiempoParcial>;
 }

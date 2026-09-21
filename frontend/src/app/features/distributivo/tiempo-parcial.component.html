@@ -1,0 +1,179 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Tiempo parcial del distributivo</h1>
+    <p class="texto-sm texto-tenue">
+      Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad
+    </p>
+  </div>
+
+  <button type="button" class="btn btn--secundario btn--sm no-imprimir" (click)="cargar()">
+    Actualizar
+  </button>
+</header>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando el tiempo parcial…" />
+} @else if (datos(); as d) {
+  @if (d.periodos.length === 0) {
+    <ute-vacio
+      titulo="Todavia no hay carga"
+      mensaje="Cuando se importe un periodo, este calculo aparecera aqui."
+    />
+  } @else {
+    <!-- ------------------------------------------------ periodo examinado -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Periodo que se examina</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <p class="texto-sm texto-tenue nota-grupo">
+          Un semestre son varios periodos —tecnologia, grado y posgrado, mas sus
+          interciclos—. Marque el semestre entero de un clic, o abra el detalle para
+          elegir periodo a periodo.
+        </p>
+
+        <div class="fila entre hueco-sm grupo__cabecera">
+          <h3 class="grupo__titulo">Semestres cargados</h3>
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiar()">
+            Limpiar
+          </button>
+        </div>
+
+        <div class="chips">
+          @for (semestre of semestres(); track semestre.clave) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--activo]="semestreCompleto(semestre)"
+              (click)="alternarSemestre(semestre)"
+            >
+              {{ semestre.clave }}
+              <span class="chip__cuenta">{{ semestre.filas | number }}</span>
+            </button>
+          }
+        </div>
+
+        <details class="detalle">
+          <summary class="texto-sm texto-suave">Elegir periodo a periodo</summary>
+          <ul class="periodos">
+            @for (semestre of semestres(); track semestre.clave) {
+              @for (p of semestre.periodos; track p.id) {
+                <li>
+                  <label class="periodo">
+                    <input
+                      type="checkbox"
+                      [checked]="seleccionado(p.id)"
+                      (change)="alternarPeriodo(p.id)"
+                    />
+                    <span class="mono">{{ p.codigo }}</span>
+                    <span class="periodo__nombre">{{ p.nombre }}</span>
+                    <span class="texto-xs texto-tenue">{{ p.filas | number }}</span>
+                  </label>
+                </li>
+              }
+            }
+          </ul>
+        </details>
+
+        <button type="button" class="btn btn--primario boton-aplicar" (click)="cargar()">
+          Aplicar
+        </button>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- indicadores -->
+    <section class="rejilla rejilla--3 seccion" aria-label="Totales del periodo">
+      <article class="metrica">
+        <p class="metrica__etiqueta">Docentes a tiempo parcial</p>
+        <p class="metrica__valor">{{ d.docentes | number }}</p>
+        <p class="metrica__pie texto-xs texto-tenue">
+          Periodos: {{ codigosDelGrupo() }}
+        </p>
+      </article>
+      <article class="metrica">
+        <p class="metrica__etiqueta">Horas de Da</p>
+        <p class="metrica__valor">{{ d.horasDa | number: '1.0-1' }}</p>
+        <p class="metrica__pie texto-xs texto-tenue">sumadas entre todos</p>
+      </article>
+      <article class="metrica">
+        <p class="metrica__etiqueta">Docentes del grupo</p>
+        <p class="metrica__valor">{{ d.grupo?.docentes ?? 0 | number }}</p>
+        <p class="metrica__pie texto-xs texto-tenue">
+          de cualquier dedicacion · {{ d.grupo?.filas ?? 0 | number }} filas
+        </p>
+      </article>
+    </section>
+
+    <!-- ------------------------------------------------------- por facultad -->
+    <section class="tarjeta seccion">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Por facultad</h2>
+      </div>
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Facultad</th>
+              <th scope="col" class="der">Docentes tiempo parcial</th>
+              <th scope="col" class="der">Horas de Da</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of d.porFacultad; track f.codigo) {
+              <tr>
+                <th scope="row" [title]="f.nombre">{{ f.codigo }}</th>
+                <td class="der mono">{{ f.docentes | number }}</td>
+                <td class="der mono">{{ f.horasDa | number: '1.0-1' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="texto-tenue">
+                  Sin docentes a tiempo parcial en este periodo
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------- por carrera -->
+    <section class="tarjeta seccion">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Por carrera</h2>
+      </div>
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Facultad</th>
+              <th scope="col">Carrera</th>
+              <th scope="col" class="der">Docentes tiempo parcial</th>
+              <th scope="col" class="der">Horas de Da</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of d.porCarrera; track c.facultadCodigo + '|' + c.carrera) {
+              <tr>
+                <th scope="row" [title]="c.facultadNombre">{{ c.facultadCodigo }}</th>
+                <td>{{ c.carrera }}</td>
+                <td class="der mono">{{ c.docentes | number }}</td>
+                <td class="der mono">{{ c.horasDa | number: '1.0-1' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="texto-tenue">
+                  Sin docentes a tiempo parcial en este periodo
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="texto-xs texto-tenue">
+      Calculado el {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}
+    </p>
+  }
+}
