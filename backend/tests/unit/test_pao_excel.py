@@ -286,3 +286,144 @@ class TestOrigenDelArchivo:
     def test_una_ruta_que_no_existe_se_rechaza(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         with pytest.raises(ErrorValidacion):
             LectorPaoExcel().leer(tmp_path / "no-esta.xlsx", pao="2026-2")
+
+
+#: Cabecera del reporte completo del PAO: dos filas, con `Titularidad`,
+#: `Categoria`, `Dedicacion` y `Relacion Laboral` repetidas bajo `Antigua`
+#: (columnas 9-12) y bajo `Nueva` (columnas 18-21).
+_CABECERA_REPORTE_COMPLETO_PRIMARIA = [
+    "No.",
+    "Identificación",
+    "Apellidos y Nombres",
+    "Sede",
+    "Nivel",
+    "Facultad",
+    "Carrera/Programa",
+    "Modalidad",
+    "Antigua",
+    "",
+    "",
+    "",
+    "Da",
+    "Medida",
+    "Nueva",
+    "",
+    "",
+    "",
+    "Estado de la Validación",
+    "N.º Semanas",
+    "Fase",
+]
+_CABECERA_REPORTE_COMPLETO_SECUNDARIA = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Titularidad",
+    "Categoría",
+    "Dedicación",
+    "Relación Laboral",
+    "",
+    "",
+    "Titularidad",
+    "Categoría",
+    "Dedicación",
+    "Relación Laboral",
+    "",
+    "",
+    "",
+]
+
+
+def hacer_archivo_reporte_completo(tmp_path, *filas):  # type: ignore[no-untyped-def]
+    """El PAO tal como lo exporta el sistema completo: varias pestanas, y en
+    `Distributivo` dos filas de titulo antes de una cabecera partida en dos."""
+    libro = Workbook()
+    antecedentes = libro.active
+    antecedentes.title = "Antecedentes"
+    antecedentes.append(["Esto no es el distributivo"])
+
+    hoja = libro.create_sheet("Distributivo")
+    hoja.append([""] * len(_CABECERA_REPORTE_COMPLETO_PRIMARIA))
+    hoja.append(["", "DISTRIBUCIÓN HORARIA POR FUNCIONES SUSTANTIVAS Y GESTIÓN"])
+    hoja.append(_CABECERA_REPORTE_COMPLETO_PRIMARIA)
+    hoja.append(_CABECERA_REPORTE_COMPLETO_SECUNDARIA)
+    for f in filas:
+        hoja.append(f)
+
+    ruta = tmp_path / "pao_completo.xlsx"
+    libro.save(ruta)
+    return ruta
+
+
+def fila_reporte_completo(  # type: ignore[no-untyped-def]
+    *, titularidad_antigua="TITULAR", titularidad_nueva="TITULAR", relacion_nueva="N/A"
+):
+    return [
+        1,
+        "1710034065",
+        "PEREZ JUAN",
+        "SEDE QUITO",
+        "GRADO",
+        "ARQUITECTURA Y URBANISMO",
+        "ARQUITECTURA",
+        "PRESENCIAL",
+        titularidad_antigua,
+        "AUXILIAR",
+        "TIEMPO COMPLETO",
+        "N/A",
+        10,
+        "N/A",
+        titularidad_nueva,
+        "AUXILIAR",
+        "TIEMPO COMPLETO",
+        relacion_nueva,
+        "OK",
+        16,
+        "Planificación",
+    ]
+
+
+class TestReporteCompletoDelPao:
+    """El sistema tambien exporta el PAO entero, con `Distributivo` como una
+    pestana mas y su cabecera partida en `Antigua` / `Nueva`."""
+
+    def test_ubica_la_hoja_distributivo_aunque_no_sea_la_primera(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        archivo = hacer_archivo_reporte_completo(tmp_path, fila_reporte_completo())
+        filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+
+        assert len(filas) == 1
+        assert filas[0].identificacion == "1710034065"
+
+    def test_usa_el_grupo_nueva_y_descarta_antigua(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        archivo = hacer_archivo_reporte_completo(
+            tmp_path,
+            fila_reporte_completo(titularidad_antigua="NO TITULAR", titularidad_nueva="TITULAR"),
+        )
+        filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+
+        assert filas[0].titularidad == "TITULAR"
+
+    def test_nueva_completa_lo_que_antigua_deja_en_blanco(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        # Es el caso real: `Antigua` trae `N/A` en Relacion Laboral donde
+        # `Nueva` ya tiene el dato corregido.
+        archivo = hacer_archivo_reporte_completo(
+            tmp_path, fila_reporte_completo(relacion_nueva="Servicios Profesionales")
+        )
+        filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+
+        assert filas[0].sistema.relacion_laboral == "Servicios Profesionales"
+
+    def test_lee_las_horas_y_los_demas_campos_igual_que_la_hoja_suelta(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        archivo = hacer_archivo_reporte_completo(tmp_path, fila_reporte_completo())
+        filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+
+        f = filas[0]
+        assert f.carrera == "UIO:ARQUITECTURA - GRADO - PRESENCIAL"
+        assert f.horas == {"Da": 10.0}
+        assert f.sistema.semanas == 16
+        assert f.sistema.fase == "Planificación"
