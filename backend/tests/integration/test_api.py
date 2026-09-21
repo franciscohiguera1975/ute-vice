@@ -7,6 +7,8 @@ las respuestas HTTP.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 pytestmark = pytest.mark.integration
@@ -748,6 +750,157 @@ class TestResumenesDelDistributivo:
 
         respuesta = await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras)
         assert respuesta.status_code == 200
+
+
+class TestHorasPorDocentes:
+    """Horas de `Da` por carrera y facultad, acotadas a una dedicacion o a todas."""
+
+    _CABECERA: ClassVar[list[str]] = [
+        "Identificación",
+        "Apellidos y Nombres",
+        "Sede",
+        "Nivel",
+        "Facultad",
+        "Carrera/Programa",
+        "Modalidad",
+        "Da",
+        "Ga",
+        "Titularidad",
+        "Categoría",
+        "Dedicación",
+        "Relación Laboral",
+        "Estado de la Validación",
+        "N.º Semanas",
+        "Fase",
+        "Tutores Posgrado",
+        "Tutores Medicina",
+    ]
+
+    @classmethod
+    def _fila(cls, identificacion: str, facultad: str, carrera: str, dedicacion: str) -> list:
+        return [
+            identificacion,
+            "APELLIDO NOMBRE",
+            "SEDE QUITO",
+            "GRADO",
+            facultad,
+            carrera,
+            "PRESENCIAL",
+            20,
+            4,
+            "NO TITULAR",
+            "AUXILIAR",
+            dedicacion,
+            "Dependencia Laboral",
+            "OK",
+            16,
+            "Planificación",
+            "No",
+            "No",
+        ]
+
+    @classmethod
+    def _archivo(cls, *filas: list) -> bytes:
+        from io import BytesIO
+
+        from openpyxl import Workbook
+
+        libro = Workbook()
+        hoja = libro.active
+        hoja.append(cls._CABECERA)
+        for f in filas:
+            hoja.append(f)
+        memoria = BytesIO()
+        libro.save(memoria)
+        return memoria.getvalue()
+
+    async def _cargar(self, cliente, cabeceras, semestre: str, *filas: list):
+        return await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras,
+            files={"archivo": (f"PAO_{semestre}.xlsx", self._archivo(*filas))},
+            data={"semestre": semestre, "actualizar_existentes": "true"},
+        )
+
+    async def test_sin_dedicacion_incluye_a_todos(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(
+            cliente,
+            cabeceras_admin,
+            "2026-2",
+            self._fila("1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"),
+            self._fila("0926687856", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO COMPLETO"),
+        )
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes", headers=cabeceras_admin
+        )
+        assert respuesta.status_code == 200, respuesta.text
+        cuerpo = respuesta.json()
+
+        assert cuerpo["docentes"] == 2
+        assert cuerpo["horas_da"] == 40.0
+        assert cuerpo["por_facultad"][0]["docentes"] == 2
+
+    async def test_filtra_por_la_dedicacion_elegida(self, sembrado, cabeceras_admin) -> None:
+        _, cliente = sembrado
+        await self._cargar(
+            cliente,
+            cabeceras_admin,
+            "2026-2",
+            self._fila("1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"),
+            self._fila("0926687856", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO COMPLETO"),
+            self._fila(
+                "1102223335", "CIENCIAS DE LA SALUD EUGENIO ESPEJO", "MEDICINA", "TIEMPO PARCIAL"
+            ),
+        )
+
+        catalogo = (
+            await cliente.get("/api/v1/catalogos/dedicaciones/opciones", headers=cabeceras_admin)
+        ).json()
+        tiempo_parcial = next(o for o in catalogo if o["nombre"].upper() == "TIEMPO PARCIAL")
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes",
+            headers=cabeceras_admin,
+            params={"dedicacion_id": tiempo_parcial["id"]},
+        )
+        assert respuesta.status_code == 200, respuesta.text
+        cuerpo = respuesta.json()
+
+        assert cuerpo["docentes"] == 2
+        assert cuerpo["horas_da"] == 40.0
+        assert {f["codigo"] for f in cuerpo["por_facultad"]} == {"FAU", "FCSEE"}
+        assert {c["carrera"] for c in cuerpo["por_carrera"]} == {
+            "UIO:ARQUITECTURA - GRADO - PRESENCIAL",
+            "UIO:MEDICINA - GRADO - PRESENCIAL",
+        }
+
+    async def test_una_carrera_en_dos_facultades_no_se_confunde(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        await self._cargar(
+            cliente,
+            cabeceras_admin,
+            "2026-2",
+            self._fila("1710034065", "ARQUITECTURA Y URBANISMO", "DISEÑO", "TIEMPO PARCIAL"),
+            self._fila(
+                "0926687856",
+                "CIENCIAS DE LA SALUD EUGENIO ESPEJO",
+                "DISEÑO",
+                "TIEMPO PARCIAL",
+            ),
+        )
+
+        respuesta = await cliente.get(
+            "/api/v1/distributivo/horas-por-docentes", headers=cabeceras_admin
+        )
+        cuerpo = respuesta.json()
+
+        assert len(cuerpo["por_carrera"]) == 2
+        facultades = {c["facultad_codigo"] for c in cuerpo["por_carrera"]}
+        assert facultades == {"FAU", "FCSEE"}
 
 
 def _pao_de_tecnologia(*, identificacion: str) -> bytes:

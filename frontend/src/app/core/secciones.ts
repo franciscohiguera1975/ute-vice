@@ -63,8 +63,8 @@ const DISTRIBUTIVO: readonly Seccion[] = [
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },
   {
-    ruta: '/distributivo/tiempo-parcial',
-    etiqueta: 'Tiempo parcial',
+    ruta: '/distributivo/horas-por-docentes',
+    etiqueta: 'Horas por docentes',
     icono: '◒',
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },

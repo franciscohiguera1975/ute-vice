@@ -13,7 +13,7 @@ from app.domain.ports.analitica import (
     RepositorioAnalitica,
     RepositorioAnaliticaDistributivo,
     ResumenComparativo,
-    ResumenTiempoParcial,
+    ResumenDeHoras,
     TableroCompleto,
     TableroDistributivo,
 )
@@ -217,28 +217,33 @@ def _grupos(
 
 
 # ---------------------------------------------------------------------------
-# Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+# Horas por docentes: horas de `Da` por carrera y facultad, en un PAO,
+# filtradas por dedicacion (o todas)
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
-class EntradaTiempoParcial:
-    """El grupo de periodos que se examina.
+class EntradaHorasPorDedicacion:
+    """El grupo de periodos que se examina y la dedicacion que lo acota.
 
     Un grupo y no periodos sueltos, por lo mismo que en el resto de la
     analitica: un semestre son varios —tecnologia, grado y posgrado, mas sus
-    interciclos—.
+    interciclos—. Sin dedicacion, se incluyen todas.
     """
 
     grupo: tuple[UUID, ...] = ()
+    dedicacion_id: UUID | None = None
 
 
-class ObtenerTiempoParcial(CasoDeUso[EntradaTiempoParcial, ResumenTiempoParcial]):
-    """Docentes a tiempo parcial de un PAO, con sus horas de `Da` por
-    carrera y facultad."""
+class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHoras]):
+    """Docentes de un PAO, con sus horas de `Da` por carrera y facultad.
 
-    nombre = "analitica.tiempo_parcial"
-    descripcion = "Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad"
+    Se puede acotar a una dedicacion —tiempo parcial, tiempo completo, medio
+    tiempo…— o dejarlas todas.
+    """
+
+    nombre = "analitica.horas_por_dedicacion"
+    descripcion = "Horas de Da por carrera y facultad de un PAO, filtradas por dedicacion"
     permiso_requerido = Permiso.DISTRIBUTIVO_LEER
 
     def __init__(self, analitica: RepositorioAnaliticaDistributivo, reloj: Reloj) -> None:
@@ -246,23 +251,26 @@ class ObtenerTiempoParcial(CasoDeUso[EntradaTiempoParcial, ResumenTiempoParcial]
         self._reloj = reloj
 
     async def _ejecutar(
-        self, entrada: EntradaTiempoParcial, contexto: ContextoEjecucion
-    ) -> ResumenTiempoParcial:
+        self, entrada: EntradaHorasPorDedicacion, contexto: ContextoEjecucion
+    ) -> ResumenDeHoras:
         periodos = await self._analitica.periodos_con_filas()
         ahora = self._reloj.ahora().isoformat()
         if not periodos:
-            return ResumenTiempoParcial(generado_en=ahora)
+            return ResumenDeHoras(generado_en=ahora)
 
         grupo = _grupo_unico(periodos, entrada.grupo)
-        totales = await self._analitica.totales_tiempo_parcial(grupo)
+        dedicacion_id = entrada.dedicacion_id
+        totales = await self._analitica.totales_por_dedicacion(grupo, dedicacion_id=dedicacion_id)
 
-        return ResumenTiempoParcial(
+        return ResumenDeHoras(
             periodos=periodos,
             grupo=await self._analitica.totales_de_grupo(grupo),
             docentes=totales.docentes,
             horas_da=totales.horas_da,
-            por_facultad=await self._analitica.tiempo_parcial_por_facultad(grupo),
-            por_carrera=await self._analitica.tiempo_parcial_por_carrera(grupo),
+            por_facultad=await self._analitica.horas_por_facultad(
+                grupo, dedicacion_id=dedicacion_id
+            ),
+            por_carrera=await self._analitica.horas_por_carrera(grupo, dedicacion_id=dedicacion_id),
             generado_en=ahora,
         )
 

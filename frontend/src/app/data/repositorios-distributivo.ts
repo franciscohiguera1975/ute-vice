@@ -32,8 +32,8 @@ import type {
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
   ResumenComparativo,
+  ResumenDeHoras,
   ResumenDistributivo,
-  ResumenTiempoParcial,
   TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
@@ -220,8 +220,11 @@ export class DistributivoHttp extends RepositorioDistributivo {
     );
   }
 
-  tiempoParcial(grupo: readonly string[]): Observable<ResumenTiempoParcial> {
-    return this.api.get<ResumenTiempoParcial>('/distributivo/tiempo-parcial', { grupo });
+  horasPorDocentes(grupo: readonly string[], dedicacionId?: string): Observable<ResumenDeHoras> {
+    return this.api.get<ResumenDeHoras>('/distributivo/horas-por-docentes', {
+      grupo,
+      dedicacionId,
+    });
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

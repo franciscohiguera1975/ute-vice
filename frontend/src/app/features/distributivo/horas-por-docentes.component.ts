@@ -1,11 +1,13 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
+  TipoCatalogo,
   type ErrorApi,
   type PeriodoConFilas,
-  type ResumenTiempoParcial,
+  type ResumenDeHoras,
 } from '@domain/modelos';
 import { RepositorioDistributivo } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
@@ -19,31 +21,38 @@ interface Semestre {
 }
 
 /**
- * Docentes a tiempo parcial de un PAO, con sus horas de `Da` por carrera y
- * facultad.
+ * Horas por docentes: horas de `Da` por carrera y facultad, en un PAO.
  *
  * Examina **un** grupo de periodos, no dos: a diferencia de los resumenes, no
  * hay nada que comparar aqui, solo un corte del distributivo. Sigue siendo un
  * grupo y no un periodo suelto porque un semestre son varios —tecnologia,
  * grado y posgrado, mas sus interciclos—.
+ *
+ * Se puede acotar a una dedicacion —tiempo parcial, tiempo completo, medio
+ * tiempo…— o dejarlas todas.
  */
 @Component({
-  selector: 'ute-tiempo-parcial-distributivo',
+  selector: 'ute-horas-por-docentes-distributivo',
   standalone: true,
   imports: [DatePipe, DecimalPipe, CargandoComponent, VacioComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './tiempo-parcial.component.html',
-  styleUrl: './tiempo-parcial.component.scss',
+  templateUrl: './horas-por-docentes.component.html',
+  styleUrl: './horas-por-docentes.component.scss',
 })
-export class TiempoParcialDistributivoComponent {
+export class HorasPorDocentesDistributivoComponent {
   private readonly repositorio = inject(RepositorioDistributivo);
   private readonly notificaciones = inject(NotificacionesService);
+  private readonly catalogos = inject(CatalogosStore);
 
-  protected readonly datos = signal<ResumenTiempoParcial | null>(null);
+  protected readonly datos = signal<ResumenDeHoras | null>(null);
   protected readonly cargando = signal(true);
 
   /** Ids elegidos. Vacio: el backend propone el semestre mas reciente. */
   protected readonly grupo = signal<readonly string[]>([]);
+
+  /** `null` es «Todas»: no se filtra por dedicacion. */
+  protected readonly dedicacionId = signal<string | null>(null);
+  protected readonly dedicaciones = computed(() => this.catalogos.de(TipoCatalogo.DEDICACION));
 
   protected readonly semestres = computed<readonly Semestre[]>(() => {
     const por = new Map<string, PeriodoConFilas[]>();
@@ -63,12 +72,13 @@ export class TiempoParcialDistributivoComponent {
   });
 
   constructor() {
+    this.catalogos.cargar();
     this.cargar();
   }
 
   protected cargar(): void {
     this.cargando.set(true);
-    this.repositorio.tiempoParcial(this.grupo()).subscribe({
+    this.repositorio.horasPorDocentes(this.grupo(), this.dedicacionId() ?? undefined).subscribe({
       next: (datos) => {
         this.datos.set(datos);
         // El backend propone el semestre mas reciente cuando no se pide nada;
@@ -80,7 +90,7 @@ export class TiempoParcialDistributivoComponent {
         this.cargando.set(false);
       },
       error: (error: ErrorApi) => {
-        this.notificaciones.error(error.mensaje ?? 'No se pudo calcular el tiempo parcial');
+        this.notificaciones.error(error.mensaje ?? 'No se pudo calcular las horas por docentes');
         this.cargando.set(false);
       },
     });
@@ -110,6 +120,10 @@ export class TiempoParcialDistributivoComponent {
 
   protected limpiar(): void {
     this.grupo.set([]);
+  }
+
+  protected elegirDedicacion(id: string | null): void {
+    this.dedicacionId.set(id);
   }
 
   protected codigosDelGrupo(): string {

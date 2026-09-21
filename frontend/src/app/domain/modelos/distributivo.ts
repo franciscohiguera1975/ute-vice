@@ -527,19 +527,20 @@ export interface PeticionResumen {
 }
 
 // ---------------------------------------------------------------------------
-// Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+// Horas por docentes: horas de `Da` por carrera y facultad, en un PAO,
+// filtradas por dedicacion (o todas)
 // ---------------------------------------------------------------------------
 
-export interface TiempoParcialPorFacultad {
+export interface HorasPorFacultad {
   readonly codigo: string;
   readonly nombre: string;
   readonly docentes: number;
   readonly horasDa: number;
 }
 
-/** Una carrera con sus docentes a tiempo parcial. Lleva su facultad porque una
- * misma carrera se dicta en mas de una. */
-export interface TiempoParcialPorCarrera {
+/** Una carrera con sus docentes de la dedicacion elegida. Lleva su facultad
+ * porque una misma carrera se dicta en mas de una. */
+export interface HorasPorCarrera {
   readonly facultadCodigo: string;
   readonly facultadNombre: string;
   readonly carrera: string;
@@ -547,13 +548,15 @@ export interface TiempoParcialPorCarrera {
   readonly horasDa: number;
 }
 
-export interface ResumenTiempoParcial {
+/** Docentes de un PAO, con sus horas de `Da` por carrera y facultad. Se puede
+ * acotar a una dedicacion o dejarlas todas. */
+export interface ResumenDeHoras {
   readonly periodos: readonly PeriodoConFilas[];
   readonly grupo: GrupoDePeriodos | null;
   readonly docentes: number;
   readonly horasDa: number;
-  readonly porFacultad: readonly TiempoParcialPorFacultad[];
-  readonly porCarrera: readonly TiempoParcialPorCarrera[];
+  readonly porFacultad: readonly HorasPorFacultad[];
+  readonly porCarrera: readonly HorasPorCarrera[];
   readonly generadoEn: string;
 }
 

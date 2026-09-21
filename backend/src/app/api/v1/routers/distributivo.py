@@ -32,18 +32,18 @@ from app.api.esquemas.distributivo import (
     ResultadoCapturaAsignaturasSalida,
     ResultadoImportacionSalida,
     ResumenComparativoSalida,
+    ResumenDeHorasSalida,
     ResumenDistributivoSalida,
-    ResumenTiempoParcialSalida,
     TableroDistributivoSalida,
     VistaPreviaReporteSalida,
 )
 from app.application.casos_uso.analitica import (
+    EntradaHorasPorDedicacion,
     EntradaResumenComparativo,
     EntradaTableroDistributivo,
-    EntradaTiempoParcial,
+    ObtenerHorasPorDedicacion,
     ObtenerResumenComparativo,
     ObtenerTableroDistributivo,
-    ObtenerTiempoParcial,
 )
 from app.application.casos_uso.distributivo import (
     ActualizarFilaDistributivo,
@@ -454,21 +454,24 @@ async def resumenes_del_distributivo(
 
 
 @router.get(
-    "/distributivo/tiempo-parcial",
-    response_model=ResumenTiempoParcialSalida,
-    summary="Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad",
+    "/distributivo/horas-por-docentes",
+    response_model=ResumenDeHorasSalida,
+    summary="Horas de Da por carrera y facultad de un PAO, filtradas por dedicacion",
     dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
 )
-async def tiempo_parcial_del_distributivo(
+async def horas_por_docentes_del_distributivo(
     contenedor: ContenedorDep,
     contexto: ContextoDep,
     grupo: Annotated[
         list[UUID] | None,
         Query(description="Periodos que se examinan. Repetir el parametro para varios."),
     ] = None,
-) -> ResumenTiempoParcialSalida:
-    """Cuantos docentes a tiempo parcial hay y cuantas horas de `Da` cargan,
-    por carrera y por facultad.
+    dedicacion_id: Annotated[
+        UUID | None, Query(description="Filtra por dedicacion. Sin ella, se incluyen todas.")
+    ] = None,
+) -> ResumenDeHorasSalida:
+    """Cuantos docentes hay y cuantas horas de `Da` cargan, por carrera y
+    por facultad, acotado a una dedicacion o a todas.
 
     Se pide un grupo y no periodos sueltos porque un semestre son varios: el
     `2026-1` completo es tecnologia, grado y posgrado, mas sus interciclos.
@@ -478,9 +481,12 @@ async def tiempo_parcial_del_distributivo(
     uow = contenedor.unidad_de_trabajo()
     async with uow:
         analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
-        caso = ObtenerTiempoParcial(analitica, contenedor.reloj)
-        resultado = await caso(EntradaTiempoParcial(grupo=tuple(grupo or ())), contexto)
-    return ResumenTiempoParcialSalida.desde(resultado)
+        caso = ObtenerHorasPorDedicacion(analitica, contenedor.reloj)
+        resultado = await caso(
+            EntradaHorasPorDedicacion(grupo=tuple(grupo or ()), dedicacion_id=dedicacion_id),
+            contexto,
+        )
+    return ResumenDeHorasSalida.desde(resultado)
 
 
 @router.get(

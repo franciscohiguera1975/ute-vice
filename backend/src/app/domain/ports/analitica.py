@@ -250,15 +250,17 @@ class RepositorioAnaliticaDistributivo(Protocol):
         self, paos: Sequence[UUID], *, dedicacion_ids: Sequence[UUID] = ()
     ) -> list[EstadosDeFacultad]: ...
 
-    async def totales_tiempo_parcial(self, paos: Sequence[UUID]) -> TotalesTiempoParcial: ...
+    async def totales_por_dedicacion(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> TotalesDeHoras: ...
 
-    async def tiempo_parcial_por_facultad(
-        self, paos: Sequence[UUID]
-    ) -> list[TiempoParcialPorFacultad]: ...
+    async def horas_por_facultad(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> list[HorasPorFacultad]: ...
 
-    async def tiempo_parcial_por_carrera(
-        self, paos: Sequence[UUID]
-    ) -> list[TiempoParcialPorCarrera]: ...
+    async def horas_por_carrera(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> list[HorasPorCarrera]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -346,14 +348,15 @@ class ResumenComparativo:
 
 
 # ---------------------------------------------------------------------------
-# Tiempo parcial: horas de `Da` por carrera y facultad, en un PAO
+# Horas por docentes: horas de `Da` por carrera y facultad, en un PAO,
+# filtradas por dedicacion (o todas)
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
-class TotalesTiempoParcial:
-    """Cuantos docentes a tiempo parcial hay en el grupo y cuantas horas de
-    `Da` cargan entre todos.
+class TotalesDeHoras:
+    """Cuantos docentes hay en el grupo con la dedicacion elegida y cuantas
+    horas de `Da` cargan entre todos.
 
     `Da` y no el total de docencia: es la subactividad que se pidio, la
     primera del bloque — el total ya cuenta con su propia columna en el
@@ -365,7 +368,7 @@ class TotalesTiempoParcial:
 
 
 @dataclass(frozen=True, slots=True)
-class TiempoParcialPorFacultad:
+class HorasPorFacultad:
     codigo: str
     nombre: str
     docentes: int
@@ -373,8 +376,8 @@ class TiempoParcialPorFacultad:
 
 
 @dataclass(frozen=True, slots=True)
-class TiempoParcialPorCarrera:
-    """Una carrera con sus docentes a tiempo parcial.
+class HorasPorCarrera:
+    """Una carrera con sus docentes de la dedicacion elegida.
 
     Lleva la facultad consigo porque una misma carrera se dicta en mas de una:
     sin ese dato, dos filas con el mismo nombre de carrera pero facultades
@@ -389,14 +392,17 @@ class TiempoParcialPorCarrera:
 
 
 @dataclass(frozen=True, slots=True)
-class ResumenTiempoParcial:
-    """Docentes a tiempo parcial de un PAO, con sus horas de `Da` por
-    carrera y facultad."""
+class ResumenDeHoras:
+    """Docentes de un PAO, con sus horas de `Da` por carrera y facultad.
+
+    Se puede acotar a una dedicacion (tiempo parcial, tiempo completo, medio
+    tiempo…) o dejar todas: es el mismo calculo, solo cambia el filtro.
+    """
 
     periodos: list[PeriodoDisponible] = field(default_factory=list)
     grupo: GrupoDePeriodos | None = None
     docentes: int = 0
     horas_da: float = 0.0
-    por_facultad: list[TiempoParcialPorFacultad] = field(default_factory=list)
-    por_carrera: list[TiempoParcialPorCarrera] = field(default_factory=list)
+    por_facultad: list[HorasPorFacultad] = field(default_factory=list)
+    por_carrera: list[HorasPorCarrera] = field(default_factory=list)
     generado_en: str = ""

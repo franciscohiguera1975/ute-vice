@@ -136,7 +136,7 @@ describe('agrupacion del menu', () => {
       'Cargar PAO',
       'Reportes',
       'Resumenes',
-      'Tiempo parcial',
+      'Horas por docentes',
       'Asignaturas',
     ]);
   });

@@ -1,4 +1,4 @@
-"""Pruebas de la eleccion del grupo para la pantalla de tiempo parcial.
+"""Pruebas de la eleccion del grupo para la pantalla de horas por docentes.
 
 Es la version de un solo grupo de `_grupos` (ver `test_tablero_distributivo.py`):
 la misma idea de proponer el semestre entero por defecto, pero para una

@@ -21,10 +21,10 @@ from app.domain.ports.analitica import (
     EstadosDeFacultad,
     FilaComparativa,
     GrupoDePeriodos,
+    HorasPorCarrera,
+    HorasPorFacultad,
     PeriodoDisponible,
-    TiempoParcialPorCarrera,
-    TiempoParcialPorFacultad,
-    TotalesTiempoParcial,
+    TotalesDeHoras,
     ValidacionDeGrupo,
 )
 from app.infrastructure.db.modelos_distributivo import (
@@ -42,10 +42,6 @@ from app.infrastructure.db.modelos_distributivo import (
 #: Estados que cuentan como carga valida. `OK_EXCEPCION` entra: dice que la
 #: fila es valida por una excepcion concedida, no que este mal.
 _APROBADOS = (EstadoValidacion.OK.value, EstadoValidacion.OK_EXCEPCION.value)
-
-#: Como escribe el catalogo la dedicacion de tiempo parcial. Es el filtro fijo
-#: de la pantalla de tiempo parcial, no un valor que se elija.
-_TIEMPO_PARCIAL = "TIEMPO PARCIAL"
 
 #: Catalogos por los que el tablero sabe desglosar un periodo. La clave es lo
 #: que llega por la API; evita construir el `join` desde texto libre.
@@ -341,31 +337,28 @@ class RepositorioAnaliticaDistributivoSQL:
             for f in (await self._s.execute(consulta)).all()
         ]
 
-    # ----------------------------------------------------------- tiempo parcial
-    async def totales_tiempo_parcial(self, paos: Sequence[UUID]) -> TotalesTiempoParcial:
+    # --------------------------------------------------------- horas por docente
+    async def totales_por_dedicacion(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> TotalesDeHoras:
         if not paos:
-            return TotalesTiempoParcial(docentes=0, horas_da=0.0)
+            return TotalesDeHoras(docentes=0, horas_da=0.0)
 
+        condicion = _condicion_dedicacion(paos, dedicacion_id)
         fila = (
             await self._s.execute(
                 select(
                     func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
                     func.coalesce(func.sum(_horas_da()), 0.0).label("horas_da"),
-                )
-                .select_from(FilaDistributivoModel)
-                .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
-                .where(FilaDistributivoModel.pao_id.in_(list(paos)))
-                .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+                ).where(condicion)
             )
         ).one()
 
-        return TotalesTiempoParcial(
-            docentes=fila.docentes or 0, horas_da=round(float(fila.horas_da), 2)
-        )
+        return TotalesDeHoras(docentes=fila.docentes or 0, horas_da=round(float(fila.horas_da), 2))
 
-    async def tiempo_parcial_por_facultad(
-        self, paos: Sequence[UUID]
-    ) -> list[TiempoParcialPorFacultad]:
+    async def horas_por_facultad(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> list[HorasPorFacultad]:
         if not paos:
             return []
 
@@ -378,15 +371,13 @@ class RepositorioAnaliticaDistributivoSQL:
             )
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
-            .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
-            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
-            .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+            .where(_condicion_dedicacion(paos, dedicacion_id))
             .group_by(FacultadModel.codigo, FacultadModel.nombre)
             .order_by(FacultadModel.codigo)
         )
 
         return [
-            TiempoParcialPorFacultad(
+            HorasPorFacultad(
                 codigo=f.codigo,
                 nombre=f.nombre,
                 docentes=f.docentes,
@@ -395,9 +386,9 @@ class RepositorioAnaliticaDistributivoSQL:
             for f in (await self._s.execute(consulta)).all()
         ]
 
-    async def tiempo_parcial_por_carrera(
-        self, paos: Sequence[UUID]
-    ) -> list[TiempoParcialPorCarrera]:
+    async def horas_por_carrera(
+        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None
+    ) -> list[HorasPorCarrera]:
         if not paos:
             return []
 
@@ -412,15 +403,13 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
-            .join(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
-            .where(FilaDistributivoModel.pao_id.in_(list(paos)))
-            .where(func.upper(DedicacionModel.nombre) == _TIEMPO_PARCIAL)
+            .where(_condicion_dedicacion(paos, dedicacion_id))
             .group_by(FacultadModel.codigo, FacultadModel.nombre, CarreraModel.nombre)
             .order_by(FacultadModel.codigo, CarreraModel.nombre)
         )
 
         return [
-            TiempoParcialPorCarrera(
+            HorasPorCarrera(
                 facultad_codigo=f.facultad_codigo,
                 facultad_nombre=f.facultad_nombre,
                 carrera=f.carrera,
@@ -438,6 +427,18 @@ def _horas_da() -> Any:
     detalle de ese bloque que esta pantalla necesita agregar.
     """
     return cast(FilaDistributivoModel.horas_docencia["Da"].astext, Float)
+
+
+def _condicion_dedicacion(paos: Sequence[UUID], dedicacion_id: UUID | None) -> Any:
+    """El grupo de periodos, acotado a una dedicacion si se eligio una.
+
+    Se filtra por el id del catalogo y no por el nombre: es lo que ya elige
+    quien usa la pantalla, y no depende de como este escrita la dedicacion.
+    """
+    condicion: Any = FilaDistributivoModel.pao_id.in_(list(paos))
+    if dedicacion_id is not None:
+        condicion = condicion & (FilaDistributivoModel.dedicacion_id == dedicacion_id)
+    return condicion
 
 
 def _estados_con_porcentaje(fila: Any) -> list[ConteoEtiquetado]:

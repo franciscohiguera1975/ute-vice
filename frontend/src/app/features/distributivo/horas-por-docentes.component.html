@@ -1,8 +1,8 @@
 <header class="fila entre envolver hueco encabezado">
   <div>
-    <h1>Tiempo parcial del distributivo</h1>
+    <h1>Horas por docentes</h1>
     <p class="texto-sm texto-tenue">
-      Docentes a tiempo parcial de un PAO, con sus horas de Da por carrera y facultad
+      Horas de Da por carrera y facultad de un PAO, por dedicacion o todas juntas
     </p>
   </div>
 
@@ -12,7 +12,7 @@
 </header>
 
 @if (cargando() && !datos()) {
-  <ute-cargando mensaje="Calculando el tiempo parcial…" />
+  <ute-cargando mensaje="Calculando las horas…" />
 } @else if (datos(); as d) {
   @if (d.periodos.length === 0) {
     <ute-vacio
@@ -75,6 +75,30 @@
           </ul>
         </details>
 
+        <div class="fila entre hueco-sm grupo__cabecera dedicacion__cabecera">
+          <h3 class="grupo__titulo">Dedicacion</h3>
+        </div>
+        <div class="chips">
+          <button
+            type="button"
+            class="chip"
+            [class.chip--activo]="dedicacionId() === null"
+            (click)="elegirDedicacion(null)"
+          >
+            Todas
+          </button>
+          @for (dedicacion of dedicaciones(); track dedicacion.id) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--activo]="dedicacionId() === dedicacion.id"
+              (click)="elegirDedicacion(dedicacion.id)"
+            >
+              {{ dedicacion.nombre }}
+            </button>
+          }
+        </div>
+
         <button type="button" class="btn btn--primario boton-aplicar" (click)="cargar()">
           Aplicar
         </button>
@@ -84,7 +108,7 @@
     <!-- ------------------------------------------------------- indicadores -->
     <section class="rejilla rejilla--3 seccion" aria-label="Totales del periodo">
       <article class="metrica">
-        <p class="metrica__etiqueta">Docentes a tiempo parcial</p>
+        <p class="metrica__etiqueta">Docentes</p>
         <p class="metrica__valor">{{ d.docentes | number }}</p>
         <p class="metrica__pie texto-xs texto-tenue">
           Periodos: {{ codigosDelGrupo() }}
@@ -114,7 +138,7 @@
           <thead>
             <tr>
               <th scope="col">Facultad</th>
-              <th scope="col" class="der">Docentes tiempo parcial</th>
+              <th scope="col" class="der">Docentes</th>
               <th scope="col" class="der">Horas de Da</th>
             </tr>
           </thead>
@@ -127,9 +151,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="3" class="texto-tenue">
-                  Sin docentes a tiempo parcial en este periodo
-                </td>
+                <td colspan="3" class="texto-tenue">Sin docentes en este periodo</td>
               </tr>
             }
           </tbody>
@@ -148,7 +170,7 @@
             <tr>
               <th scope="col">Facultad</th>
               <th scope="col">Carrera</th>
-              <th scope="col" class="der">Docentes tiempo parcial</th>
+              <th scope="col" class="der">Docentes</th>
               <th scope="col" class="der">Horas de Da</th>
             </tr>
           </thead>
@@ -162,9 +184,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="4" class="texto-tenue">
-                  Sin docentes a tiempo parcial en este periodo
-                </td>
+                <td colspan="4" class="texto-tenue">Sin docentes en este periodo</td>
               </tr>
             }
           </tbody>

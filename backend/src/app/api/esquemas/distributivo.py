@@ -17,11 +17,11 @@ from app.domain.ports.analitica import (
     EstadosDeFacultad,
     FilaComparativa,
     GrupoDePeriodos,
+    HorasPorCarrera,
+    HorasPorFacultad,
     ResumenComparativo,
-    ResumenTiempoParcial,
+    ResumenDeHoras,
     TableroDistributivo,
-    TiempoParcialPorCarrera,
-    TiempoParcialPorFacultad,
     ValidacionDeGrupo,
 )
 from app.domain.ports.distributivo import FilaDistributivoResuelta, ResumenDistributivo
@@ -736,18 +736,18 @@ class ResumenComparativoSalida(EsquemaBase):
         )
 
 
-class TiempoParcialPorFacultadSalida(EsquemaBase):
+class HorasPorFacultadSalida(EsquemaBase):
     codigo: str
     nombre: str
     docentes: int
     horas_da: float
 
     @classmethod
-    def desde(cls, f: TiempoParcialPorFacultad) -> TiempoParcialPorFacultadSalida:
+    def desde(cls, f: HorasPorFacultad) -> HorasPorFacultadSalida:
         return cls(codigo=f.codigo, nombre=f.nombre, docentes=f.docentes, horas_da=f.horas_da)
 
 
-class TiempoParcialPorCarreraSalida(EsquemaBase):
+class HorasPorCarreraSalida(EsquemaBase):
     facultad_codigo: str
     facultad_nombre: str
     carrera: str
@@ -755,7 +755,7 @@ class TiempoParcialPorCarreraSalida(EsquemaBase):
     horas_da: float
 
     @classmethod
-    def desde(cls, c: TiempoParcialPorCarrera) -> TiempoParcialPorCarreraSalida:
+    def desde(cls, c: HorasPorCarrera) -> HorasPorCarreraSalida:
         return cls(
             facultad_codigo=c.facultad_codigo,
             facultad_nombre=c.facultad_nombre,
@@ -765,17 +765,17 @@ class TiempoParcialPorCarreraSalida(EsquemaBase):
         )
 
 
-class ResumenTiempoParcialSalida(EsquemaBase):
+class ResumenDeHorasSalida(EsquemaBase):
     periodos: list[PeriodoDisponibleSalida]
     grupo: GrupoDePeriodosSalida | None
     docentes: int
     horas_da: float
-    por_facultad: list[TiempoParcialPorFacultadSalida]
-    por_carrera: list[TiempoParcialPorCarreraSalida]
+    por_facultad: list[HorasPorFacultadSalida]
+    por_carrera: list[HorasPorCarreraSalida]
     generado_en: str
 
     @classmethod
-    def desde(cls, r: ResumenTiempoParcial) -> ResumenTiempoParcialSalida:
+    def desde(cls, r: ResumenDeHoras) -> ResumenDeHorasSalida:
         grupo = (
             GrupoDePeriodosSalida(
                 codigos=list(r.grupo.codigos), filas=r.grupo.filas, docentes=r.grupo.docentes
@@ -793,7 +793,7 @@ class ResumenTiempoParcialSalida(EsquemaBase):
             grupo=grupo,
             docentes=r.docentes,
             horas_da=r.horas_da,
-            por_facultad=[TiempoParcialPorFacultadSalida.desde(f) for f in r.por_facultad],
-            por_carrera=[TiempoParcialPorCarreraSalida.desde(c) for c in r.por_carrera],
+            por_facultad=[HorasPorFacultadSalida.desde(f) for f in r.por_facultad],
+            por_carrera=[HorasPorCarreraSalida.desde(c) for c in r.por_carrera],
             generado_en=r.generado_en,
         )

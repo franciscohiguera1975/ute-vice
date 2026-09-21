@@ -31,8 +31,8 @@ import type {
   ResultadoCapturaAsignaturas,
   ResultadoCargaPao,
   ResumenComparativo,
+  ResumenDeHoras,
   ResumenDistributivo,
-  ResumenTiempoParcial,
   TableroDistributivo,
   TipoCatalogo,
   VistaPreviaReporte,
@@ -163,12 +163,14 @@ export abstract class RepositorioDistributivo {
   ): Observable<ArchivoDescarga>;
 
   /**
-   * Docentes a tiempo parcial de un PAO, con sus horas de `Da` por carrera y
-   * facultad.
+   * Docentes de un PAO, con sus horas de `Da` por carrera y facultad.
    *
    * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`: un
    * semestre son varios. Sin grupo, el backend propone el semestre mas
-   * reciente.
+   * reciente. Sin dedicacion, se incluyen todas.
    */
-  abstract tiempoParcial(grupo: readonly string[]): Observable<ResumenTiempoParcial>;
+  abstract horasPorDocentes(
+    grupo: readonly string[],
+    dedicacionId?: string,
+  ): Observable<ResumenDeHoras>;
 }
