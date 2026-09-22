@@ -225,11 +225,13 @@ export class DistributivoHttp extends RepositorioDistributivo {
     grupo: readonly string[],
     dedicacionId?: string,
     menosDe?: number,
+    excluirSinHoras?: boolean,
   ): Observable<ResumenDeHoras> {
     return this.api.get<ResumenDeHoras>('/distributivo/horas-por-docentes', {
       grupo,
       dedicacionId,
       menosDe,
+      excluirSinHoras,
     });
   }
 

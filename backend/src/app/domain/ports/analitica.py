@@ -263,7 +263,12 @@ class RepositorioAnaliticaDistributivo(Protocol):
     ) -> list[HorasPorCarrera]: ...
 
     async def docentes_bajo_horas(
-        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None, menos_de: float
+        self,
+        paos: Sequence[UUID],
+        *,
+        dedicacion_id: UUID | None = None,
+        menos_de: float,
+        excluir_sin_horas: bool = False,
     ) -> list[DocenteConPocasHoras]: ...
 
 

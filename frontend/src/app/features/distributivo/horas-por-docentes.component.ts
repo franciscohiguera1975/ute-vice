@@ -75,6 +75,8 @@ export class HorasPorDocentesDistributivoComponent {
 
   /** Umbral del reporte de docentes con pocas horas de Da. */
   protected readonly menosDe = signal(5);
+  /** Dentro de ese reporte, deja fuera a quien tiene 0 horas registradas. */
+  protected readonly excluirSinHoras = signal(false);
 
   protected readonly semestres = computed<readonly Semestre[]>(() => {
     const por = new Map<string, PeriodoConFilas[]>();
@@ -101,7 +103,12 @@ export class HorasPorDocentesDistributivoComponent {
   protected cargar(): void {
     this.cargando.set(true);
     this.repositorio
-      .horasPorDocentes(this.grupo(), this.dedicacionId() ?? undefined, this.menosDe())
+      .horasPorDocentes(
+        this.grupo(),
+        this.dedicacionId() ?? undefined,
+        this.menosDe(),
+        this.excluirSinHoras(),
+      )
       .subscribe({
         next: (datos) => {
           this.datos.set(datos);
@@ -155,6 +162,10 @@ export class HorasPorDocentesDistributivoComponent {
     if (Number.isFinite(valor) && valor >= 0) this.menosDe.set(valor);
   }
 
+  protected alternarExcluirSinHoras(evento: Event): void {
+    this.excluirSinHoras.set((evento.target as HTMLInputElement).checked);
+  }
+
   protected codigosDelGrupo(): string {
     return this.datos()?.grupo?.codigos.join(' · ') || 'sin periodos';
   }
@@ -178,6 +189,7 @@ export class HorasPorDocentesDistributivoComponent {
           grupo: this.grupo(),
           dedicacionId: this.dedicacionId() ?? undefined,
           menosDe: resumen === 'bajo_horas' ? this.menosDe() : undefined,
+          excluirSinHoras: resumen === 'bajo_horas' ? this.excluirSinHoras() : undefined,
         },
         formato,
       )

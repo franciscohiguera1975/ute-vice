@@ -235,6 +235,8 @@ class EntradaHorasPorDedicacion:
     dedicacion_id: UUID | None = None
     menos_de: float | None = None
     """Umbral del reporte de docentes con pocas horas. Sin el, no se calcula."""
+    excluir_sin_horas: bool = False
+    """Dentro de ese reporte, deja fuera a quien tiene 0 horas de Da."""
 
 
 class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHoras]):
@@ -266,7 +268,10 @@ class ObtenerHorasPorDedicacion(CasoDeUso[EntradaHorasPorDedicacion, ResumenDeHo
 
         bajo_horas = (
             await self._analitica.docentes_bajo_horas(
-                grupo, dedicacion_id=dedicacion_id, menos_de=entrada.menos_de
+                grupo,
+                dedicacion_id=dedicacion_id,
+                menos_de=entrada.menos_de,
+                excluir_sin_horas=entrada.excluir_sin_horas,
             )
             if entrada.menos_de is not None
             else []

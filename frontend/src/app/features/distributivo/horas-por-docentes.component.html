@@ -261,6 +261,14 @@
           />
           horas de Da
         </label>
+        <label class="umbral umbral--casilla">
+          <input
+            type="checkbox"
+            [checked]="excluirSinHoras()"
+            (change)="alternarExcluirSinHoras($event)"
+          />
+          Excluir a quien tiene 0 horas
+        </label>
         <button type="button" class="btn btn--primario btn--sm boton-aplicar" (click)="cargar()">
           Aplicar
         </button>

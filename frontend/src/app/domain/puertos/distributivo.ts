@@ -169,12 +169,14 @@ export abstract class RepositorioDistributivo {
    * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`: un
    * semestre son varios. Sin grupo, el backend propone el semestre mas
    * reciente. Sin dedicacion, se incluyen todas. `menosDe` ademas lista los
-   * docentes con menos de esas horas de `Da`.
+   * docentes con menos de esas horas de `Da`; `excluirSinHoras` deja fuera de
+   * esa lista a quien tiene 0 horas.
    */
   abstract horasPorDocentes(
     grupo: readonly string[],
     dedicacionId?: string,
     menosDe?: number,
+    excluirSinHoras?: boolean,
   ): Observable<ResumenDeHoras>;
 
   /** Descarga una tabla de «Horas por docentes». Sale del mismo calculo que la pantalla. */

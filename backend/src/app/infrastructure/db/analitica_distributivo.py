@@ -422,12 +422,24 @@ class RepositorioAnaliticaDistributivoSQL:
         ]
 
     async def docentes_bajo_horas(
-        self, paos: Sequence[UUID], *, dedicacion_id: UUID | None = None, menos_de: float
+        self,
+        paos: Sequence[UUID],
+        *,
+        dedicacion_id: UUID | None = None,
+        menos_de: float,
+        excluir_sin_horas: bool = False,
     ) -> list[DocenteConPocasHoras]:
         if not paos:
             return []
 
         horas = _horas_da()
+        condicion = _condicion_dedicacion(paos, dedicacion_id) & (horas < menos_de)
+        if excluir_sin_horas:
+            # `> 0` y no `is not None`: a quien no le llego el dato de Da (los
+            # periodos anteriores a 2026-2) tampoco tiene 0 horas, tiene un
+            # vacio distinto que este filtro no promete resolver.
+            condicion = condicion & (horas > 0)
+
         consulta = (
             select(
                 DocenteModel.identificacion.label("identificacion"),
@@ -441,8 +453,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
-            .where(_condicion_dedicacion(paos, dedicacion_id))
-            .where(horas < menos_de)
+            .where(condicion)
             .order_by(FacultadModel.codigo, CarreraModel.nombre, DocenteModel.nombre_completo)
         )
 

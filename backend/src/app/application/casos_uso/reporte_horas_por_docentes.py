@@ -47,6 +47,8 @@ class EntradaExportarHoras:
     dedicacion_id: UUID | None = None
     menos_de: float | None = None
     """Solo hace falta para `bajo_horas`; las otras dos tablas la ignoran."""
+    excluir_sin_horas: bool = False
+    """En `bajo_horas`, deja fuera a quien tiene 0 horas de Da."""
     resumen: str = RESUMEN_FACULTAD
     formato: FormatoReporte = FormatoReporte.XLSX
 
@@ -81,6 +83,7 @@ class ExportarHorasPorDocentes(CasoDeUso[EntradaExportarHoras, ArchivoReporte]):
                 grupo=entrada.grupo,
                 dedicacion_id=entrada.dedicacion_id,
                 menos_de=entrada.menos_de,
+                excluir_sin_horas=entrada.excluir_sin_horas,
             ),
             contexto,
         )
@@ -208,6 +211,7 @@ def _tabla_bajo_horas(
     umbral = entrada.menos_de if entrada.menos_de is not None else 0.0
     filtros = _filtros(datos, entrada)
     filtros["Menos de"] = f"{umbral:g} horas de Da"
+    filtros["Sin horas (0)"] = "Excluidos" if entrada.excluir_sin_horas else "Incluidos"
 
     return TablaReporte(
         titulo=f"Docentes con menos de {umbral:g} horas de Da",

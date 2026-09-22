@@ -945,6 +945,38 @@ class TestHorasPorDocentes:
         assert bajo_horas[0]["horas_da"] == 3.0
         assert bajo_horas[0]["carrera"] == "UIO:ARQUITECTURA - GRADO - PRESENCIAL"
 
+    async def test_excluir_sin_horas_deja_fuera_a_quien_tiene_cero(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        _, cliente = sembrado
+        pocas_horas = self._fila(
+            "1710034065", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"
+        )
+        pocas_horas[self._CABECERA.index("Da")] = 3
+        sin_horas = self._fila(
+            "0926687856", "ARQUITECTURA Y URBANISMO", "ARQUITECTURA", "TIEMPO PARCIAL"
+        )
+        sin_horas[self._CABECERA.index("Da")] = 0
+        await self._cargar(cliente, cabeceras_admin, "2026-2", pocas_horas, sin_horas)
+
+        con_ceros = (
+            await cliente.get(
+                "/api/v1/distributivo/horas-por-docentes",
+                headers=cabeceras_admin,
+                params={"menos_de": 5},
+            )
+        ).json()["bajo_horas"]
+        assert {d["identificacion"] for d in con_ceros} == {"1710034065", "0926687856"}
+
+        sin_ceros = (
+            await cliente.get(
+                "/api/v1/distributivo/horas-por-docentes",
+                headers=cabeceras_admin,
+                params={"menos_de": 5, "excluir_sin_horas": "true"},
+            )
+        ).json()["bajo_horas"]
+        assert {d["identificacion"] for d in sin_ceros} == {"1710034065"}
+
 
 class TestExportarHorasPorDocentes:
     """Descarga de las tres tablas de horas por docentes.

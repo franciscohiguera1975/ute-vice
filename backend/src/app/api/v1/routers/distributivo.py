@@ -480,6 +480,9 @@ async def horas_por_docentes_del_distributivo(
         float | None,
         Query(description="Ademas, lista los docentes con menos de N horas de Da."),
     ] = None,
+    excluir_sin_horas: Annotated[
+        bool, Query(description="En esa lista, deja fuera a quien tiene 0 horas de Da.")
+    ] = False,
 ) -> ResumenDeHorasSalida:
     """Cuantos docentes hay y cuantas horas de `Da` cargan, por carrera y
     por facultad, acotado a una dedicacion o a todas.
@@ -495,7 +498,10 @@ async def horas_por_docentes_del_distributivo(
         caso = ObtenerHorasPorDedicacion(analitica, contenedor.reloj)
         resultado = await caso(
             EntradaHorasPorDedicacion(
-                grupo=tuple(grupo or ()), dedicacion_id=dedicacion_id, menos_de=menos_de
+                grupo=tuple(grupo or ()),
+                dedicacion_id=dedicacion_id,
+                menos_de=menos_de,
+                excluir_sin_horas=excluir_sin_horas,
             ),
             contexto,
         )
@@ -524,6 +530,9 @@ async def exportar_horas_por_docentes(
         float | None,
         Query(description=f"Obligatorio para `{RESUMEN_BAJO_HORAS}`."),
     ] = None,
+    excluir_sin_horas: Annotated[
+        bool, Query(description="En `bajo_horas`, deja fuera a quien tiene 0 horas de Da.")
+    ] = False,
     formato: FormatoReporte = FormatoReporte.XLSX,
 ) -> Response:
     """La misma tabla que muestra la pantalla, como archivo.
@@ -540,6 +549,7 @@ async def exportar_horas_por_docentes(
                 grupo=tuple(grupo or ()),
                 dedicacion_id=dedicacion_id,
                 menos_de=menos_de,
+                excluir_sin_horas=excluir_sin_horas,
                 resumen=resumen,
                 formato=formato,
             ),

@@ -541,6 +541,8 @@ export interface PeticionHorasPorDocentes {
   readonly dedicacionId?: string;
   /** Obligatorio para `bajo_horas`. */
   readonly menosDe?: number;
+  /** En `bajo_horas`, deja fuera a quien tiene 0 horas de Da. */
+  readonly excluirSinHoras?: boolean;
 }
 
 export interface HorasPorFacultad {
