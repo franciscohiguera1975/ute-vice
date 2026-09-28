@@ -15,7 +15,12 @@ dependencies = [
     "pydantic-settings>=2.6",
     "email-validator>=2.2",
     # --- Persistencia ---
-    "sqlalchemy[asyncio]>=2.0.36",
+    # `<2.1`: esa serie cambio como tipa `Select[]` (columnas individuales
+    # dejan de envolverse en `tuple[...]`) y rompe la anotacion de tipos en
+    # varios repositorios sin tocar el comportamiento en tiempo de ejecucion.
+    # Subir de serie es una migracion aparte, no un efecto colateral de un
+    # `pip install` sin techo.
+    "sqlalchemy[asyncio]>=2.0.36,<2.1",
     "asyncpg>=0.30",
     "alembic>=1.14",
     # --- Seguridad ---
