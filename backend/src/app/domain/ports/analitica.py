@@ -395,9 +395,10 @@ class EstadoLotePorFacultad:
     """
 
     estados: tuple[str, ...] = ()
-    """Los estados presentes en el grupo, del mas frecuente al menos —sin
-    filtrar por lo que se pidio en `estados` al consultar—. Es lo que ofrece
-    el filtro de casillas de la pantalla."""
+    """Los estados presentes en el grupo, en el orden del flujo de aprobacion
+    del sistema academico —los que ese flujo no declara van al final, del mas
+    frecuente al menos—, sin filtrar por lo que se pidio en `estados` al
+    consultar. Es lo que ofrece el filtro de casillas de la pantalla."""
 
     por_facultad: list[FacultadPorEstadoLote] = field(default_factory=list)
     generado_en: str = ""

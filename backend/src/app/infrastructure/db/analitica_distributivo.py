@@ -64,6 +64,35 @@ def _cuenta_si(condicion: Any) -> Any:
     return func.count().filter(condicion)
 
 
+#: Orden real del flujo de aprobacion, tal como lo muestra el sistema
+#: academico. No es un catalogo cerrado -no lo declara-, asi que los estados
+#: que no aparecen aqui no se descartan: se agregan al final, del mas
+#: frecuente al menos, en lugar de perderse de la tabla.
+_ORDEN_ESTADO_LOTE: tuple[str, ...] = (
+    "EN REVISIÓN POR DECANO",
+    "EN REVISIÓN POR DGA",
+    "EN REVISIÓN POR VICERRECTORADO",
+    "EN REVISIÓN POR CANCILLER",
+    "EN REVISIÓN POR RECTOR",
+    "APROBADO",
+    "RECHAZADO",
+    "CANCELADO",
+)
+
+
+def _ordenar_estado_lote(estados: Sequence[str]) -> tuple[str, ...]:
+    """Antepone el orden del flujo de aprobacion; lo demas, tal como llego.
+
+    `estados` ya viene del mas frecuente al menos -es el orden con que se
+    calculo en la consulta-, asi que a los desconocidos les basta con
+    conservar ese orden relativo.
+    """
+    posicion = {estado: i for i, estado in enumerate(_ORDEN_ESTADO_LOTE)}
+    conocidos = sorted((e for e in estados if e in posicion), key=lambda e: posicion[e])
+    desconocidos = [e for e in estados if e not in posicion]
+    return tuple(conocidos) + tuple(desconocidos)
+
+
 def _suma_sin_duplicar(expresion: Any, condicion: Any) -> Any:
     """Suma `expresion` sin contar dos veces una carga que se exploto en varias
     filas.
@@ -524,6 +553,8 @@ class RepositorioAnaliticaDistributivoSQL:
         if not disponibles:
             return EstadoLotePorFacultad()
 
+        orden = _ordenar_estado_lote([d.estado for d in disponibles])
+
         condicion = con_dato
         if estados:
             condicion = condicion & campo.in_(list(estados))
@@ -548,7 +579,7 @@ class RepositorioAnaliticaDistributivoSQL:
             por_facultad.setdefault(clave, {})[fila.estado] = fila.valor
 
         return EstadoLotePorFacultad(
-            estados=tuple(d.estado for d in disponibles),
+            estados=orden,
             por_facultad=[
                 FacultadPorEstadoLote(codigo=codigo, nombre=nombre, conteos=conteos)
                 for (codigo, nombre), conteos in por_facultad.items()
