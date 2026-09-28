@@ -415,9 +415,7 @@ class LectorPaoExcel:
         grupo_id = uuid4() if len(combinaciones) > 1 else None
 
         facultad = valor("Facultad").upper()
-        horas = {
-            clave: self._numero(cruda, col, clave) for clave in _CLAVES_HORAS if clave in col
-        }
+        horas = {clave: self._numero(cruda, col, clave) for clave in _CLAVES_HORAS if clave in col}
         nivel_columna = valor("Nivel")
         modalidad = valor("Modalidad")
         sistema = DatosSistemaAcademico(

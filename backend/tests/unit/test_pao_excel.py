@@ -163,7 +163,10 @@ class TestFilasCombinadas:
         pareo real: se generan todas las combinaciones y se marca `ambiguo`."""
         archivo = hacer_archivo(
             tmp_path,
-            fila(**{"Carrera/Programa": "ALIMENTOS, MECATRÓNICA"}, Sede="SEDE QUITO, SEDE SANTO DOMINGO"),
+            fila(
+                **{"Carrera/Programa": "ALIMENTOS, MECATRÓNICA"},
+                Sede="SEDE QUITO, SEDE SANTO DOMINGO",
+            ),
         )
         filas, combinadas = LectorPaoExcel().leer(archivo, pao="2026-2")
 
@@ -173,7 +176,9 @@ class TestFilasCombinadas:
 
     def test_las_horas_no_se_reparten(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """La carga cuenta completa en cada combinacion, no dividida."""
-        archivo = hacer_archivo(tmp_path, fila(**{"Carrera/Programa": "ALIMENTOS, MECATRÓNICA"}, Da=10))
+        archivo = hacer_archivo(
+            tmp_path, fila(**{"Carrera/Programa": "ALIMENTOS, MECATRÓNICA"}, Da=10)
+        )
         filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
 
         assert filas[0].horas["Da"] == 10.0
@@ -321,9 +326,7 @@ class TestEstadoDeLoteYDeContrato:
     academica que ya cubre `estado_validacion`."""
 
     def test_lee_el_estado_de_lote(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
-        archivo = hacer_archivo(
-            tmp_path, fila(**{"Estado de Lote/Proceso": "En revisión por DGA"})
-        )
+        archivo = hacer_archivo(tmp_path, fila(**{"Estado de Lote/Proceso": "En revisión por DGA"}))
         filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
         assert filas[0].sistema.estado_lote == "En revisión por DGA"
 

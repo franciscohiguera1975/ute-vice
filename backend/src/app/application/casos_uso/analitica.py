@@ -324,9 +324,7 @@ class EntradaEstadoLotePorFacultad:
     estados: tuple[str, ...] = ()
 
 
-class ObtenerEstadoLotePorFacultad(
-    CasoDeUso[EntradaEstadoLotePorFacultad, EstadoLotePorFacultad]
-):
+class ObtenerEstadoLotePorFacultad(CasoDeUso[EntradaEstadoLotePorFacultad, EstadoLotePorFacultad]):
     """Filas de un grupo de periodos, por facultad y estado de lote/proceso.
 
     Es el avance de la contratacion administrativa —«Aprobado», «En revision
@@ -350,9 +348,7 @@ class ObtenerEstadoLotePorFacultad(
             return EstadoLotePorFacultad(generado_en=self._reloj.ahora().isoformat())
 
         grupo = _grupo_unico(periodos, entrada.grupo)
-        resultado = await self._analitica.estado_lote_por_facultad(
-            grupo, estados=entrada.estados
-        )
+        resultado = await self._analitica.estado_lote_por_facultad(grupo, estados=entrada.estados)
         return EstadoLotePorFacultad(
             estados=resultado.estados,
             por_facultad=resultado.por_facultad,
