@@ -6,6 +6,7 @@ from app.application.plantillas.consolidado import (
     PlantillaConsolidadoOrigen,
 )
 from app.application.plantillas.docencia import COLUMNAS_DOCENCIA, PlantillaDocenciaPorCarrera
+from app.application.plantillas.pao import COLUMNAS_PAO, PlantillaPaoOrigen
 from app.application.plantillas.registro import (
     PLANTILLA_POR_DEFECTO,
     REGISTRO_PLANTILLAS,
@@ -15,11 +16,13 @@ from app.application.plantillas.registro import (
 __all__ = [
     "COLUMNAS_CONSOLIDADO",
     "COLUMNAS_DOCENCIA",
+    "COLUMNAS_PAO",
     "PLANTILLA_POR_DEFECTO",
     "REGISTRO_PLANTILLAS",
     "ContenidoPlantilla",
     "PlantillaConsolidadoOrigen",
     "PlantillaDistributivo",
     "PlantillaDocenciaPorCarrera",
+    "PlantillaPaoOrigen",
     "RegistroPlantillas",
 ]
