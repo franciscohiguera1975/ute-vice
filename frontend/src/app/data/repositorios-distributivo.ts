@@ -18,6 +18,7 @@ import type {
   ElementoCatalogo,
   EstadoLotePorFacultad,
   FilaDistributivo,
+  TipoFlujoContrato,
   FiltroCatalogo,
   FiltroDistributivo,
   FiltroDocentes,
@@ -249,9 +250,14 @@ export class DistributivoHttp extends RepositorioDistributivo {
 
   estadoLotePorFacultad(
     grupo: readonly string[],
+    tipoFlujo: TipoFlujoContrato,
     estados?: readonly string[],
   ): Observable<EstadoLotePorFacultad> {
-    return this.api.get<EstadoLotePorFacultad>('/distributivo/estado-lote', { grupo, estados });
+    return this.api.get<EstadoLotePorFacultad>('/distributivo/estado-lote', {
+      grupo,
+      tipoFlujo,
+      estados,
+    });
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

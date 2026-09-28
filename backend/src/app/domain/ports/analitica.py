@@ -15,6 +15,8 @@ from datetime import date
 from typing import Protocol
 from uuid import UUID
 
+from app.domain.enums import TipoFlujoContrato
+
 
 @dataclass(frozen=True, slots=True)
 class ConteoEtiquetado:
@@ -272,7 +274,11 @@ class RepositorioAnaliticaDistributivo(Protocol):
     ) -> list[DocenteConPocasHoras]: ...
 
     async def estado_lote_por_facultad(
-        self, paos: Sequence[UUID], *, estados: Sequence[str] = ()
+        self,
+        paos: Sequence[UUID],
+        *,
+        tipo_flujo: TipoFlujoContrato = TipoFlujoContrato.NORMAL,
+        estados: Sequence[str] = (),
     ) -> EstadoLotePorFacultad: ...
 
 
@@ -382,10 +388,14 @@ class FacultadPorEstadoLote:
 
 @dataclass(frozen=True, slots=True)
 class EstadoLotePorFacultad:
-    """Filas por facultad y estado de lote/proceso del sistema academico.
+    """Filas por facultad y estado de lote/proceso, acotadas a un flujo.
 
     Solo cuenta filas con el dato informado: es el estado de la contratacion,
     no de la validacion academica, y la mayoria de filas todavia no lo tienen.
+    Ademas se acotan al `TipoFlujoContrato` que se pidio: los tres comparten
+    la misma columna de estado, pero son procesos distintos —ver
+    `_condicion_flujo` en el repositorio— y mezclarlos en una sola tabla
+    confundiria pasos que no significan lo mismo.
 
     Los estados **no son un conjunto fijo**: el sistema academico no declara
     cuales existen, igual que `fase` en `FilaDistributivo`. Por eso `estados`
@@ -395,8 +405,8 @@ class EstadoLotePorFacultad:
     """
 
     estados: tuple[str, ...] = ()
-    """Los estados presentes en el grupo, en el orden del flujo de aprobacion
-    del sistema academico —los que ese flujo no declara van al final, del mas
+    """Los estados presentes en el grupo para el flujo elegido, en el orden
+    de sus pasos —los que ese flujo no declara van al final, del mas
     frecuente al menos—, sin filtrar por lo que se pidio en `estados` al
     consultar. Es lo que ofrece el filtro de casillas de la pantalla."""
 

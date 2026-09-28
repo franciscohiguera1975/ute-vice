@@ -710,6 +710,7 @@ class RepositorioDistributivoSQL:
             "tutor_medicina",
             "estado_lote",
             "estado_contrato",
+            "generacion_contrato",
             "grupo_combinado_id",
         )
 

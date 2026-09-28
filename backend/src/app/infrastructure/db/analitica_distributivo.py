@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy import Float, Select, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.enums import EstadoValidacion
+from app.domain.enums import EstadoValidacion, TipoFlujoContrato
 from app.domain.ports.analitica import (
     AvanceDeFacultad,
     ConteoEtiquetado,
@@ -64,33 +64,64 @@ def _cuenta_si(condicion: Any) -> Any:
     return func.count().filter(condicion)
 
 
-#: Orden real del flujo de aprobacion, tal como lo muestra el sistema
-#: academico. No es un catalogo cerrado -no lo declara-, asi que los estados
-#: que no aparecen aqui no se descartan: se agregan al final, del mas
-#: frecuente al menos, en lugar de perderse de la tabla.
-_ORDEN_ESTADO_LOTE: tuple[str, ...] = (
-    "EN REVISIÓN POR DECANO",
-    "EN REVISIÓN POR DGA",
-    "EN REVISIÓN POR VICERRECTORADO",
-    "EN REVISIÓN POR CANCILLER",
-    "EN REVISIÓN POR RECTOR",
-    "APROBADO",
-    "RECHAZADO",
-    "CANCELADO",
-)
+def _ordenar_estado_lote(estados: Sequence[str], orden: Sequence[str]) -> tuple[str, ...]:
+    """Antepone `orden` —el de los pasos del flujo elegido—; lo demas, tal
+    como llego.
 
-
-def _ordenar_estado_lote(estados: Sequence[str]) -> tuple[str, ...]:
-    """Antepone el orden del flujo de aprobacion; lo demas, tal como llego.
-
-    `estados` ya viene del mas frecuente al menos -es el orden con que se
-    calculo en la consulta-, asi que a los desconocidos les basta con
-    conservar ese orden relativo.
+    `estados` ya viene del mas frecuente al menos —es el orden con que se
+    calculo en la consulta—, asi que a los que `orden` no declara les basta
+    con conservar ese orden relativo en lugar de perderse de la tabla.
     """
-    posicion = {estado: i for i, estado in enumerate(_ORDEN_ESTADO_LOTE)}
+    posicion = {estado: i for i, estado in enumerate(orden)}
     conocidos = sorted((e for e in estados if e in posicion), key=lambda e: posicion[e])
     desconocidos = [e for e in estados if e not in posicion]
     return tuple(conocidos) + tuple(desconocidos)
+
+
+#: Medidas que ya tramitan su propia aprobacion por otra via: una alta, una
+#: renovacion o un cambio de dedicacion no son del flujo normal ni del
+#: simplificado. Sin acentos porque se comparan contra la columna sin
+#: acentos —ver `_condicion_flujo`—; `NUEVA CONTRATACION` es como lo escribe
+#: hoy el origen, `NUEVO CONTRATO` se agrega por si cambia la redaccion.
+_MEDIDAS_CON_TRAMITE_PROPIO = (
+    "RENOVACION",
+    "CAMBIO DE DEDICACION",
+    "NUEVA CONTRATACION",
+    "NUEVO CONTRATO",
+)
+
+
+def _condicion_flujo(tipo: TipoFlujoContrato) -> Any:
+    """El criterio que separa un flujo de aprobacion de los otros dos.
+
+    Los tres comparten la misma fila de origen —no hay una columna «tipo de
+    flujo»—, asi que se distinguen por como vienen otras tres columnas.
+    Acordado con la institucion:
+
+    * **Contratacion**: genera un contrato nuevo (`Generación de contrato` =
+      `Si`). Nada mas la distingue: es precisamente por crear una obligacion
+      nueva que pasa ademas por Canciller y Rector.
+    * **Normal**: no genera contrato, la medida no tramita su aprobacion por
+      otra via (ver `_MEDIDAS_CON_TRAMITE_PROPIO`), y el periodo esta en
+      planificacion.
+    * **Simplificado**: el mismo filtro que el normal, pero en ejecucion —el
+      periodo ya esta corriendo y solo hace falta el visto bueno del Decano.
+    """
+    f = FilaDistributivoModel
+    # `unaccent` solo para comparar: la columna se guarda tal como llega, con
+    # sus acentos, para los reportes que la muestran en crudo.
+    medida = func.upper(func.unaccent(func.coalesce(f.medida, "")))
+    generacion = func.upper(func.coalesce(f.generacion_contrato, ""))
+    fase = func.upper(func.coalesce(f.fase, ""))
+
+    if tipo is TipoFlujoContrato.CONTRATACION:
+        return generacion == "SI"
+
+    sin_contrato_nuevo = generacion.in_(("", "NO"))
+    sin_medida_con_tramite_propio = ~medida.in_(_MEDIDAS_CON_TRAMITE_PROPIO)
+    fase_esperada = "EJECUCIÓN" if tipo is TipoFlujoContrato.SIMPLIFICADO else "PLANIFICACIÓN"
+
+    return sin_contrato_nuevo & sin_medida_con_tramite_propio & (fase == fase_esperada)
 
 
 def _suma_sin_duplicar(expresion: Any, condicion: Any) -> Any:
@@ -528,14 +559,21 @@ class RepositorioAnaliticaDistributivoSQL:
 
     # ------------------------------------------ estado de lote/proceso
     async def estado_lote_por_facultad(
-        self, paos: Sequence[UUID], *, estados: Sequence[str] = ()
+        self,
+        paos: Sequence[UUID],
+        *,
+        tipo_flujo: TipoFlujoContrato = TipoFlujoContrato.NORMAL,
+        estados: Sequence[str] = (),
     ) -> EstadoLotePorFacultad:
         if not paos:
             return EstadoLotePorFacultad()
 
         campo = FilaDistributivoModel.estado_lote
         con_dato: Any = (
-            FilaDistributivoModel.pao_id.in_(list(paos)) & campo.is_not(None) & (campo != "")
+            FilaDistributivoModel.pao_id.in_(list(paos))
+            & campo.is_not(None)
+            & (campo != "")
+            & _condicion_flujo(tipo_flujo)
         )
 
         # Los estados que ofrece el filtro de casillas: todos los que aparecen
@@ -553,7 +591,7 @@ class RepositorioAnaliticaDistributivoSQL:
         if not disponibles:
             return EstadoLotePorFacultad()
 
-        orden = _ordenar_estado_lote([d.estado for d in disponibles])
+        orden = _ordenar_estado_lote([d.estado for d in disponibles], tipo_flujo.orden_estados)
 
         condicion = con_dato
         if estados:

@@ -93,6 +93,15 @@
 
 .tabla-envoltura.cargando { opacity: 0.6; }
 
+.tarjeta__subtitulo { font-weight: 400; font-size: 0.85rem; }
+
+.selector-flujo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.selector-flujo__control { min-width: 14rem; }
+
 /* Cabecera vertical de la tabla de estado de contrato: los nombres de
    estado son largos ("EN REVISIÓN POR VICERRECTORADO"), y en horizontal la
    tabla no entra sin desplazarse. En vertical cada columna ocupa el ancho de

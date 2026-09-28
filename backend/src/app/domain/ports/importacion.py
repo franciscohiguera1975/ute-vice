@@ -19,6 +19,7 @@ class DatosSistemaAcademico:
     tutor_medicina: bool = False
     estado_lote: str | None = None
     estado_contrato: str | None = None
+    generacion_contrato: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

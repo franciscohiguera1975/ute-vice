@@ -263,8 +263,8 @@ CABECERA_PAO = [
     "Total Horas Semanales", "Total Horas Semestrales",
     "Tutores Posgrado", "Tutores Medicina", "Medida",
     "Titularidad", "Categoría", "Dedicación", "Relación Laboral",
-    "Estado de la Validación", "Estado de Lote/Proceso", "Estado de Contrato",
-    "N.º Semanas", "Fase",
+    "Estado de la Validación", "Estado de Lote/Proceso", "Generación de contrato",
+    "Estado de Contrato", "N.º Semanas", "Fase",
 ]  # fmt: skip
 
 
@@ -422,6 +422,7 @@ async def test_pao_el_estado_de_lote_y_de_contrato_salen_tal_como_se_guardaron()
                         horas=DistribucionHoras.vacia(),
                         estado_lote="En revisión por DGA",
                         estado_contrato="Firmado Docente",
+                        generacion_contrato="Si",
                     )
                 )
             ]
@@ -431,6 +432,7 @@ async def test_pao_el_estado_de_lote_y_de_contrato_salen_tal_como_se_guardaron()
     fila = contenido.filas[0]
     assert fila["Estado de Lote/Proceso"] == "EN REVISIÓN POR DGA"
     assert fila["Estado de Contrato"] == "FIRMADO DOCENTE"
+    assert fila["Generación de contrato"] == "SI"
 
 
 async def test_pao_las_marcas_de_tutoria_salen_como_si_o_no() -> None:

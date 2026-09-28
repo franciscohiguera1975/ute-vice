@@ -602,6 +602,30 @@ export interface ResumenDeHoras {
 // ---------------------------------------------------------------------------
 
 /**
+ * Los tres flujos de aprobacion del estado de lote/proceso.
+ *
+ * Comparten la misma columna de estado, pero son procesos distintos —cada
+ * uno con su propio orden de pasos y su propio criterio de filtro—. El
+ * servidor decide el filtro; aqui solo hace falta el codigo, que viaja tal
+ * cual en la peticion.
+ */
+export const TipoFlujoContrato = {
+  NORMAL: 'NORMAL',
+  /** Genera un contrato nuevo: pasa ademas por Canciller y Rector. */
+  CONTRATACION: 'CONTRATACION',
+  /** Solo pide el visto bueno del Decano. */
+  SIMPLIFICADO: 'SIMPLIFICADO',
+} as const;
+
+export type TipoFlujoContrato = (typeof TipoFlujoContrato)[keyof typeof TipoFlujoContrato];
+
+export const ETIQUETAS_FLUJO_CONTRATO: Readonly<Record<TipoFlujoContrato, string>> = {
+  [TipoFlujoContrato.NORMAL]: 'Flujo normal',
+  [TipoFlujoContrato.CONTRATACION]: 'Contratación (Canciller y Vicerrectorado)',
+  [TipoFlujoContrato.SIMPLIFICADO]: 'Proceso simplificado',
+};
+
+/**
  * Una facultad con sus filas repartidas por estado de lote/proceso.
  *
  * `conteos` solo trae los estados que esa facultad tiene; los ausentes se
@@ -615,13 +639,14 @@ export interface FacultadPorEstadoLote {
 }
 
 /**
- * Filas por facultad y estado de lote/proceso del sistema academico: el
- * avance de la contratacion administrativa, no la validacion academica de la
- * carga horaria que ya cubre `TableroDistributivo`.
+ * Filas por facultad y estado de lote/proceso del sistema academico,
+ * acotadas a un `TipoFlujoContrato`: el avance de la contratacion
+ * administrativa, no la validacion academica de la carga horaria que ya
+ * cubre `TableroDistributivo`.
  *
  * Los estados no son un conjunto fijo —el sistema academico no los declara—,
- * asi que `estados` trae los que de verdad aparecen en el grupo, para armar
- * las casillas del filtro sin una lista escrita a mano.
+ * asi que `estados` trae los que de verdad aparecen en el grupo para ese
+ * flujo, para armar las casillas del filtro sin una lista escrita a mano.
  */
 export interface EstadoLotePorFacultad {
   readonly estados: readonly string[];

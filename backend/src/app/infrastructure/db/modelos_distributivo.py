@@ -407,6 +407,9 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     #: Estado de la firma del contrato. Casi siempre nulo hoy; se guarda para
     #: reportes futuros.
     estado_contrato: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: `SI` si la fila genera un contrato nuevo. Distingue el flujo de
+    #: contratacion de los otros dos; ver `TipoFlujoContrato`.
+    generacion_contrato: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     #: Comparte el mismo id con las demas filas nacidas de una sola fila del
     #: origen con varias carreras, sedes o periodos a la vez. `None` en todo lo

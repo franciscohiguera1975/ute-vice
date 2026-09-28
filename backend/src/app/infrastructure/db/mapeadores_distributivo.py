@@ -124,6 +124,7 @@ def fila_a_dominio(modelo: FilaDistributivoModel) -> FilaDistributivo:
         tutor_medicina=bool(modelo.tutor_medicina),
         estado_lote=modelo.estado_lote,
         estado_contrato=modelo.estado_contrato,
+        generacion_contrato=modelo.generacion_contrato,
         grupo_combinado_id=modelo.grupo_combinado_id,
         creado_en=modelo.creado_en,
         actualizado_en=modelo.actualizado_en,
@@ -172,6 +173,7 @@ def fila_a_modelo(
     modelo.tutor_medicina = entidad.tutor_medicina
     modelo.estado_lote = entidad.estado_lote
     modelo.estado_contrato = entidad.estado_contrato
+    modelo.generacion_contrato = entidad.generacion_contrato
     modelo.grupo_combinado_id = entidad.grupo_combinado_id
     modelo.creado_por = entidad.creado_por
     return modelo

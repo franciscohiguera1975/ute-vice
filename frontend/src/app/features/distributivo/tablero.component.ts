@@ -5,8 +5,10 @@ import { DescargaService } from '@core/descarga.service';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
   ETIQUETAS_ESTADO_VALIDACION,
+  ETIQUETAS_FLUJO_CONTRATO,
   FormatoReporte,
   Permiso,
+  TipoFlujoContrato,
   TipoResumen,
   type Conteo,
   type ErrorApi,
@@ -88,6 +90,13 @@ export class TableroDistributivoComponent {
   protected readonly cargandoEstadoLote = signal(false);
   /** Sin marcar ninguno se incluyen todos, igual que el filtro de dedicacion. */
   protected readonly estadosSeleccionados = signal<readonly string[]>([]);
+  protected readonly tipoFlujo = signal<TipoFlujoContrato>(TipoFlujoContrato.NORMAL);
+  protected readonly TipoFlujoContrato = TipoFlujoContrato;
+  protected readonly ETIQUETAS_FLUJO_CONTRATO = ETIQUETAS_FLUJO_CONTRATO;
+  protected readonly opcionesFlujo = Object.values(TipoFlujoContrato).map((valor) => ({
+    valor,
+    etiqueta: ETIQUETAS_FLUJO_CONTRATO[valor],
+  }));
 
   constructor() {
     this.cargar();
@@ -120,18 +129,28 @@ export class TableroDistributivoComponent {
    */
   protected cargarEstadoLote(): void {
     this.cargandoEstadoLote.set(true);
-    this.repositorio.estadoLotePorFacultad(this.grupoB(), this.estadosSeleccionados()).subscribe({
-      next: (resultado) => {
-        this.estadoLote.set(resultado);
-        this.cargandoEstadoLote.set(false);
-      },
-      error: (error: ErrorApi) => {
-        this.notificaciones.error(
-          error.mensaje ?? 'No se pudo calcular el estado de lote o proceso',
-        );
-        this.cargandoEstadoLote.set(false);
-      },
-    });
+    this.repositorio
+      .estadoLotePorFacultad(this.grupoB(), this.tipoFlujo(), this.estadosSeleccionados())
+      .subscribe({
+        next: (resultado) => {
+          this.estadoLote.set(resultado);
+          this.cargandoEstadoLote.set(false);
+        },
+        error: (error: ErrorApi) => {
+          this.notificaciones.error(
+            error.mensaje ?? 'No se pudo calcular el estado de lote o proceso',
+          );
+          this.cargandoEstadoLote.set(false);
+        },
+      });
+  }
+
+  /** Cambiar de flujo limpia la seleccion: los estados de uno no significan
+   * lo mismo en otro, y una casilla marcada del flujo anterior confundiria. */
+  protected cambiarTipoFlujo(valor: TipoFlujoContrato): void {
+    this.tipoFlujo.set(valor);
+    this.estadosSeleccionados.set([]);
+    this.cargarEstadoLote();
   }
 
   protected estadoLoteSeleccionado(estado: string): boolean {

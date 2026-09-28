@@ -211,17 +211,33 @@
       <!-- --------------------------------- tabla: estado de lote/proceso -->
       <section class="tarjeta seccion">
         <div class="tarjeta__cabecera fila entre envolver hueco-sm">
-          <h2 class="tarjeta__titulo">Estado de contrato</h2>
+          <h2 class="tarjeta__titulo">
+            Estado de contrato
+            <span class="tarjeta__subtitulo texto-tenue">· {{ ETIQUETAS_FLUJO_CONTRATO[tipoFlujo()] }}</span>
+          </h2>
+          <label class="selector-flujo">
+            <span class="texto-xs texto-tenue">Flujo</span>
+            <select
+              class="selector-flujo__control"
+              [value]="tipoFlujo()"
+              (change)="cambiarTipoFlujo($any($event.target).value)"
+            >
+              @for (opcion of opcionesFlujo; track opcion.valor) {
+                <option [value]="opcion.valor">{{ opcion.etiqueta }}</option>
+              }
+            </select>
+          </label>
         </div>
         <p class="texto-sm texto-suave">
-          Avance de la contratacion administrativa del grupo 2, por facultad. Es distinto
-          de la validacion academica de arriba: solo cuenta filas que ya traen ese dato.
+          Avance de la contratacion administrativa del grupo 2, por facultad, en el flujo
+          elegido. Es distinto de la validacion academica de arriba: solo cuenta filas que
+          ya traen ese dato.
         </p>
 
         @if (estadoLote(); as lote) {
           @if (lote.estados.length === 0) {
             <p class="nota texto-sm texto-tenue">
-              Ninguna fila de este grupo trae estado de lote o proceso todavia.
+              Ninguna fila de este grupo entra en el flujo «{{ ETIQUETAS_FLUJO_CONTRATO[tipoFlujo()] }}».
             </p>
           } @else {
             <div class="fila entre envolver hueco-sm">

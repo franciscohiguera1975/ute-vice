@@ -72,6 +72,74 @@ _ETIQUETAS_VALIDACION: dict[EstadoValidacion, str] = {
 }
 
 
+class TipoFlujoContrato(StrEnum):
+    """Los tres flujos de aprobacion del estado de lote/proceso.
+
+    El sistema academico no declara un catalogo cerrado de valores para
+    `estado_lote` —por eso ese campo se guarda como texto libre, igual que
+    `fase`—, pero el proceso real de la institucion tiene tres variantes,
+    cada una con su propio orden de pasos y su propio criterio para saber
+    que fila pertenece a cual. Ver `_condicion_flujo` en
+    `infrastructure/db/analitica_distributivo.py`, que es donde se aplica.
+    """
+
+    NORMAL = "NORMAL"
+    """El caso general: no genera contrato nuevo y esta en planificacion."""
+
+    CONTRATACION = "CONTRATACION"
+    """Genera un contrato nuevo: pasa ademas por Canciller y Rector."""
+
+    SIMPLIFICADO = "SIMPLIFICADO"
+    """Misma exclusion que el normal, pero en ejecucion: solo pide el visto
+    bueno del Decano."""
+
+    @property
+    def etiqueta(self) -> str:
+        return _ETIQUETAS_FLUJO_CONTRATO[self]
+
+    @property
+    def orden_estados(self) -> tuple[str, ...]:
+        """El orden real de los pasos de este flujo, para ordenar la tabla y
+        el filtro de casillas. Los estados que no aparecen aqui no se
+        descartan —el origen no declara un catalogo cerrado—, se agregan al
+        final."""
+        return _ORDEN_ESTADOS_FLUJO[self]
+
+
+_ETIQUETAS_FLUJO_CONTRATO: dict[TipoFlujoContrato, str] = {
+    TipoFlujoContrato.NORMAL: "Flujo normal",
+    TipoFlujoContrato.CONTRATACION: "Contratación (Canciller y Vicerrectorado)",
+    TipoFlujoContrato.SIMPLIFICADO: "Proceso simplificado",
+}
+
+_ORDEN_ESTADOS_FLUJO: dict[TipoFlujoContrato, tuple[str, ...]] = {
+    TipoFlujoContrato.NORMAL: (
+        "EN REVISIÓN POR DECANO",
+        "EN REVISIÓN POR DGA",
+        "EN REVISIÓN POR VICERRECTORADO",
+        "APROBADO",
+        "RECHAZADO",
+        "CANCELADO",
+    ),
+    TipoFlujoContrato.CONTRATACION: (
+        "EN REVISIÓN POR DECANO",
+        "EN REVISIÓN POR DGA",
+        "EN REVISIÓN POR VICERRECTORADO",
+        "EN REVISIÓN POR CANCILLER",
+        "EN REVISIÓN POR RECTOR",
+        "APROBADO",
+        "RECHAZADO",
+        "CANCELADO",
+    ),
+    TipoFlujoContrato.SIMPLIFICADO: (
+        "EN REVISIÓN POR DECANO",
+        "APROBADO",
+        "RECHAZADO",
+        "CANCELADO",
+    ),
+}
+
+
 class Permiso(StrEnum):
     """Permisos atomicos. La autorizacion se evalua siempre contra estos.
 

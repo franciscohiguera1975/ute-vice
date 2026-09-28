@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
-from app.domain.enums import Permiso
+from app.domain.enums import Permiso, TipoFlujoContrato
 from app.domain.ports.analitica import (
     EstadoLotePorFacultad,
     PeriodoDisponible,
@@ -314,13 +314,16 @@ def _grupo_unico(periodos: list[PeriodoDisponible], elegidos: tuple[UUID, ...]) 
 
 @dataclass(frozen=True, slots=True)
 class EntradaEstadoLotePorFacultad:
-    """El grupo de periodos que se examina y los estados que se quieren ver.
+    """El grupo de periodos, el flujo de aprobacion y los estados que se
+    quieren ver.
 
     Un grupo y no periodos sueltos, por lo mismo que en el resto de la
-    analitica. Sin estados elegidos, se incluyen todos los que aparezcan.
+    analitica. Sin estados elegidos, se incluyen todos los que aparezcan del
+    flujo pedido.
     """
 
     grupo: tuple[UUID, ...] = ()
+    tipo_flujo: TipoFlujoContrato = TipoFlujoContrato.NORMAL
     estados: tuple[str, ...] = ()
 
 
@@ -329,7 +332,10 @@ class ObtenerEstadoLotePorFacultad(CasoDeUso[EntradaEstadoLotePorFacultad, Estad
 
     Es el avance de la contratacion administrativa —«Aprobado», «En revision
     por DGA»…—, no la validacion academica de la carga horaria que ya cubre
-    `ObtenerTableroDistributivo`.
+    `ObtenerTableroDistributivo`. Hay tres flujos de aprobacion distintos
+    —normal, contratacion y simplificado, ver `TipoFlujoContrato`— que
+    comparten la misma columna de estado; `entrada.tipo_flujo` elige cual se
+    consulta.
     """
 
     nombre = "analitica.estado_lote_por_facultad"
@@ -348,7 +354,9 @@ class ObtenerEstadoLotePorFacultad(CasoDeUso[EntradaEstadoLotePorFacultad, Estad
             return EstadoLotePorFacultad(generado_en=self._reloj.ahora().isoformat())
 
         grupo = _grupo_unico(periodos, entrada.grupo)
-        resultado = await self._analitica.estado_lote_por_facultad(grupo, estados=entrada.estados)
+        resultado = await self._analitica.estado_lote_por_facultad(
+            grupo, tipo_flujo=entrada.tipo_flujo, estados=entrada.estados
+        )
         return EstadoLotePorFacultad(
             estados=resultado.estados,
             por_facultad=resultado.por_facultad,

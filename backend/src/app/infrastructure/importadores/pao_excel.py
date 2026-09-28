@@ -430,6 +430,7 @@ class LectorPaoExcel:
             # DGA»…), no la validacion academica de la carga horaria.
             estado_lote=_o_nada(valor("Estado de Lote/Proceso")),
             estado_contrato=_o_nada(valor("Estado de Contrato")),
+            generacion_contrato=_o_nada(valor("Generación de contrato")),
         )
 
         return [

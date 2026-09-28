@@ -29,9 +29,10 @@ las de `consolidado.py`:
   escribe `TITULAR AUXILIAR 1` para la misma categoria, y esa variante no se
   puede distinguir de `TITULAR AUXILIAR` una vez importada.
 * **`Fase`, `Relación Laboral`, `Estado de la Validación`, `Estado de
-  Lote/Proceso` y `Estado de Contrato` salen en mayusculas o con la redaccion
-  del catalogo**, no con la capitalizacion exacta del origen (`Planificación`
-  sale `PLANIFICACIÓN`). Es cosmetico: el dato es el mismo.
+  Lote/Proceso`, `Generación de contrato` y `Estado de Contrato` salen en
+  mayusculas o con la redaccion del catalogo**, no con la capitalizacion
+  exacta del origen (`Planificación` sale `PLANIFICACIÓN`). Es cosmetico: el
+  dato es el mismo.
 """
 
 from __future__ import annotations
@@ -137,6 +138,7 @@ def _columnas() -> list[ColumnaReporte]:
         ColumnaReporte("Relación Laboral", "Relación Laboral", 20),
         ColumnaReporte("Estado de la Validación", "Estado de la Validación", 20),
         ColumnaReporte("Estado de Lote/Proceso", "Estado de Lote/Proceso", 20),
+        ColumnaReporte("Generación de contrato", "Generación de contrato", 12),
         ColumnaReporte("Estado de Contrato", "Estado de Contrato", 18),
         ColumnaReporte("N.º Semanas", "N.º Semanas", 10, tipo="numero", alineacion="centro"),
         ColumnaReporte("Fase", "Fase", 16),
@@ -270,6 +272,7 @@ class PlantillaPaoOrigen(PlantillaDistributivo):
                     _ESTADO_A_TEXTO.get(estado, estado.value) if estado else None
                 ),
                 "Estado de Lote/Proceso": r.fila.estado_lote,
+                "Generación de contrato": r.fila.generacion_contrato,
                 "Estado de Contrato": r.fila.estado_contrato,
                 "N.º Semanas": semanas,
                 "Fase": r.fila.fase,

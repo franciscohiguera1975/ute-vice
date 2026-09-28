@@ -99,7 +99,7 @@ from app.application.casos_uso.reporte_resumenes import (
     EntradaExportarResumen,
     ExportarResumenDistributivo,
 )
-from app.domain.enums import FormatoReporte, Permiso
+from app.domain.enums import FormatoReporte, Permiso, TipoFlujoContrato
 from app.domain.errors import ErrorValidacion
 from app.domain.ports.distributivo import FiltroDistributivo, FiltroDocentes
 from app.domain.ports.reportes import ArchivoReporte
@@ -524,6 +524,10 @@ async def estado_lote_por_facultad(
         list[UUID] | None,
         Query(description="Periodos que se examinan. Repetir el parametro para varios."),
     ] = None,
+    tipo_flujo: Annotated[
+        TipoFlujoContrato,
+        Query(description="Flujo de aprobacion: NORMAL, CONTRATACION o SIMPLIFICADO."),
+    ] = TipoFlujoContrato.NORMAL,
     estados: Annotated[
         list[str] | None,
         Query(description="Estados a incluir. Repetir el parametro para varios; sin ninguno todos"),
@@ -535,16 +539,23 @@ async def estado_lote_por_facultad(
     revision por DGA»…—, no la validacion academica de la carga horaria que
     cubre `/distributivo/tablero`. Solo cuenta filas que traen ese dato.
 
+    Hay tres flujos de aprobacion distintos que comparten la misma columna de
+    estado —normal, contratacion (pasa ademas por Canciller y Rector) y
+    simplificado (solo Decano)—; `tipo_flujo` elige cual se consulta y decide
+    ademas el orden de sus pasos.
+
     Los estados no son un conjunto fijo: `estados` devuelve los que de verdad
-    aparecen en el grupo, para que la pantalla ofrezca las casillas correctas
-    sin una lista escrita a mano.
+    aparecen en el grupo para ese flujo, para que la pantalla ofrezca las
+    casillas correctas sin una lista escrita a mano.
     """
     uow = contenedor.unidad_de_trabajo()
     async with uow:
         analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
         caso = ObtenerEstadoLotePorFacultad(analitica, contenedor.reloj)
         resultado = await caso(
-            EntradaEstadoLotePorFacultad(grupo=tuple(grupo or ()), estados=tuple(estados or ())),
+            EntradaEstadoLotePorFacultad(
+                grupo=tuple(grupo or ()), tipo_flujo=tipo_flujo, estados=tuple(estados or ())
+            ),
             contexto,
         )
     return EstadoLotePorFacultadSalida.desde(resultado)

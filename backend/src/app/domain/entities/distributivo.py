@@ -203,6 +203,11 @@ class FilaDistributivo:
     #: que lo necesiten, no lo usa ninguno todavia.
     estado_contrato: str | None = None
 
+    #: `SI` si la fila genera un contrato nuevo. Es lo que distingue el flujo
+    #: de contratacion —pasa ademas por Canciller y Rector— de los otros dos.
+    #: Ver `TipoFlujoContrato`.
+    generacion_contrato: str | None = None
+
     #: Comparte el mismo id con las demas filas nacidas de una sola fila del
     #: origen que traia varias carreras, sedes o periodos a la vez: la misma
     #: carga de horas, replicada en cada combinacion. `None` cuando la fila no
@@ -218,7 +223,13 @@ class FilaDistributivo:
     def __post_init__(self) -> None:
         if self.medida is not None:
             self.medida = " ".join(self.medida.split()) or None
-        for campo in ("fase", "relacion_laboral", "estado_lote", "estado_contrato"):
+        for campo in (
+            "fase",
+            "relacion_laboral",
+            "estado_lote",
+            "estado_contrato",
+            "generacion_contrato",
+        ):
             valor = getattr(self, campo)
             if valor is not None:
                 setattr(self, campo, " ".join(valor.split()).upper() or None)

@@ -37,6 +37,7 @@ import type {
   ResumenDistributivo,
   TableroDistributivo,
   TipoCatalogo,
+  TipoFlujoContrato,
   VistaPreviaReporte,
 } from '../modelos';
 
@@ -187,14 +188,16 @@ export abstract class RepositorioDistributivo {
   ): Observable<ArchivoDescarga>;
 
   /**
-   * Filas por facultad y estado de lote/proceso: el avance de la
-   * contratacion administrativa, no la validacion academica de la carga.
+   * Filas por facultad y estado de lote/proceso, para un flujo de
+   * aprobacion: el avance de la contratacion administrativa, no la
+   * validacion academica de la carga.
    *
    * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`. Sin
-   * `estados`, se incluyen todos los que aparezcan.
+   * `estados`, se incluyen todos los que aparezcan para ese flujo.
    */
   abstract estadoLotePorFacultad(
     grupo: readonly string[],
+    tipoFlujo: TipoFlujoContrato,
     estados?: readonly string[],
   ): Observable<EstadoLotePorFacultad>;
 }

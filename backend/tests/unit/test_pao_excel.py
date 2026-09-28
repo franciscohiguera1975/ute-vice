@@ -40,6 +40,7 @@ CABECERA = [
     "Relación Laboral",
     "Estado de la Validación",
     "Estado de Lote/Proceso",
+    "Generación de contrato",
     "Estado de Contrato",
     "N.º Semanas",
     "Fase",
@@ -83,6 +84,7 @@ def fila(**cambios):  # type: ignore[no-untyped-def]
         "Relación Laboral": "Dependencia Laboral",
         "Estado de la Validación": "OK",
         "Estado de Lote/Proceso": "",
+        "Generación de contrato": "",
         "Estado de Contrato": "",
         "N.º Semanas": 16,
         "Fase": "Planificación",
@@ -335,10 +337,16 @@ class TestEstadoDeLoteYDeContrato:
         filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
         assert filas[0].sistema.estado_contrato == "Firmado Docente"
 
+    def test_lee_la_generacion_de_contrato(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        archivo = hacer_archivo(tmp_path, fila(**{"Generación de contrato": "Si"}))
+        filas, _ = LectorPaoExcel().leer(archivo, pao="2026-2")
+        assert filas[0].sistema.generacion_contrato == "Si"
+
     def test_sin_dato_queda_vacio(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         filas, _ = LectorPaoExcel().leer(hacer_archivo(tmp_path, fila()), pao="2026-2")
         assert filas[0].sistema.estado_lote is None
         assert filas[0].sistema.estado_contrato is None
+        assert filas[0].sistema.generacion_contrato is None
 
 
 class TestFacultadYPeriodo:

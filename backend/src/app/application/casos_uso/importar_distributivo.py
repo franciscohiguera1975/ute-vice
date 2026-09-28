@@ -493,6 +493,7 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
                     tutor_medicina=principal.sistema.tutor_medicina,
                     estado_lote=principal.sistema.estado_lote,
                     estado_contrato=principal.sistema.estado_contrato,
+                    generacion_contrato=principal.sistema.generacion_contrato,
                     grupo_combinado_id=principal.grupo_combinado_id,
                     creado_por=contexto.actor_id,
                 )
