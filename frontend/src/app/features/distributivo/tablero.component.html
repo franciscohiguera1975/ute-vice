@@ -256,7 +256,9 @@
                   <tr>
                     <th scope="col">Facultad</th>
                     @for (estado of columnasEstadoLote(); track estado) {
-                      <th scope="col" class="der">{{ estado }}</th>
+                      <th scope="col" class="der th--vertical" [title]="estado">
+                        <span>{{ estado }}</span>
+                      </th>
                     }
                     <th scope="col" class="der">Total</th>
                   </tr>

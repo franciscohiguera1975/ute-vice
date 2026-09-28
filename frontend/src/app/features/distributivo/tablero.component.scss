@@ -92,3 +92,20 @@
 }
 
 .tabla-envoltura.cargando { opacity: 0.6; }
+
+/* Cabecera vertical de la tabla de estado de contrato: los nombres de
+   estado son largos ("EN REVISIÓN POR DGA"), y en horizontal la tabla no
+   entra sin desplazarse. En vertical cada columna ocupa el ancho de un
+   numero, no el de la etiqueta mas larga. */
+.th--vertical {
+  vertical-align: bottom;
+  padding-bottom: 0.6rem;
+  white-space: nowrap;
+
+  span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display: inline-block;
+    max-height: 9rem;
+  }
+}
