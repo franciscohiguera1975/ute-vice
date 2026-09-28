@@ -65,17 +65,20 @@ def _cuenta_si(condicion: Any) -> Any:
 
 
 def _ordenar_estado_lote(estados: Sequence[str], orden: Sequence[str]) -> tuple[str, ...]:
-    """Antepone `orden` —el de los pasos del flujo elegido—; lo demas, tal
-    como llego.
+    """El flujo completo, seguido de lo que ese flujo no declara.
 
-    `estados` ya viene del mas frecuente al menos —es el orden con que se
-    calculo en la consulta—, asi que a los que `orden` no declara les basta
-    con conservar ese orden relativo en lugar de perderse de la tabla.
+    `orden` sale entero siempre —aunque un paso no tenga ninguna fila
+    todavia, como «En revision por Canciller» antes de que alguien llegue
+    ahi—, para que la tabla y el filtro de casillas muestren el flujo
+    completo y no solo los pasos por los que ya paso alguna fila.
+
+    `estados` es lo que de verdad aparece en los datos, del mas frecuente al
+    menos: lo que ese flujo no declara se agrega despues, en ese orden, en
+    lugar de perderse de la tabla.
     """
-    posicion = {estado: i for i, estado in enumerate(orden)}
-    conocidos = sorted((e for e in estados if e in posicion), key=lambda e: posicion[e])
-    desconocidos = [e for e in estados if e not in posicion]
-    return tuple(conocidos) + tuple(desconocidos)
+    conocidos = set(orden)
+    desconocidos = [e for e in estados if e not in conocidos]
+    return tuple(orden) + tuple(desconocidos)
 
 
 #: Medidas que ya tramitan su propia aprobacion por otra via: una alta, una
@@ -576,10 +579,12 @@ class RepositorioAnaliticaDistributivoSQL:
             & _condicion_flujo(tipo_flujo)
         )
 
-        # Los estados que ofrece el filtro de casillas: todos los que aparecen
-        # en el grupo, sin acotar por lo que se pidio en `estados`. Si se
-        # calcularan con el filtro ya aplicado, marcar una sola casilla haria
-        # desaparecer las demas de la lista y no se podrian volver a marcar.
+        # Lo que de verdad aparece en el grupo, sin acotar por lo que se pidio
+        # en `estados`. Si se calculara con ese filtro ya aplicado, marcar una
+        # sola casilla haria desaparecer las demas y no se podrian volver a
+        # marcar. Sirve ademas para decidir si el flujo tiene alguna fila —ver
+        # el `if not disponibles` de abajo— y para completar `orden` con lo
+        # que el flujo no declara (`_ordenar_estado_lote`).
         disponibles = (
             await self._s.execute(
                 select(campo.label("estado"), func.count().label("total"))

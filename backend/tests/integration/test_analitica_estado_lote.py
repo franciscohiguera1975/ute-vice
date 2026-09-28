@@ -123,24 +123,29 @@ async def test_solo_cuenta_filas_con_estado_de_lote(esquema: None) -> None:  # t
     motor, fabrica = await _sesion(get_settings())
     try:
         async with fabrica() as sesion:
+            # En mayusculas: es como queda `estado_lote` una vez importado por
+            # `FilaDistributivo.__post_init__`, y contra eso compara el orden
+            # del flujo (`TipoFlujoContrato.orden_estados`).
             pao = await _preparar(
                 sesion,
                 [
-                    ("FCII", "Aprobado"),
-                    ("FCII", "Rechazado"),
+                    ("FCII", "APROBADO"),
+                    ("FCII", "RECHAZADO"),
                     ("FCII", None),  # sin estado: no cuenta
-                    ("FAU", "Aprobado"),
+                    ("FAU", "APROBADO"),
                 ],
             )
 
             repo = RepositorioAnaliticaDistributivoSQL(sesion)
             resultado = await repo.estado_lote_por_facultad([pao.id])
 
-            assert set(resultado.estados) == {"Aprobado", "Rechazado"}
+            # El flujo normal completo, aunque «Vicerrectorado» y «Cancelado»
+            # no tengan ninguna fila todavia.
+            assert set(resultado.estados) >= {"APROBADO", "RECHAZADO"}
             por_codigo = {f.codigo: f for f in resultado.por_facultad}
-            assert por_codigo["FCII"].conteos == {"Aprobado": 1, "Rechazado": 1}
+            assert por_codigo["FCII"].conteos == {"APROBADO": 1, "RECHAZADO": 1}
             assert por_codigo["FCII"].total == 2
-            assert por_codigo["FAU"].conteos == {"Aprobado": 1}
+            assert por_codigo["FAU"].conteos == {"APROBADO": 1}
     finally:
         await motor.dispose()
 
@@ -158,20 +163,21 @@ async def test_filtrar_por_estados_no_borra_las_opciones_disponibles(  # type: i
             pao = await _preparar(
                 sesion,
                 [
-                    ("FCII", "Aprobado"),
-                    ("FCII", "Rechazado"),
-                    ("FAU", "En revisión por DGA"),
+                    ("FCII", "APROBADO"),
+                    ("FCII", "RECHAZADO"),
+                    ("FAU", "EN REVISIÓN POR DGA"),
                 ],
             )
 
             repo = RepositorioAnaliticaDistributivoSQL(sesion)
-            resultado = await repo.estado_lote_por_facultad([pao.id], estados=["Aprobado"])
+            resultado = await repo.estado_lote_por_facultad([pao.id], estados=["APROBADO"])
 
-            # Las tres opciones siguen disponibles para volver a marcarlas...
-            assert set(resultado.estados) == {"Aprobado", "Rechazado", "En revisión por DGA"}
+            # Las tres siguen disponibles para volver a marcarlas (mas el
+            # resto del flujo normal, que sale completo)...
+            assert set(resultado.estados) >= {"APROBADO", "RECHAZADO", "EN REVISIÓN POR DGA"}
             # ...pero la tabla solo trae lo que se pidio.
             por_codigo = {f.codigo: f for f in resultado.por_facultad}
-            assert por_codigo["FCII"].conteos == {"Aprobado": 1}
+            assert por_codigo["FCII"].conteos == {"APROBADO": 1}
             assert "FAU" not in por_codigo
     finally:
         await motor.dispose()
@@ -199,6 +205,44 @@ class TestFiltroDeFlujo:
     """Los tres flujos comparten la columna `estado_lote`, pero se distinguen
     por `medida`, `generación de contrato` y `fase`. Acordado con la
     institucion — ver `_condicion_flujo`."""
+
+    async def test_un_paso_sin_filas_todavia_sale_en_cero(  # type: ignore[no-untyped-def]
+        self, esquema: None
+    ) -> None:
+        """«En revision por Canciller» es un paso real del flujo de
+        contratacion aunque nadie haya llegado ahi todavia: la tabla lo
+        muestra en cero, no lo oculta."""
+        from app.core.config import get_settings
+        from app.domain.enums import TipoFlujoContrato
+        from app.infrastructure.db.analitica_distributivo import RepositorioAnaliticaDistributivoSQL
+
+        motor, fabrica = await _sesion(get_settings())
+        try:
+            async with fabrica() as sesion:
+                pao, carrera, facultad = await _base(sesion)
+                await _fila_de_flujo(
+                    sesion,
+                    pao,
+                    carrera,
+                    facultad,
+                    estado="EN REVISIÓN POR DGA",
+                    generacion_contrato="Si",
+                )
+                await sesion.commit()
+
+                repo = RepositorioAnaliticaDistributivoSQL(sesion)
+                resultado = await repo.estado_lote_por_facultad(
+                    [pao.id], tipo_flujo=TipoFlujoContrato.CONTRATACION
+                )
+
+                assert resultado.estados == TipoFlujoContrato.CONTRATACION.orden_estados
+                # Ni "Canciller" ni "Rector" tienen fila: no aparecen en
+                # `conteos` -el frontend los trata como cero-, pero la
+                # facultad si aparece por la unica fila que tiene.
+                assert resultado.por_facultad[0].conteos == {"EN REVISIÓN POR DGA": 1}
+                assert "EN REVISIÓN POR CANCILLER" not in resultado.por_facultad[0].conteos
+        finally:
+            await motor.dispose()
 
     async def test_contratacion_solo_exige_generacion_de_contrato(  # type: ignore[no-untyped-def]
         self, esquema: None
@@ -332,10 +376,13 @@ class TestFiltroDeFlujo:
                     [pao.id], tipo_flujo=TipoFlujoContrato.SIMPLIFICADO
                 )
 
+                # El flujo completo, en su orden -incluido "Cancelado", que
+                # ninguna fila tiene todavia-, no el orden de llegada.
                 assert resultado.estados == (
                     "EN REVISIÓN POR DECANO",
                     "APROBADO",
                     "RECHAZADO",
+                    "CANCELADO",
                 )
         finally:
             await motor.dispose()

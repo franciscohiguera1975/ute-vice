@@ -2,8 +2,9 @@
 
 El sistema academico no declara un catalogo cerrado de estados, pero cada uno
 de los tres flujos de aprobacion (`TipoFlujoContrato`) si tiene un orden real
-de pasos. La tabla debe mostrarlo en ese orden y no por frecuencia, que es una
-coincidencia de los datos y no del proceso.
+de pasos, y esos pasos deben verse completos aunque alguno no tenga todavia
+ninguna fila -«En revision por Canciller» antes de que alguien llegue ahi-,
+no solo los que ya ocurrieron.
 """
 
 from __future__ import annotations
@@ -18,15 +19,11 @@ pytestmark = pytest.mark.unit
 _ORDEN_NORMAL = TipoFlujoContrato.NORMAL.orden_estados
 
 
-def test_respeta_el_orden_del_flujo_de_aprobacion() -> None:
-    # Llegan en un orden cualquiera -aqui, el inverso del flujo-.
-    desordenados = ["RECHAZADO", "APROBADO", "EN REVISIÓN POR DGA", "EN REVISIÓN POR DECANO"]
-    assert _ordenar_estado_lote(desordenados, _ORDEN_NORMAL) == (
-        "EN REVISIÓN POR DECANO",
-        "EN REVISIÓN POR DGA",
-        "APROBADO",
-        "RECHAZADO",
-    )
+def test_el_flujo_sale_completo_aunque_falten_pasos_en_los_datos() -> None:
+    # Ni "Vicerrectorado" ni "Cancelado" aparecen en los datos...
+    estados = ["RECHAZADO", "APROBADO", "EN REVISIÓN POR DGA", "EN REVISIÓN POR DECANO"]
+    # ...pero igual salen, porque son pasos del flujo.
+    assert _ordenar_estado_lote(estados, _ORDEN_NORMAL) == _ORDEN_NORMAL
 
 
 def test_agrega_los_desconocidos_al_final_sin_perderlos() -> None:
@@ -34,18 +31,20 @@ def test_agrega_los_desconocidos_al_final_sin_perderlos() -> None:
     estados = ["INICIAR CONTRATACIÓN", "APROBADO", "OTRO ESTADO NUEVO", "RECHAZADO"]
     resultado = _ordenar_estado_lote(estados, _ORDEN_NORMAL)
 
-    assert set(resultado) == set(estados)
-    assert resultado[:2] == ("APROBADO", "RECHAZADO")
-    # Los desconocidos conservan el orden relativo con que llegaron.
-    assert resultado[2:] == ("INICIAR CONTRATACIÓN", "OTRO ESTADO NUEVO")
+    # El flujo completo primero...
+    assert resultado[: len(_ORDEN_NORMAL)] == _ORDEN_NORMAL
+    # ...los desconocidos despues, en el orden con que llegaron.
+    assert resultado[len(_ORDEN_NORMAL) :] == ("INICIAR CONTRATACIÓN", "OTRO ESTADO NUEVO")
 
 
-def test_una_lista_vacia_no_falla() -> None:
-    assert _ordenar_estado_lote([], _ORDEN_NORMAL) == ()
+def test_sin_datos_todavia_sale_el_flujo_completo() -> None:
+    """Nada impide mostrar los pasos: son del flujo, no de los datos."""
+    assert _ordenar_estado_lote([], _ORDEN_NORMAL) == _ORDEN_NORMAL
 
 
-def test_solo_desconocidos_conserva_el_orden_de_llegada() -> None:
-    assert _ordenar_estado_lote(["B", "A"], _ORDEN_NORMAL) == ("B", "A")
+def test_solo_desconocidos_van_despues_del_flujo_completo() -> None:
+    resultado = _ordenar_estado_lote(["B", "A"], _ORDEN_NORMAL)
+    assert resultado == (*_ORDEN_NORMAL, "B", "A")
 
 
 class TestOrdenPorFlujo:

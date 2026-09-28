@@ -397,18 +397,22 @@ class EstadoLotePorFacultad:
     `_condicion_flujo` en el repositorio— y mezclarlos en una sola tabla
     confundiria pasos que no significan lo mismo.
 
-    Los estados **no son un conjunto fijo**: el sistema academico no declara
-    cuales existen, igual que `fase` en `FilaDistributivo`. Por eso `estados`
-    se calcula de lo que de verdad aparece en el grupo de periodos, en lugar
-    de una lista escrita a mano que quedaria desactualizada en cuanto se sume
-    un estado nuevo.
+    Los estados que el sistema academico puede escribir **no son un conjunto
+    fijo** —no los declara, igual que `fase` en `FilaDistributivo`—, pero los
+    pasos del flujo elegido si lo son (`TipoFlujoContrato.orden_estados`).
+    Por eso `estados` trae siempre el flujo completo, con los pasos que
+    todavia no tienen ninguna fila —«En revision por Canciller» antes de que
+    alguien llegue ahi—, y agrega al final lo que ese flujo no declara, sin
+    una lista escrita a mano que quedaria desactualizada en cuanto el origen
+    sume un estado nuevo.
     """
 
     estados: tuple[str, ...] = ()
-    """Los estados presentes en el grupo para el flujo elegido, en el orden
-    de sus pasos —los que ese flujo no declara van al final, del mas
-    frecuente al menos—, sin filtrar por lo que se pidio en `estados` al
-    consultar. Es lo que ofrece el filtro de casillas de la pantalla."""
+    """Los pasos del flujo elegido, completos —aunque alguno no tenga
+    todavia ninguna fila—, seguidos de lo que ese flujo no declara, del mas
+    frecuente al menos. Sin filtrar por lo que se pidio en `estados` al
+    consultar. Es lo que ofrece el filtro de casillas de la pantalla y las
+    columnas de la tabla."""
 
     por_facultad: list[FacultadPorEstadoLote] = field(default_factory=list)
     generado_en: str = ""

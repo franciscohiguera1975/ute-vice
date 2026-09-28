@@ -849,8 +849,9 @@ class FacultadPorEstadoLoteSalida(EsquemaBase):
 
 
 class EstadoLotePorFacultadSalida(EsquemaBase):
-    #: Los estados presentes en el grupo, en el orden del flujo de aprobacion.
-    #: Es lo que ofrece el filtro de casillas de la pantalla.
+    #: Los pasos del flujo elegido, completos aunque alguno no tenga todavia
+    #: ninguna fila. Es lo que ofrece el filtro de casillas y las columnas
+    #: de la tabla.
     estados: list[str]
     por_facultad: list[FacultadPorEstadoLoteSalida]
     generado_en: str
