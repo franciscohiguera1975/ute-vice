@@ -208,6 +208,103 @@
         </div>
       </section>
 
+      <!-- --------------------------------- tabla: estado de lote/proceso -->
+      <section class="tarjeta seccion">
+        <div class="tarjeta__cabecera fila entre envolver hueco-sm">
+          <h2 class="tarjeta__titulo">Estado de contrato</h2>
+        </div>
+        <p class="texto-sm texto-suave">
+          Avance de la contratacion administrativa del grupo 2, por facultad. Es distinto
+          de la validacion academica de arriba: solo cuenta filas que ya traen ese dato.
+        </p>
+
+        @if (estadoLote(); as lote) {
+          @if (lote.estados.length === 0) {
+            <p class="nota texto-sm texto-tenue">
+              Ninguna fila de este grupo trae estado de lote o proceso todavia.
+            </p>
+          } @else {
+            <div class="fila entre envolver hueco-sm">
+              <ul class="filtro-estados">
+                @for (estado of lote.estados; track estado) {
+                  <li>
+                    <label class="filtro-estados__opcion">
+                      <input
+                        type="checkbox"
+                        [checked]="estadoLoteSeleccionado(estado)"
+                        (change)="alternarEstadoLote(estado)"
+                      />
+                      <span>{{ estado }}</span>
+                    </label>
+                  </li>
+                }
+              </ul>
+              @if (estadosSeleccionados().length > 0) {
+                <button
+                  type="button"
+                  class="btn btn--fantasma btn--sm"
+                  (click)="limpiarEstadosLote()"
+                >
+                  Mostrar todos
+                </button>
+              }
+            </div>
+
+            <div class="tabla-envoltura" [class.cargando]="cargandoEstadoLote()">
+              <table class="tabla">
+                <thead>
+                  <tr>
+                    <th scope="col">Facultad</th>
+                    @for (estado of columnasEstadoLote(); track estado) {
+                      <th scope="col" class="der">{{ estado }}</th>
+                    }
+                    <th scope="col" class="der">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (facultad of lote.porFacultad; track facultad.codigo) {
+                    <tr>
+                      <th scope="row">{{ facultad.nombre }}</th>
+                      @for (estado of columnasEstadoLote(); track estado) {
+                        <td class="der mono">{{ facultad.conteos[estado] ?? 0 | number }}</td>
+                      }
+                      <td class="der mono fuerte">{{ facultad.total | number }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td [attr.colspan]="columnasEstadoLote().length + 2" class="texto-tenue">
+                        Sin facultades con los estados elegidos
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    @for (estado of columnasEstadoLote(); track estado) {
+                      <td class="der mono fuerte">
+                        {{ totalesEstadoLote()[estado] ?? 0 | number }}
+                      </td>
+                    }
+                    <td class="der mono fuerte">{{ totalGeneralEstadoLote() | number }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="tarjeta__cuerpo">
+              <ute-grafico-barras-agrupadas
+                [grupos]="seriesEstadoLote()"
+                [series]="columnasEstadoLote()"
+                titulo="Estado de contrato por facultad"
+              />
+            </div>
+          }
+        } @else if (cargandoEstadoLote()) {
+          <ute-cargando mensaje="Calculando estado de contrato…" />
+        }
+      </section>
+
       <!-- ------------------------------------------------------- graficos -->
       <section class="rejilla rejilla--2 seccion" aria-label="Graficos">
         <article class="tarjeta">

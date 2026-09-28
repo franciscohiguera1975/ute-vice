@@ -22,6 +22,7 @@ from app.api.esquemas.distributivo import (
     DocenteDetalleSalida,
     DocenteSalida,
     ElementoCatalogoSalida,
+    EstadoLotePorFacultadSalida,
     FilaDistributivoActualizar,
     FilaDistributivoCrear,
     FilaDistributivoSalida,
@@ -38,9 +39,11 @@ from app.api.esquemas.distributivo import (
     VistaPreviaReporteSalida,
 )
 from app.application.casos_uso.analitica import (
+    EntradaEstadoLotePorFacultad,
     EntradaHorasPorDedicacion,
     EntradaResumenComparativo,
     EntradaTableroDistributivo,
+    ObtenerEstadoLotePorFacultad,
     ObtenerHorasPorDedicacion,
     ObtenerResumenComparativo,
     ObtenerTableroDistributivo,
@@ -509,6 +512,45 @@ async def horas_por_docentes_del_distributivo(
 
 
 @router.get(
+    "/distributivo/estado-lote",
+    response_model=EstadoLotePorFacultadSalida,
+    summary="Filas por facultad y estado de lote o proceso",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def estado_lote_por_facultad(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    grupo: Annotated[
+        list[UUID] | None,
+        Query(description="Periodos que se examinan. Repetir el parametro para varios."),
+    ] = None,
+    estados: Annotated[
+        list[str] | None,
+        Query(description="Estados a incluir. Repetir el parametro para varios; sin ninguno todos"),
+    ] = None,
+) -> EstadoLotePorFacultadSalida:
+    """Avance de la contratacion administrativa, por facultad.
+
+    Es el estado de lote o proceso del sistema academico —«Aprobado», «En
+    revision por DGA»…—, no la validacion academica de la carga horaria que
+    cubre `/distributivo/tablero`. Solo cuenta filas que traen ese dato.
+
+    Los estados no son un conjunto fijo: `estados` devuelve los que de verdad
+    aparecen en el grupo, para que la pantalla ofrezca las casillas correctas
+    sin una lista escrita a mano.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ObtenerEstadoLotePorFacultad(analitica, contenedor.reloj)
+        resultado = await caso(
+            EntradaEstadoLotePorFacultad(grupo=tuple(grupo or ()), estados=tuple(estados or ())),
+            contexto,
+        )
+    return EstadoLotePorFacultadSalida.desde(resultado)
+
+
+@router.get(
     "/distributivo/horas-por-docentes/exportar",
     summary="Descargar una tabla de horas por docentes",
     dependencies=[requiere(Permiso.REPORTES_GENERAR)],
@@ -688,7 +730,7 @@ async def importar_pao(
             campo="archivo",
         )
 
-    filas, no_desglosadas = LectorPaoExcel().leer(
+    filas, combinadas = LectorPaoExcel().leer(
         contenido, pao=semestre.strip(), interciclo=interciclo, hoja=hoja or None
     )
 
@@ -699,7 +741,7 @@ async def importar_pao(
     )
     return ResultadoImportacionSalida.desde(
         resultado,
-        no_desglosadas=no_desglosadas,
+        combinadas=combinadas,
         periodo=f"{semestre.strip()}{' interciclo' if interciclo else ''}",
     )
 

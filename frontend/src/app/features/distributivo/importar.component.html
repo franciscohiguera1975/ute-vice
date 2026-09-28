@@ -209,13 +209,15 @@
         }
       }
 
-      @if (r.noDesglosadas.length > 0) {
+      @if (r.combinadas.length > 0) {
         <h3 class="subtitulo">
-          Filas que no se pudieron desglosar ({{ r.noDesglosadas.length | number }})
+          Filas combinadas ({{ r.combinadas.length | number }})
         </h3>
         <p class="texto-sm texto-tenue">
-          Juntan varias carreras o sedes en una celda, con un total de horas unico que no
-          se puede repartir entre ellas. Quedan fuera en lugar de inventar una atribucion.
+          Juntaban varias carreras, sedes o periodos en una celda, con un total de horas
+          unico que no se reparte entre ellas: se cargo una fila por combinacion, todas con
+          la misma carga. Las marcadas "pareo ambiguo" traian carrera y sede combinadas a la
+          vez, sin forma de saber cual iba con cual; conviene revisarlas.
         </p>
         <div class="tabla-envoltura">
           <table class="tabla">
@@ -223,23 +225,25 @@
               <tr>
                 <th scope="col" class="der">Fila</th>
                 <th scope="col">Identificacion</th>
-                <th scope="col">Motivo</th>
+                <th scope="col" class="der">Filas generadas</th>
+                <th scope="col">Pareo</th>
               </tr>
             </thead>
             <tbody>
-              @for (f of r.noDesglosadas.slice(0, TOPE_LISTA); track $index) {
+              @for (f of r.combinadas.slice(0, TOPE_LISTA); track $index) {
                 <tr>
                   <td class="der mono">{{ f.numeroFila }}</td>
                   <td class="mono">{{ f.identificacion }}</td>
-                  <td>{{ f.motivo }}</td>
+                  <td class="der">{{ f.combinaciones }}</td>
+                  <td>{{ f.ambiguo ? 'Ambiguo, revisar' : 'Directo' }}</td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-        @if (r.noDesglosadas.length > TOPE_LISTA) {
+        @if (r.combinadas.length > TOPE_LISTA) {
           <p class="texto-xs texto-tenue">
-            … y {{ r.noDesglosadas.length - TOPE_LISTA }} mas.
+            … y {{ r.combinadas.length - TOPE_LISTA }} mas.
           </p>
         }
       }

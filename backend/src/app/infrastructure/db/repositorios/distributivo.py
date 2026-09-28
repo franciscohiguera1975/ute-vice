@@ -708,6 +708,9 @@ class RepositorioDistributivoSQL:
             "relacion_laboral",
             "tutor_posgrado",
             "tutor_medicina",
+            "estado_lote",
+            "estado_contrato",
+            "grupo_combinado_id",
         )
 
         for inicio in range(0, len(filas), 500):

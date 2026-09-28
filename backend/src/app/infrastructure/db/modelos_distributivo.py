@@ -401,6 +401,18 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     tutor_medicina: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     observaciones: Mapped[str | None] = mapped_column(Text)
 
+    #: Avance de la contratacion administrativa. Distinto de
+    #: `estado_validacion`, que es la validacion academica de la carga.
+    estado_lote: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    #: Estado de la firma del contrato. Casi siempre nulo hoy; se guarda para
+    #: reportes futuros.
+    estado_contrato: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    #: Comparte el mismo id con las demas filas nacidas de una sola fila del
+    #: origen con varias carreras, sedes o periodos a la vez. `None` en todo lo
+    #: que no viene de una combinacion. Ver `FilaDistributivo.grupo_combinado_id`.
+    grupo_combinado_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True), index=True)
+
     creado_por: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="SET NULL")
     )

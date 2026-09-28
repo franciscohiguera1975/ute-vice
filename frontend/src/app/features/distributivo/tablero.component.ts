@@ -10,6 +10,7 @@ import {
   TipoResumen,
   type Conteo,
   type ErrorApi,
+  type EstadoLotePorFacultad,
   type FilaComparativa,
   type TableroDistributivo,
   type ValidacionDeGrupo,
@@ -21,7 +22,9 @@ import { PermisoDirective } from '@shared/directivas/permiso.directive';
 
 import {
   GraficoAnilloComponent,
+  GraficoBarrasAgrupadasComponent,
   GraficoBarrasComponent,
+  type SerieAgrupada,
 } from '@features/tablero/graficos.component';
 
 import { SelectorGruposComponent } from './selector-grupos.component';
@@ -53,6 +56,7 @@ import { SelectorGruposComponent } from './selector-grupos.component';
     SelectorGruposComponent,
     GraficoAnilloComponent,
     GraficoBarrasComponent,
+    GraficoBarrasAgrupadasComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tablero.component.html',
@@ -79,6 +83,12 @@ export class TableroDistributivoComponent {
     { valor: FormatoReporte.PDF, etiqueta: 'PDF' },
   ];
 
+  // --------------------------------------------------- estado de lote/proceso
+  protected readonly estadoLote = signal<EstadoLotePorFacultad | null>(null);
+  protected readonly cargandoEstadoLote = signal(false);
+  /** Sin marcar ninguno se incluyen todos, igual que el filtro de dedicacion. */
+  protected readonly estadosSeleccionados = signal<readonly string[]>([]);
+
   constructor() {
     this.cargar();
   }
@@ -95,6 +105,7 @@ export class TableroDistributivoComponent {
           this.grupoB.set(this.idsDe(tablero, tablero.actual?.codigos ?? []));
         }
         this.cargando.set(false);
+        this.cargarEstadoLote();
       },
       error: (error: ErrorApi) => {
         this.notificaciones.error(error.mensaje ?? 'No se pudo calcular el tablero');
@@ -102,6 +113,69 @@ export class TableroDistributivoComponent {
       },
     });
   }
+
+  /**
+   * Avance de la contratacion administrativa del grupo 2 —el que se examina—,
+   * el mismo que alimenta el resto de la pantalla.
+   */
+  protected cargarEstadoLote(): void {
+    this.cargandoEstadoLote.set(true);
+    this.repositorio.estadoLotePorFacultad(this.grupoB(), this.estadosSeleccionados()).subscribe({
+      next: (resultado) => {
+        this.estadoLote.set(resultado);
+        this.cargandoEstadoLote.set(false);
+      },
+      error: (error: ErrorApi) => {
+        this.notificaciones.error(
+          error.mensaje ?? 'No se pudo calcular el estado de lote o proceso',
+        );
+        this.cargandoEstadoLote.set(false);
+      },
+    });
+  }
+
+  protected estadoLoteSeleccionado(estado: string): boolean {
+    return this.estadosSeleccionados().includes(estado);
+  }
+
+  protected alternarEstadoLote(estado: string): void {
+    this.estadosSeleccionados.update((actual) =>
+      actual.includes(estado) ? actual.filter((e) => e !== estado) : [...actual, estado],
+    );
+    this.cargarEstadoLote();
+  }
+
+  protected limpiarEstadosLote(): void {
+    this.estadosSeleccionados.set([]);
+    this.cargarEstadoLote();
+  }
+
+  /** Las columnas que muestra la tabla: lo elegido, o todo si no se eligio nada. */
+  protected readonly columnasEstadoLote = computed<readonly string[]>(() => {
+    const disponibles = this.estadoLote()?.estados ?? [];
+    const elegidos = this.estadosSeleccionados();
+    return elegidos.length === 0 ? disponibles : disponibles.filter((e) => elegidos.includes(e));
+  });
+
+  /** Totales por columna, sumando todas las facultades — el pie de la tabla. */
+  protected readonly totalesEstadoLote = computed<Readonly<Record<string, number>>>(() => {
+    const totales: Record<string, number> = {};
+    for (const facultad of this.estadoLote()?.porFacultad ?? []) {
+      for (const [estado, valor] of Object.entries(facultad.conteos)) {
+        totales[estado] = (totales[estado] ?? 0) + valor;
+      }
+    }
+    return totales;
+  });
+
+  protected readonly totalGeneralEstadoLote = computed(() =>
+    (this.estadoLote()?.porFacultad ?? []).reduce((suma, f) => suma + f.total, 0),
+  );
+
+  /** El mismo reparto, listo para el grafico de barras agrupadas. */
+  protected readonly seriesEstadoLote = computed<readonly SerieAgrupada[]>(() =>
+    (this.estadoLote()?.porFacultad ?? []).map((f) => ({ etiqueta: f.nombre, valores: f.conteos })),
+  );
 
   private idsDe(datos: TableroDistributivo, codigos: readonly string[]): string[] {
     const buscados = new Set(codigos);

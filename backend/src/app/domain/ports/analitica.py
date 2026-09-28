@@ -271,6 +271,10 @@ class RepositorioAnaliticaDistributivo(Protocol):
         excluir_sin_horas: bool = False,
     ) -> list[DocenteConPocasHoras]: ...
 
+    async def estado_lote_por_facultad(
+        self, paos: Sequence[UUID], *, estados: Sequence[str] = ()
+    ) -> EstadoLotePorFacultad: ...
+
 
 # ---------------------------------------------------------------------------
 # Resumenes: dos grupos de periodos, uno frente al otro
@@ -353,6 +357,49 @@ class ResumenComparativo:
     avance: list[AvanceDeFacultad] = field(default_factory=list)
     estados_a: list[EstadosDeFacultad] = field(default_factory=list)
     estados_b: list[EstadosDeFacultad] = field(default_factory=list)
+    generado_en: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Estado de lote/proceso por facultad
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class FacultadPorEstadoLote:
+    """Una facultad con sus filas repartidas por estado de lote/proceso."""
+
+    codigo: str
+    nombre: str
+    conteos: dict[str, int] = field(default_factory=dict)
+    """Estado -> cantidad de filas. Solo trae los estados que esa facultad
+    tiene; los demas se asumen en cero."""
+
+    @property
+    def total(self) -> int:
+        return sum(self.conteos.values())
+
+
+@dataclass(frozen=True, slots=True)
+class EstadoLotePorFacultad:
+    """Filas por facultad y estado de lote/proceso del sistema academico.
+
+    Solo cuenta filas con el dato informado: es el estado de la contratacion,
+    no de la validacion academica, y la mayoria de filas todavia no lo tienen.
+
+    Los estados **no son un conjunto fijo**: el sistema academico no declara
+    cuales existen, igual que `fase` en `FilaDistributivo`. Por eso `estados`
+    se calcula de lo que de verdad aparece en el grupo de periodos, en lugar
+    de una lista escrita a mano que quedaria desactualizada en cuanto se sume
+    un estado nuevo.
+    """
+
+    estados: tuple[str, ...] = ()
+    """Los estados presentes en el grupo, del mas frecuente al menos —sin
+    filtrar por lo que se pidio en `estados` al consultar—. Es lo que ofrece
+    el filtro de casillas de la pantalla."""
+
+    por_facultad: list[FacultadPorEstadoLote] = field(default_factory=list)
     generado_en: str = ""
 
 

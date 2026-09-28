@@ -423,6 +423,16 @@ export interface FilaConsolidada {
   readonly totalHorasResultante: number;
 }
 
+export interface FilaCombinada {
+  readonly numeroFila: number;
+  readonly identificacion: string;
+  /** En cuantas filas se convirtio esta al cargarla. */
+  readonly combinaciones: number;
+  /** `true` si carrera y sede traian varios valores a la vez: el pareo entre
+   *  ellas se genero por combinacion, no porque el origen lo diga. */
+  readonly ambiguo: boolean;
+}
+
 export interface ResultadoCargaPao {
   readonly totalFilasLeidas: number;
   readonly filasCreadas: number;
@@ -434,8 +444,9 @@ export interface ResultadoCargaPao {
   readonly elementosCatalogoCreados: Readonly<Record<string, number>>;
   readonly rechazadas: readonly FilaRechazada[];
   readonly consolidaciones: readonly FilaConsolidada[];
-  /** Filas que el lector descarto: juntan varias carreras o sedes en una celda. */
-  readonly noDesglosadas: readonly FilaRechazada[];
+  /** Filas del origen que juntaban varias carreras, sedes o periodos en una
+   *  celda: se explotaron en una fila por combinacion, ya contadas arriba. */
+  readonly combinadas: readonly FilaCombinada[];
   readonly exitosa: boolean;
   readonly resumen: string;
   readonly periodo: string;
@@ -583,6 +594,38 @@ export interface ResumenDeHoras {
   readonly porCarrera: readonly HorasPorCarrera[];
   /** Vacio si no se pidio un umbral de horas. */
   readonly bajoHoras: readonly DocenteConPocasHoras[];
+  readonly generadoEn: string;
+}
+
+// ---------------------------------------------------------------------------
+// Estado de lote/proceso por facultad
+// ---------------------------------------------------------------------------
+
+/**
+ * Una facultad con sus filas repartidas por estado de lote/proceso.
+ *
+ * `conteos` solo trae los estados que esa facultad tiene; los ausentes se
+ * asumen en cero.
+ */
+export interface FacultadPorEstadoLote {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly conteos: Readonly<Record<string, number>>;
+  readonly total: number;
+}
+
+/**
+ * Filas por facultad y estado de lote/proceso del sistema academico: el
+ * avance de la contratacion administrativa, no la validacion academica de la
+ * carga horaria que ya cubre `TableroDistributivo`.
+ *
+ * Los estados no son un conjunto fijo —el sistema academico no los declara—,
+ * asi que `estados` trae los que de verdad aparecen en el grupo, para armar
+ * las casillas del filtro sin una lista escrita a mano.
+ */
+export interface EstadoLotePorFacultad {
+  readonly estados: readonly string[];
+  readonly porFacultad: readonly FacultadPorEstadoLote[];
   readonly generadoEn: string;
 }
 

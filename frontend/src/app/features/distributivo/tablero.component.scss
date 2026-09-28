@@ -72,3 +72,23 @@
 .punto--pendiente { background: #9a6400; }
 .punto--error { background: var(--error); }
 .punto--sin_estado { background: var(--borde-fuerte); }
+
+/* Casillas del filtro de estado de lote/proceso: sin marcar ninguna se
+   incluyen todas, igual que el filtro de dedicacion del selector de grupos. */
+.filtro-estados {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0 1.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.1rem;
+}
+.filtro-estados__opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.tabla-envoltura.cargando { opacity: 0.6; }

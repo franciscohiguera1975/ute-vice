@@ -19,7 +19,9 @@ from app.domain.ports.analitica import (
     AvanceDeFacultad,
     ConteoEtiquetado,
     DocenteConPocasHoras,
+    EstadoLotePorFacultad,
     EstadosDeFacultad,
+    FacultadPorEstadoLote,
     FilaComparativa,
     GrupoDePeriodos,
     HorasPorCarrera,
@@ -60,6 +62,29 @@ _DESGLOSES: dict[str, tuple[Any, Any]] = {
 
 def _cuenta_si(condicion: Any) -> Any:
     return func.count().filter(condicion)
+
+
+def _suma_sin_duplicar(expresion: Any, condicion: Any) -> Any:
+    """Suma `expresion` sin contar dos veces una carga que se exploto en varias
+    filas.
+
+    Una fila del sistema academico que junta varias carreras, sedes o periodos
+    a la vez se guarda como varias filas —una por combinacion, todas con la
+    misma carga— que comparten `grupo_combinado_id` (ver `pao_excel.py`). Sumar
+    `total_horas` o `Da` fila a fila contaria esa carga una vez por
+    combinacion; aqui se toma una sola fila por grupo antes de sumar. Las
+    filas que no vienen de una combinacion —casi todas— no cambian: cada una
+    es su propio grupo, porque `grupo_combinado_id` es nulo y se cae al `id`.
+    """
+    f = FilaDistributivoModel
+    clave = func.coalesce(f.grupo_combinado_id, f.id)
+    numero = func.row_number().over(partition_by=clave, order_by=f.id).label("numero")
+    representantes = select(expresion.label("valor"), numero).where(condicion).subquery()
+    return (
+        select(func.coalesce(func.sum(representantes.c.valor), 0.0))
+        .where(representantes.c.numero == 1)
+        .scalar_subquery()
+    )
 
 
 class RepositorioAnaliticaDistributivoSQL:
@@ -120,7 +145,10 @@ class RepositorioAnaliticaDistributivoSQL:
                     _cuenta_si(estado == EstadoValidacion.ERROR.value).label("con_error"),
                     _cuenta_si(estado.is_(None)).label("sin_estado"),
                     func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
-                    func.coalesce(func.sum(FilaDistributivoModel.total_horas), 0.0).label("horas"),
+                    _suma_sin_duplicar(
+                        FilaDistributivoModel.total_horas,
+                        FilaDistributivoModel.pao_id.in_(list(paos)),
+                    ).label("horas"),
                 ).where(FilaDistributivoModel.pao_id.in_(list(paos)))
             )
         ).one()
@@ -351,7 +379,7 @@ class RepositorioAnaliticaDistributivoSQL:
             await self._s.execute(
                 select(
                     func.count(func.distinct(FilaDistributivoModel.docente_id)).label("docentes"),
-                    func.coalesce(func.sum(_horas_da()), 0.0).label("horas_da"),
+                    _suma_sin_duplicar(_horas_da(), condicion).label("horas_da"),
                 ).where(condicion)
             )
         ).one()
@@ -468,6 +496,64 @@ class RepositorioAnaliticaDistributivoSQL:
             )
             for f in (await self._s.execute(consulta)).all()
         ]
+
+    # ------------------------------------------ estado de lote/proceso
+    async def estado_lote_por_facultad(
+        self, paos: Sequence[UUID], *, estados: Sequence[str] = ()
+    ) -> EstadoLotePorFacultad:
+        if not paos:
+            return EstadoLotePorFacultad()
+
+        campo = FilaDistributivoModel.estado_lote
+        con_dato: Any = (
+            FilaDistributivoModel.pao_id.in_(list(paos)) & campo.is_not(None) & (campo != "")
+        )
+
+        # Los estados que ofrece el filtro de casillas: todos los que aparecen
+        # en el grupo, sin acotar por lo que se pidio en `estados`. Si se
+        # calcularan con el filtro ya aplicado, marcar una sola casilla haria
+        # desaparecer las demas de la lista y no se podrian volver a marcar.
+        disponibles = (
+            await self._s.execute(
+                select(campo.label("estado"), func.count().label("total"))
+                .where(con_dato)
+                .group_by(campo)
+                .order_by(func.count().desc())
+            )
+        ).all()
+        if not disponibles:
+            return EstadoLotePorFacultad()
+
+        condicion = con_dato
+        if estados:
+            condicion = condicion & campo.in_(list(estados))
+
+        consulta = (
+            select(
+                FacultadModel.codigo.label("codigo"),
+                FacultadModel.nombre.label("nombre"),
+                campo.label("estado"),
+                func.count().label("valor"),
+            )
+            .select_from(FilaDistributivoModel)
+            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .where(condicion)
+            .group_by(FacultadModel.codigo, FacultadModel.nombre, campo)
+            .order_by(FacultadModel.codigo)
+        )
+
+        por_facultad: dict[tuple[str, str], dict[str, int]] = {}
+        for fila in (await self._s.execute(consulta)).all():
+            clave = (fila.codigo, fila.nombre)
+            por_facultad.setdefault(clave, {})[fila.estado] = fila.valor
+
+        return EstadoLotePorFacultad(
+            estados=tuple(d.estado for d in disponibles),
+            por_facultad=[
+                FacultadPorEstadoLote(codigo=codigo, nombre=nombre, conteos=conteos)
+                for (codigo, nombre), conteos in por_facultad.items()
+            ],
+        )
 
 
 def _horas_da() -> Any:

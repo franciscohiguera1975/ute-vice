@@ -16,6 +16,7 @@ import type {
   Docente,
   DocenteDetalle,
   ElementoCatalogo,
+  EstadoLotePorFacultad,
   FilaDistributivo,
   FiltroCatalogo,
   FiltroDistributivo,
@@ -244,6 +245,13 @@ export class DistributivoHttp extends RepositorioDistributivo {
       { ...peticion, formato },
       `horas-${peticion.resumen}.${formato.toLowerCase()}`,
     );
+  }
+
+  estadoLotePorFacultad(
+    grupo: readonly string[],
+    estados?: readonly string[],
+  ): Observable<EstadoLotePorFacultad> {
+    return this.api.get<EstadoLotePorFacultad>('/distributivo/estado-lote', { grupo, estados });
   }
 
   cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao> {

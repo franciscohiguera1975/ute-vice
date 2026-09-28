@@ -14,12 +14,15 @@ import pytest
 from app.application.plantillas import (
     COLUMNAS_CONSOLIDADO,
     COLUMNAS_DOCENCIA,
+    COLUMNAS_PAO,
     REGISTRO_PLANTILLAS,
     PlantillaConsolidadoOrigen,
     PlantillaDocenciaPorCarrera,
+    PlantillaPaoOrigen,
     RegistroPlantillas,
 )
 from app.domain.entities.distributivo import Docente, FilaDistributivo
+from app.domain.enums import EstadoValidacion
 from app.domain.errors import ErrorValidacion
 from app.domain.ports.distributivo import (
     FilaDistributivoResuelta,
@@ -115,9 +118,9 @@ def _resuelta(**cambios) -> FilaDistributivoResuelta:  # type: ignore[no-untyped
 # ===========================================================================
 
 
-def test_registro_ofrece_las_dos_plantillas() -> None:
+def test_registro_ofrece_las_tres_plantillas() -> None:
     codigos = [p.codigo for p in REGISTRO_PLANTILLAS.disponibles()]
-    assert codigos == ["docencia-carrera", "consolidado-origen"]
+    assert codigos == ["docencia-carrera", "consolidado-origen", "pao-origen"]
 
 
 def test_sin_codigo_usa_la_institucional() -> None:
@@ -242,6 +245,248 @@ async def test_cuenta_las_filas_que_dictan_clase_sin_asignatura() -> None:
     )
     # Solo la que tiene horas de docencia: a quien no dicta no le falta nada.
     assert contenido.sin_asignatura == 1
+
+
+# ===========================================================================
+# Plantilla del sistema academico (PAO)
+# ===========================================================================
+
+#: Cabecera literal de la hoja `Distributivo` que reproduce el sistema, en su
+#: orden: D, I, V y G —no el D-G-I-V del consolidado—.
+CABECERA_PAO = [
+    "No.", "Identificación", "Apellidos y Nombres", "Sede", "Nivel", "Facultad",
+    "Carrera/Programa", "Modalidad",
+    "Da", "Db", "Dc", "Dd", "De", "Df", "Dg", "Dh", "Di", "Dj", "Dk", "Dl", "Dm", "Dn", "D",
+    "Ia", "Ib", "Ic", "Id", "Ie", "If", "Ig", "Ih", "Ii", "Ij", "I",
+    "Va", "Vb", "Vc", "Vd", "Ve", "Vf", "Vg", "Vh", "Vi", "V",
+    "Ga", "Gb", "Gc", "Gd", "Ge", "Gf", "Gg", "Gh", "Gi", "Gj", "Gk", "Gl", "Gm", "Gn", "G",
+    "Total Horas Semanales", "Total Horas Semestrales",
+    "Tutores Posgrado", "Tutores Medicina", "Medida",
+    "Titularidad", "Categoría", "Dedicación", "Relación Laboral",
+    "Estado de la Validación", "Estado de Lote/Proceso", "Estado de Contrato",
+    "N.º Semanas", "Fase",
+]  # fmt: skip
+
+
+def _resuelta_pao(**cambios) -> FilaDistributivoResuelta:  # type: ignore[no-untyped-def]
+    docente = Docente(identificacion="1717154767", nombre_completo="ALMEIDA NAVARRETE FRANCISCO")
+    base = {
+        "fila": FilaDistributivo(
+            docente_id=docente.id,
+            pao_id=docente.id,
+            facultad_id=docente.id,
+            carrera_id=docente.id,
+            horas=DistribucionHoras.desde_plano({"Da": 10.0, "Ga": 4.0, "Ib": 2.5, "Vc": 1.0}),
+            medida=None,
+            estado_validacion=EstadoValidacion.PENDIENTE,
+            fase="Planificación",
+            semanas=16,
+            relacion_laboral="Dependencia Laboral",
+            tutor_posgrado=False,
+            tutor_medicina=False,
+        ),
+        "docente_identificacion": "1717154767",
+        "docente_nombre": "ALMEIDA NAVARRETE FRANCISCO",
+        "pao": "2026-2 GRADO",
+        "pao_semestre": "2026-2",
+        "facultad": "FAU",
+        "carrera": "UIO:ARQUITECTURA - GRADO - PRESENCIAL",
+        "sede": "QUITO",
+        "nivel": "GRADO",
+        "titularidad": "NO TITULAR",
+        "dedicacion": "TIEMPO COMPLETO",
+        "categoria": "AUXILIAR",
+        "codigo_carrera": "UIO:ARQUITECTURA - GRADO - PRESENCIAL",
+        "codigo_sede": "QUITO",
+        "codigo_nivel": "GRADO",
+        "codigo_titularidad": "NO TITULAR",
+        "codigo_dedicacion": "TIEMPO COMPLETO",
+        "codigo_categoria": "AUXILIAR",
+    }
+    return FilaDistributivoResuelta(**{**base, **cambios})
+
+
+def test_las_columnas_son_las_de_la_hoja_distributivo() -> None:
+    assert [c.clave for c in COLUMNAS_PAO] == CABECERA_PAO
+    assert [c.titulo for c in COLUMNAS_PAO] == CABECERA_PAO
+
+
+async def test_pao_la_fila_trae_un_valor_por_cada_columna() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert list(contenido.filas[0]) == CABECERA_PAO
+
+
+async def test_pao_numera_las_filas_de_salida_desde_uno() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao(), _resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert [f["No."] for f in contenido.filas] == [1, 2]
+
+
+async def test_pao_separa_carrera_y_modalidad_por_el_nivel_conocido() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Carrera/Programa"] == "ARQUITECTURA"
+    assert fila["Nivel"] == "GRADO"
+    assert fila["Modalidad"] == "PRESENCIAL"
+
+
+async def test_pao_separa_la_modalidad_sin_nivel() -> None:
+    """Sin nivel, `_carrera()` solo pudo haber agregado la modalidad."""
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(
+            resueltas=[
+                _resuelta_pao(
+                    codigo_carrera="UIO:MEDICINA - PRESENCIAL",
+                    codigo_nivel=None,
+                    nivel=None,
+                )
+            ]
+        ),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Carrera/Programa"] == "MEDICINA"
+    assert fila["Modalidad"] == "PRESENCIAL"
+
+
+async def test_pao_sin_prefijo_de_sede_deja_el_nombre_de_carrera_solo() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(
+            resueltas=[_resuelta_pao(codigo_carrera="MEDICINA (R)", codigo_nivel=None, nivel=None)]
+        ),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Carrera/Programa"] == "MEDICINA (R)"
+    assert fila["Modalidad"] is None
+
+
+async def test_pao_la_facultad_vuelve_a_su_nombre_largo() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Facultad"] == "ARQUITECTURA Y URBANISMO"
+
+
+async def test_pao_una_facultad_sin_sigla_conocida_pasa_intacta() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao(facultad="FCID")]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Facultad"] == "FCID"
+
+
+async def test_pao_la_categoria_vuelve_a_anteponer_titular() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Categoría"] == "TITULAR AUXILIAR"
+
+
+async def test_pao_una_categoria_sin_escalafon_pasa_intacta() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao(codigo_categoria="OCASIONAL", categoria="OCASIONAL")]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Categoría"] == "OCASIONAL"
+
+
+async def test_pao_el_estado_de_validacion_vuelve_al_texto_del_origen() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Estado de la Validación"] == "VALIDACIÓN PENDIENTE"
+
+
+async def test_pao_el_estado_de_lote_y_de_contrato_salen_tal_como_se_guardaron() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(
+            resueltas=[
+                _resuelta_pao(
+                    fila=FilaDistributivo(
+                        docente_id=uuid4(),
+                        pao_id=uuid4(),
+                        facultad_id=uuid4(),
+                        carrera_id=uuid4(),
+                        horas=DistribucionHoras.vacia(),
+                        estado_lote="En revisión por DGA",
+                        estado_contrato="Firmado Docente",
+                    )
+                )
+            ]
+        ),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Estado de Lote/Proceso"] == "EN REVISIÓN POR DGA"
+    assert fila["Estado de Contrato"] == "FIRMADO DOCENTE"
+
+
+async def test_pao_las_marcas_de_tutoria_salen_como_si_o_no() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(
+            resueltas=[
+                _resuelta_pao(
+                    fila=FilaDistributivo(
+                        docente_id=uuid4(),
+                        pao_id=uuid4(),
+                        facultad_id=uuid4(),
+                        carrera_id=uuid4(),
+                        horas=DistribucionHoras.vacia(),
+                        semanas=16,
+                        tutor_posgrado=True,
+                        tutor_medicina=False,
+                    )
+                )
+            ]
+        ),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Tutores Posgrado"] == "Sí"
+    assert fila["Tutores Medicina"] == "No"
+
+
+async def test_pao_las_horas_semestrales_multiplican_por_las_semanas() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(resueltas=[_resuelta_pao()]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["Total Horas Semanales"] == 17.5
+    assert fila["Total Horas Semestrales"] == 280.0
+
+
+async def test_pao_sin_semanas_las_horas_semestrales_quedan_vacias() -> None:
+    contenido = await PlantillaPaoOrigen().construir(
+        _Uow(
+            resueltas=[
+                _resuelta_pao(
+                    fila=FilaDistributivo(
+                        docente_id=uuid4(),
+                        pao_id=uuid4(),
+                        facultad_id=uuid4(),
+                        carrera_id=uuid4(),
+                        horas=DistribucionHoras.desde_plano({"Da": 10.0}),
+                        semanas=None,
+                    )
+                )
+            ]
+        ),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.filas[0]["Total Horas Semestrales"] is None
 
 
 # ===========================================================================

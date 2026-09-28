@@ -619,16 +619,20 @@ async def importar_pao() -> None:
 
     contenedor = Contenedor(get_settings())
     print(f"  leyendo {ruta}  (pao {pao}{', interciclo' if interciclo else ''})…")
-    filas, rechazadas = LectorPaoExcel().leer(ruta, pao=pao, interciclo=interciclo, hoja=hoja)
+    filas, combinadas = LectorPaoExcel().leer(ruta, pao=pao, interciclo=interciclo, hoja=hoja)
     print(f"  {len(filas):,} filas leidas".replace(",", "."))
 
-    if rechazadas:
-        print(f"\n  {len(rechazadas)} fila(s) con varias carreras o sedes en una celda:")
-        for numero, identificacion, motivo in rechazadas[:8]:
-            print(f"      fila {numero:>6} {identificacion:12s} {motivo[:66]}")
-        if len(rechazadas) > 8:
-            print(f"      … y {len(rechazadas) - 8} mas")
-        print("  Quedan fuera: su clave natural exige una carrera y una sede.")
+    if combinadas:
+        print(f"\n  {len(combinadas)} fila(s) del origen juntaban varias carreras, sedes o")
+        print("  periodos en una celda; se explotaron en una fila por combinacion:")
+        for aviso in combinadas[:8]:
+            marca = "  (pareo ambiguo, revisar)" if aviso.ambiguo else ""
+            print(
+                f"      fila {aviso.numero_fila:>6} {aviso.identificacion:12s} "
+                f"-> {aviso.combinaciones} filas{marca}"
+            )
+        if len(combinadas) > 8:
+            print(f"      … y {len(combinadas) - 8} mas")
 
     caso = ImportarDistributivo(contenedor.unidad_de_trabajo())
     resultado = await caso(

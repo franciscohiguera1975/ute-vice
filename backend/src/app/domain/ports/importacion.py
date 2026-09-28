@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Protocol
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +17,8 @@ class DatosSistemaAcademico:
     relacion_laboral: str | None = None
     tutor_posgrado: bool = False
     tutor_medicina: bool = False
+    estado_lote: str | None = None
+    estado_contrato: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +55,34 @@ class FilaCrudaDistributivo:
 
     #: Solo lo trae el distributivo oficial; el consolidado lo deja vacio.
     sistema: DatosSistemaAcademico = field(default_factory=DatosSistemaAcademico)
+
+    #: Comparte el mismo id todas las filas que salieron de **una** fila del
+    #: origen con varias carreras, sedes o periodos a la vez: la misma carga de
+    #: horas, replicada en cada combinacion. `None` cuando la fila del origen no
+    #: se combino con nada. Sirve para no contar esa carga mas de una vez al
+    #: sumar horas por docente en lugar de por carrera o periodo.
+    grupo_combinado_id: UUID | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AvisoCombinacion:
+    """Una fila del origen que traia varias carreras, sedes o periodos a la vez.
+
+    El origen no reparte esas horas entre las combinaciones —vienen como un
+    total unico—, asi que la misma carga se replica en cada una en lugar de
+    dejar a alguien fuera de una carrera, sede o periodo donde el reporte dice
+    que estuvo. Ver `FilaCrudaDistributivo.grupo_combinado_id`.
+    """
+
+    numero_fila: int
+    identificacion: str
+    combinaciones: int
+    """En cuantas filas se convirtio esta."""
+
+    ambiguo: bool
+    """`True` cuando carrera y sede traian varios valores a la vez: ahi no hay
+    forma de saber cual iba con cual, asi que se generaron todas las
+    combinaciones posibles en lugar de solo las que de verdad ocurrieron."""
 
 
 @dataclass(frozen=True, slots=True)

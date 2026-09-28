@@ -92,6 +92,166 @@ export class GraficoBarrasComponent {
   }
 }
 
+/** Una categoria del grafico de barras agrupadas (una facultad), con sus
+ * valores por serie (un estado). Las series ausentes en `valores` valen 0. */
+export interface SerieAgrupada {
+  readonly etiqueta: string;
+  readonly valores: Readonly<Record<string, number>>;
+}
+
+// ---------------------------------------------------------------------------
+@Component({
+  selector: 'ute-grafico-barras-agrupadas',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    @if (grupos().length === 0 || series().length === 0) {
+      <p class="vacio-grafico texto-sm texto-tenue">Sin datos para mostrar</p>
+    } @else {
+      <div [attr.aria-label]="titulo()">
+        <div class="lienzo">
+          @for (linea of lineasGuia; track linea) {
+            <div class="lienzo__guia" [style.bottom.%]="linea"></div>
+          }
+          @for (grupo of grupos(); track grupo.etiqueta) {
+            <div class="grupo">
+              <div class="grupo__barras">
+                @for (serie of series(); track serie; let i = $index) {
+                  <div
+                    class="grupo__barra"
+                    [style.height.%]="altura(grupo, serie)"
+                    [style.background]="color(i)"
+                  >
+                    <span class="grupo__globo">{{ serie }}: {{ valor(grupo, serie) }}</span>
+                  </div>
+                }
+              </div>
+              <span class="grupo__etiqueta" [title]="grupo.etiqueta">{{ grupo.etiqueta }}</span>
+            </div>
+          }
+        </div>
+
+        <ul class="leyenda leyenda--horizontal">
+          @for (serie of series(); track serie; let i = $index) {
+            <li class="leyenda__item">
+              <span class="leyenda__punto" [style.background]="color(i)"></span>
+              <span class="leyenda__etiqueta" [title]="serie">{{ serie }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  `,
+  styles: [
+    `
+      .lienzo {
+        display: flex;
+        align-items: flex-end;
+        gap: 1.5rem;
+        height: 220px;
+        padding: 0 0.25rem;
+        position: relative;
+        border-bottom: 1px solid var(--borde);
+      }
+      .lienzo__guia {
+        position: absolute;
+        left: 0;
+        right: 0;
+        border-top: 1px dashed var(--borde);
+      }
+      .grupo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        justify-content: flex-end;
+      }
+      .grupo__barras {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+        height: 100%;
+      }
+      .grupo__barra {
+        position: relative;
+        width: 12px;
+        min-height: 2px;
+        border-radius: 2px 2px 0 0;
+      }
+      .grupo__globo {
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        font-size: 0.7rem;
+        background: var(--superficie-elevada, var(--superficie));
+        border: 1px solid var(--borde);
+        border-radius: 4px;
+        padding: 0.15rem 0.4rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+        z-index: 1;
+      }
+      .grupo__barra:hover .grupo__globo { opacity: 1; }
+      .grupo__etiqueta {
+        font-size: 0.72rem;
+        color: var(--texto-suave);
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
+      .leyenda--horizontal {
+        list-style: none;
+        margin: 0.75rem 0 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+      }
+      .leyenda__item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; }
+      .leyenda__punto { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+      .leyenda__etiqueta { color: var(--texto-suave); max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .vacio-grafico { text-align: center; padding: 1.5rem 0; margin: 0; }
+    `,
+  ],
+})
+export class GraficoBarrasAgrupadasComponent {
+  readonly grupos = input.required<readonly SerieAgrupada[]>();
+  /** Orden y color de las barras dentro de cada grupo. */
+  readonly series = input.required<readonly string[]>();
+  readonly titulo = input('Distribucion');
+
+  protected readonly lineasGuia = [25, 50, 75];
+
+  private readonly maximo = computed(() =>
+    Math.max(
+      1,
+      ...this.grupos().flatMap((g) => this.series().map((s) => g.valores[s] ?? 0)),
+    ),
+  );
+
+  protected valor(grupo: SerieAgrupada, serie: string): number {
+    return grupo.valores[serie] ?? 0;
+  }
+
+  protected altura(grupo: SerieAgrupada, serie: string): number {
+    return (this.valor(grupo, serie) / this.maximo()) * 100;
+  }
+
+  protected color(indice: number): string {
+    return PALETA[indice % PALETA.length]!;
+  }
+}
+
 // ---------------------------------------------------------------------------
 @Component({
   selector: 'ute-grafico-anillo',

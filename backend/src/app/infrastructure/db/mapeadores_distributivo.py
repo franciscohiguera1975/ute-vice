@@ -122,6 +122,9 @@ def fila_a_dominio(modelo: FilaDistributivoModel) -> FilaDistributivo:
         relacion_laboral=modelo.relacion_laboral,
         tutor_posgrado=bool(modelo.tutor_posgrado),
         tutor_medicina=bool(modelo.tutor_medicina),
+        estado_lote=modelo.estado_lote,
+        estado_contrato=modelo.estado_contrato,
+        grupo_combinado_id=modelo.grupo_combinado_id,
         creado_en=modelo.creado_en,
         actualizado_en=modelo.actualizado_en,
         creado_por=modelo.creado_por,
@@ -167,6 +170,9 @@ def fila_a_modelo(
     modelo.relacion_laboral = entidad.relacion_laboral
     modelo.tutor_posgrado = entidad.tutor_posgrado
     modelo.tutor_medicina = entidad.tutor_medicina
+    modelo.estado_lote = entidad.estado_lote
+    modelo.estado_contrato = entidad.estado_contrato
+    modelo.grupo_combinado_id = entidad.grupo_combinado_id
     modelo.creado_por = entidad.creado_por
     return modelo
 

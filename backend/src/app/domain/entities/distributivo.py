@@ -191,6 +191,25 @@ class FilaDistributivo:
     tutor_posgrado: bool = False
     tutor_medicina: bool = False
 
+    #: Como va la contratacion administrativa de la fila —«Aprobado»,
+    #: «En revision por DGA»…—. No es lo mismo que `estado_validacion`, que es
+    #: la validacion academica de la carga horaria. Se guarda como texto
+    #: porque el origen no declara el conjunto de valores posibles, igual que
+    #: `fase`.
+    estado_lote: str | None = None
+
+    #: Estado de la firma del contrato. Casi siempre vacio hoy —el sistema
+    #: academico recien empieza a poblarlo—; se conserva para reportes futuros
+    #: que lo necesiten, no lo usa ninguno todavia.
+    estado_contrato: str | None = None
+
+    #: Comparte el mismo id con las demas filas nacidas de una sola fila del
+    #: origen que traia varias carreras, sedes o periodos a la vez: la misma
+    #: carga de horas, replicada en cada combinacion. `None` cuando la fila no
+    #: viene de una combinacion. Sirve para no sumarla mas de una vez al
+    #: totalizar horas por docente. Ver `app.domain.ports.importacion.FilaCrudaDistributivo`.
+    grupo_combinado_id: UUID | None = None
+
     id: UUID = field(default_factory=uuid4)
     creado_en: datetime = field(default_factory=ahora_utc)
     actualizado_en: datetime = field(default_factory=ahora_utc)
@@ -199,7 +218,7 @@ class FilaDistributivo:
     def __post_init__(self) -> None:
         if self.medida is not None:
             self.medida = " ".join(self.medida.split()) or None
-        for campo in ("fase", "relacion_laboral"):
+        for campo in ("fase", "relacion_laboral", "estado_lote", "estado_contrato"):
             valor = getattr(self, campo)
             if valor is not None:
                 setattr(self, campo, " ".join(valor.split()).upper() or None)

@@ -9,6 +9,7 @@ from uuid import UUID
 from app.application.base import CasoDeUso, ContextoEjecucion
 from app.domain.enums import Permiso
 from app.domain.ports.analitica import (
+    EstadoLotePorFacultad,
     PeriodoDisponible,
     RepositorioAnalitica,
     RepositorioAnaliticaDistributivo,
@@ -304,3 +305,56 @@ def _grupo_unico(periodos: list[PeriodoDisponible], elegidos: tuple[UUID, ...]) 
 
     semestre = periodos[0].semestre or periodos[0].codigo[:3]
     return [p.id for p in periodos if (p.semestre or p.codigo[:3]) == semestre]
+
+
+# ---------------------------------------------------------------------------
+# Estado de lote/proceso por facultad
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class EntradaEstadoLotePorFacultad:
+    """El grupo de periodos que se examina y los estados que se quieren ver.
+
+    Un grupo y no periodos sueltos, por lo mismo que en el resto de la
+    analitica. Sin estados elegidos, se incluyen todos los que aparezcan.
+    """
+
+    grupo: tuple[UUID, ...] = ()
+    estados: tuple[str, ...] = ()
+
+
+class ObtenerEstadoLotePorFacultad(
+    CasoDeUso[EntradaEstadoLotePorFacultad, EstadoLotePorFacultad]
+):
+    """Filas de un grupo de periodos, por facultad y estado de lote/proceso.
+
+    Es el avance de la contratacion administrativa —«Aprobado», «En revision
+    por DGA»…—, no la validacion academica de la carga horaria que ya cubre
+    `ObtenerTableroDistributivo`.
+    """
+
+    nombre = "analitica.estado_lote_por_facultad"
+    descripcion = "Filas por facultad y estado de lote o proceso de un grupo de periodos"
+    permiso_requerido = Permiso.DISTRIBUTIVO_LEER
+
+    def __init__(self, analitica: RepositorioAnaliticaDistributivo, reloj: Reloj) -> None:
+        self._analitica = analitica
+        self._reloj = reloj
+
+    async def _ejecutar(
+        self, entrada: EntradaEstadoLotePorFacultad, contexto: ContextoEjecucion
+    ) -> EstadoLotePorFacultad:
+        periodos = await self._analitica.periodos_con_filas()
+        if not periodos:
+            return EstadoLotePorFacultad(generado_en=self._reloj.ahora().isoformat())
+
+        grupo = _grupo_unico(periodos, entrada.grupo)
+        resultado = await self._analitica.estado_lote_por_facultad(
+            grupo, estados=entrada.estados
+        )
+        return EstadoLotePorFacultad(
+            estados=resultado.estados,
+            por_facultad=resultado.por_facultad,
+            generado_en=self._reloj.ahora().isoformat(),
+        )

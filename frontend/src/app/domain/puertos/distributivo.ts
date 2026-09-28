@@ -15,6 +15,7 @@ import type {
   Docente,
   DocenteDetalle,
   ElementoCatalogo,
+  EstadoLotePorFacultad,
   FilaDistributivo,
   FiltroCatalogo,
   FiltroDistributivo,
@@ -184,4 +185,16 @@ export abstract class RepositorioDistributivo {
     peticion: PeticionHorasPorDocentes,
     formato: FormatoReporte,
   ): Observable<ArchivoDescarga>;
+
+  /**
+   * Filas por facultad y estado de lote/proceso: el avance de la
+   * contratacion administrativa, no la validacion academica de la carga.
+   *
+   * Es un grupo y no periodos sueltos por lo mismo que en `resumenes`. Sin
+   * `estados`, se incluyen todos los que aparezcan.
+   */
+  abstract estadoLotePorFacultad(
+    grupo: readonly string[],
+    estados?: readonly string[],
+  ): Observable<EstadoLotePorFacultad>;
 }

@@ -15,7 +15,9 @@ from app.domain.entities.distributivo import Docente
 from app.domain.ports.analitica import (
     AvanceDeFacultad,
     DocenteConPocasHoras,
+    EstadoLotePorFacultad,
     EstadosDeFacultad,
+    FacultadPorEstadoLote,
     FilaComparativa,
     GrupoDePeriodos,
     HorasPorCarrera,
@@ -26,7 +28,7 @@ from app.domain.ports.analitica import (
     ValidacionDeGrupo,
 )
 from app.domain.ports.distributivo import FilaDistributivoResuelta, ResumenDistributivo
-from app.domain.ports.importacion import ResultadoImportacionDistributivo
+from app.domain.ports.importacion import AvisoCombinacion, ResultadoImportacionDistributivo
 from app.domain.ports.reportes import ColumnaReporte
 from app.domain.value_objects_distributivo import DistribucionHoras, Identificacion
 
@@ -472,10 +474,11 @@ class ResultadoImportacionSalida(EsquemaBase):
     exitosa: bool
     resumen: str
 
-    #: Filas que el lector descarto antes de llegar al caso de uso: las que
-    #: juntan varias carreras o sedes en una celda. Se informan aparte de
-    #: `rechazadas` porque el motivo es del archivo, no de la validacion.
-    no_desglosadas: list[dict[str, Any]] = Field(default_factory=list)
+    #: Filas del origen que juntaban varias carreras, sedes o periodos en una
+    #: celda: el lector las exploto en una fila por combinacion —ya estan
+    #: contadas en `filas_creadas`/`filas_actualizadas`, esto solo avisa cuales
+    #: fueron—. Distinto de `rechazadas`: aqui no se perdio nada.
+    combinadas: list[dict[str, Any]] = Field(default_factory=list)
 
     #: El periodo al que se cargo, como lo entendio el sistema.
     periodo: str = ""
@@ -485,7 +488,7 @@ class ResultadoImportacionSalida(EsquemaBase):
         cls,
         r: ResultadoImportacionDistributivo,
         *,
-        no_desglosadas: Sequence[tuple[int, str, str]] = (),
+        combinadas: Sequence[AvisoCombinacion] = (),
         periodo: str = "",
     ) -> ResultadoImportacionSalida:
         return cls(
@@ -521,9 +524,14 @@ class ResultadoImportacionSalida(EsquemaBase):
             ],
             exitosa=r.exitosa,
             resumen=r.resumen(),
-            no_desglosadas=[
-                {"numero_fila": numero, "identificacion": identificacion, "motivo": motivo}
-                for numero, identificacion, motivo in list(no_desglosadas)[:200]
+            combinadas=[
+                {
+                    "numero_fila": a.numero_fila,
+                    "identificacion": a.identificacion,
+                    "combinaciones": a.combinaciones,
+                    "ambiguo": a.ambiguo,
+                }
+                for a in list(combinadas)[:200]
             ],
             periodo=periodo,
         )
@@ -818,5 +826,39 @@ class ResumenDeHorasSalida(EsquemaBase):
             por_facultad=[HorasPorFacultadSalida.desde(f) for f in r.por_facultad],
             por_carrera=[HorasPorCarreraSalida.desde(c) for c in r.por_carrera],
             bajo_horas=[DocenteConPocasHorasSalida.desde(d) for d in r.bajo_horas],
+            generado_en=r.generado_en,
+        )
+
+
+# ===========================================================================
+# Estado de lote/proceso por facultad
+# ===========================================================================
+
+
+class FacultadPorEstadoLoteSalida(EsquemaBase):
+    codigo: str
+    nombre: str
+    #: Estado -> cantidad. Los estados ausentes de esta facultad no aparecen
+    #: como clave; el cliente los trata como cero.
+    conteos: dict[str, int]
+    total: int
+
+    @classmethod
+    def desde(cls, f: FacultadPorEstadoLote) -> FacultadPorEstadoLoteSalida:
+        return cls(codigo=f.codigo, nombre=f.nombre, conteos=dict(f.conteos), total=f.total)
+
+
+class EstadoLotePorFacultadSalida(EsquemaBase):
+    #: Los estados presentes en el grupo, del mas frecuente al menos. Es lo
+    #: que ofrece el filtro de casillas de la pantalla.
+    estados: list[str]
+    por_facultad: list[FacultadPorEstadoLoteSalida]
+    generado_en: str
+
+    @classmethod
+    def desde(cls, r: EstadoLotePorFacultad) -> EstadoLotePorFacultadSalida:
+        return cls(
+            estados=list(r.estados),
+            por_facultad=[FacultadPorEstadoLoteSalida.desde(f) for f in r.por_facultad],
             generado_en=r.generado_en,
         )
