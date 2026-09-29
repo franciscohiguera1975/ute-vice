@@ -44,6 +44,13 @@ class RolCodigo(StrEnum):
     emitir los archivos, sin acceso al resto del expediente de cada persona.
     """
 
+    SOPORTE_TECNICO = "SOPORTE_TECNICO"
+    """Atiende los tickets de soporte tecnico de las facultades a Vicerrectorado.
+
+    No ve personas, titulos ni distributivo: solo el modulo de tickets, donde
+    puede crear, comentar, cambiar el estado y asignarse o reasignar casos.
+    """
+
 
 class EstadoValidacion(StrEnum):
     """Como quedo la fila al validarla en el sistema academico.
@@ -189,6 +196,11 @@ class Permiso(StrEnum):
     ROLES_ADMINISTRAR = "roles:administrar"
     AUDITORIA_LEER = "auditoria:leer"
 
+    # Tickets de soporte tecnico
+    TICKETS_LEER = "tickets:leer"
+    TICKETS_ESCRIBIR = "tickets:escribir"
+    """Crear tickets, comentar, cambiar de estado y asignar o reasignar el responsable."""
+
 
 #: Composicion de cada rol. Fuente de verdad para la siembra inicial.
 PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
@@ -253,6 +265,16 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
             Permiso.DASHBOARD_VER,
             Permiso.DISTRIBUTIVO_LEER,
             Permiso.CATALOGOS_LEER,
+        }
+    ),
+    #: Sin PERSONAS_LEER, TITULOS_LEER ni DISTRIBUTIVO_LEER: el equipo de soporte
+    #: atiende tickets, no el expediente academico. `TICKETS_LEER` le basta para
+    #: ver el selector de responsables (`/tickets/responsables`) sin necesitar
+    #: `USUARIOS_LEER`, que es de administracion general.
+    RolCodigo.SOPORTE_TECNICO: frozenset(
+        {
+            Permiso.TICKETS_LEER,
+            Permiso.TICKETS_ESCRIBIR,
         }
     ),
 }
@@ -430,3 +452,52 @@ class FormatoReporte(StrEnum):
     XLSX = "XLSX"
     CSV = "CSV"
     PDF = "PDF"
+
+
+# ---------------------------------------------------------------------------
+# Tickets de soporte tecnico
+# ---------------------------------------------------------------------------
+
+
+class EstadoTicket(StrEnum):
+    """Ciclo de vida de un ticket de soporte tecnico.
+
+    No es una maquina de estados estricta: cualquier transicion se acepta,
+    igual que `estado_lote` en el distributivo. Lo que importa es que quede
+    registrada en el seguimiento, no que el flujo se imponga por software.
+    """
+
+    RECIBIDO = "RECIBIDO"
+    """Recien creado, sin que soporte lo haya revisado todavia."""
+
+    ABIERTO = "ABIERTO"
+    """Soporte lo reviso y lo reconoce como valido."""
+
+    EN_PROCESO = "EN_PROCESO"
+    BLOQUEADO = "BLOQUEADO"
+    """Detenido por un impedimento que no depende del solicitante."""
+
+    EN_ESPERA = "EN_ESPERA"
+    """Detenido a la espera de una respuesta del solicitante."""
+
+    EJECUTADO = "EJECUTADO"
+    CANCELADO = "CANCELADO"
+
+    @property
+    def etiqueta(self) -> str:
+        return _ETIQUETAS_ESTADO_TICKET[self]
+
+    @property
+    def es_terminal(self) -> bool:
+        return self in {EstadoTicket.EJECUTADO, EstadoTicket.CANCELADO}
+
+
+_ETIQUETAS_ESTADO_TICKET: dict[EstadoTicket, str] = {
+    EstadoTicket.RECIBIDO: "Recibido",
+    EstadoTicket.ABIERTO: "Abierto",
+    EstadoTicket.EN_PROCESO: "En proceso",
+    EstadoTicket.BLOQUEADO: "Bloqueado",
+    EstadoTicket.EN_ESPERA: "En espera del solicitante",
+    EstadoTicket.EJECUTADO: "Ejecutado",
+    EstadoTicket.CANCELADO: "Cancelado",
+}

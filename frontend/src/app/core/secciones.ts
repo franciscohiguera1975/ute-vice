@@ -102,6 +102,7 @@ export const SECCIONES: readonly Seccion[] = [
     icono: '⚙',
     permisos: [Permiso.USUARIOS_LEER],
   },
+  { ruta: '/tickets', etiqueta: 'Tickets', icono: '☎', permisos: [Permiso.TICKETS_LEER] },
 ];
 
 /**

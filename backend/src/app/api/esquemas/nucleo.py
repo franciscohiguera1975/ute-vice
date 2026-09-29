@@ -40,6 +40,8 @@ class PersonaCrear(EsquemaBase):
     telefono: str | None = Field(default=None, max_length=32)
     tipo_vinculacion: TipoVinculacion = TipoVinculacion.OTRO
     unidad: str | None = Field(default=None, max_length=160)
+    facultad_id: UUID | None = None
+    carrera_id: UUID | None = None
     cargo: str | None = Field(default=None, max_length=160)
     codigo_empleado: str | None = Field(default=None, max_length=40)
     fecha_ingreso: date | None = None
@@ -65,6 +67,8 @@ class PersonaActualizar(EsquemaBase):
     telefono: str | None = Field(default=None, max_length=32)
     tipo_vinculacion: TipoVinculacion | None = None
     unidad: str | None = Field(default=None, max_length=160)
+    facultad_id: UUID | None = None
+    carrera_id: UUID | None = None
     cargo: str | None = Field(default=None, max_length=160)
     codigo_empleado: str | None = Field(default=None, max_length=40)
     fecha_ingreso: date | None = None
@@ -84,6 +88,8 @@ class PersonaSalida(EsquemaBase):
     telefono: str | None
     tipo_vinculacion: TipoVinculacion
     unidad: str | None
+    facultad_id: UUID | None
+    carrera_id: UUID | None
     cargo: str | None
     codigo_empleado: str | None
     fecha_ingreso: date | None
@@ -110,6 +116,8 @@ class PersonaSalida(EsquemaBase):
             telefono=p.telefono,
             tipo_vinculacion=p.tipo_vinculacion,
             unidad=p.unidad,
+            facultad_id=p.facultad_id,
+            carrera_id=p.carrera_id,
             cargo=p.cargo,
             codigo_empleado=p.codigo_empleado,
             fecha_ingreso=p.fecha_ingreso,

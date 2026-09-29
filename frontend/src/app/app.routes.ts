@@ -114,6 +114,12 @@ export const rutas: Routes = [
       },
 
       {
+        path: 'tickets',
+        canActivate: [guardaPermiso(Permiso.TICKETS_LEER)],
+        loadChildren: () => import('@features/tickets/tickets.routes').then((m) => m.rutas),
+      },
+
+      {
         path: 'perfil',
         loadChildren: () => import('@features/perfil/perfil.routes').then((m) => m.rutas),
       },

@@ -157,6 +157,9 @@ _DESCRIPCION_ROLES: dict[RolCodigo, str] = {
     RolCodigo.CONSULTA_DISTRIBUTIVO: (
         "Consulta del distributivo y sus catalogos, con emision de reportes"
     ),
+    RolCodigo.SOPORTE_TECNICO: (
+        "Atiende los tickets de soporte tecnico de las facultades a Vicerrectorado"
+    ),
 }
 
 

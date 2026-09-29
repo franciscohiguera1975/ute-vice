@@ -4,6 +4,7 @@ import type {
   AuthProvider,
   EstadoConsulta,
   EstadoJob,
+  EstadoTicket,
   EstadoTitulo,
   NivelTitulo,
   OrigenTitulo,
@@ -96,6 +97,8 @@ export interface Persona {
   readonly telefono: string | null;
   readonly tipoVinculacion: TipoVinculacion;
   readonly unidad: string | null;
+  readonly facultadId: string | null;
+  readonly carreraId: string | null;
   readonly cargo: string | null;
   readonly codigoEmpleado: string | null;
   readonly fechaIngreso: string | null;
@@ -137,6 +140,8 @@ export interface DatosPersona {
   readonly telefono?: string | null;
   readonly tipoVinculacion?: TipoVinculacion;
   readonly unidad?: string | null;
+  readonly facultadId?: string | null;
+  readonly carreraId?: string | null;
   readonly cargo?: string | null;
   readonly codigoEmpleado?: string | null;
   readonly fechaIngreso?: string | null;
@@ -440,4 +445,61 @@ export interface CambiosUsuario {
   /** Omitido deja el alcance como estaba; vacio lo borra. */
   readonly facultadesIds?: readonly string[];
   readonly carrerasIds?: readonly string[];
+}
+
+// ---------------------------------------------------------------------------
+// Tickets de soporte tecnico
+// ---------------------------------------------------------------------------
+
+export interface Ticket {
+  readonly id: string;
+  readonly titulo: string;
+  readonly descripcion: string;
+  readonly estado: EstadoTicket;
+  readonly solicitanteId: string;
+  readonly solicitanteNombre: string;
+  readonly solicitanteUnidad: string | null;
+  readonly asignadoA: string | null;
+  readonly asignadoANombre: string | null;
+  readonly creadoPor: string | null;
+  readonly creadoEn: string;
+  readonly actualizadoEn: string;
+}
+
+export interface SeguimientoTicket {
+  readonly id: string;
+  readonly autorId: string | null;
+  readonly comentario: string;
+  readonly estadoAnterior: EstadoTicket | null;
+  readonly estadoNuevo: EstadoTicket | null;
+  readonly creadoEn: string;
+}
+
+export interface TicketDetalle {
+  readonly ticket: Ticket;
+  readonly seguimientos: readonly SeguimientoTicket[];
+}
+
+export interface FiltroTickets {
+  readonly texto?: string;
+  readonly estado?: EstadoTicket;
+  readonly solicitanteId?: string;
+  readonly asignadoA?: string;
+}
+
+export interface DatosTicket {
+  readonly titulo: string;
+  readonly descripcion: string;
+  readonly solicitanteId: string;
+}
+
+export interface DatosSeguimiento {
+  readonly comentario: string;
+  readonly estadoNuevo?: EstadoTicket | null;
+}
+
+/** Usuario de soporte tecnico disponible para asignar un ticket. */
+export interface Responsable {
+  readonly id: string;
+  readonly nombreCompleto: string;
 }

@@ -24,6 +24,7 @@ from app.core.config import get_settings
 from app.infrastructure.db.base import Base
 from app.infrastructure.db import modelos  # noqa: F401
 from app.infrastructure.db import modelos_distributivo  # noqa: F401
+from app.infrastructure.db import modelos_tickets  # noqa: F401
 
 config = context.config
 

@@ -182,6 +182,8 @@ class PersonaModel(Base, MixinAuditoria):
         ),
         Index("ix_personas_cobertura", "activo", "ultima_consulta_en"),
         Index("ix_personas_unidad", "unidad"),
+        Index("ix_personas_facultad", "facultad_id"),
+        Index("ix_personas_carrera", "carrera_id"),
     )
 
     id: Mapped[UUID] = _uuid_pk()
@@ -198,6 +200,12 @@ class PersonaModel(Base, MixinAuditoria):
 
     tipo_vinculacion: Mapped[str] = mapped_column(String(24), default="OTRO", nullable=False)
     unidad: Mapped[str | None] = mapped_column(String(160))
+    facultad_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("cat_facultades.id", ondelete="SET NULL")
+    )
+    carrera_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("cat_carreras.id", ondelete="SET NULL")
+    )
     cargo: Mapped[str | None] = mapped_column(String(160))
     codigo_empleado: Mapped[str | None] = mapped_column(String(40), index=True)
     fecha_ingreso: Mapped[date | None] = mapped_column(Date)

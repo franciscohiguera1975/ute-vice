@@ -30,6 +30,8 @@ class EntradaCrearPersona:
     telefono: str | None = None
     tipo_vinculacion: TipoVinculacion = TipoVinculacion.OTRO
     unidad: str | None = None
+    facultad_id: UUID | None = None
+    carrera_id: UUID | None = None
     cargo: str | None = None
     codigo_empleado: str | None = None
     fecha_ingreso: date | None = None
@@ -47,6 +49,8 @@ class EntradaActualizarPersona:
     telefono: str | None = None
     tipo_vinculacion: TipoVinculacion | None = None
     unidad: str | None = None
+    facultad_id: UUID | None = None
+    carrera_id: UUID | None = None
     cargo: str | None = None
     codigo_empleado: str | None = None
     fecha_ingreso: date | None = None
@@ -146,6 +150,8 @@ class CrearPersona(CasoDeUso[EntradaCrearPersona, Persona]):
                 telefono=entrada.telefono,
                 tipo_vinculacion=entrada.tipo_vinculacion,
                 unidad=entrada.unidad,
+                facultad_id=entrada.facultad_id,
+                carrera_id=entrada.carrera_id,
                 cargo=entrada.cargo,
                 codigo_empleado=entrada.codigo_empleado,
                 fecha_ingreso=entrada.fecha_ingreso,
@@ -197,6 +203,8 @@ class ActualizarPersona(CasoDeUso[EntradaActualizarPersona, Persona]):
                 telefono=entrada.telefono,
                 tipo_vinculacion=entrada.tipo_vinculacion,
                 unidad=entrada.unidad,
+                facultad_id=entrada.facultad_id,
+                carrera_id=entrada.carrera_id,
                 cargo=entrada.cargo,
                 codigo_empleado=entrada.codigo_empleado,
                 fecha_ingreso=entrada.fecha_ingreso,

@@ -1,0 +1,252 @@
+<nav class="miga no-imprimir" aria-label="Ruta de navegacion">
+  <a routerLink="/tickets">Tickets</a>
+  <span aria-hidden="true">/</span>
+  <span>Nuevo ticket</span>
+</nav>
+
+<header class="encabezado">
+  <h1>Nuevo ticket</h1>
+  <p class="texto-sm texto-suave">Registre una solicitud de soporte tecnico</p>
+</header>
+
+<form (ngSubmit)="enviar()" novalidate class="formulario">
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Solicitante</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      @if (solicitante(); as persona) {
+        <div class="solicitante-elegido">
+          <div>
+            <span class="negrita">{{ persona.nombreCompleto }}</span>
+            <span class="texto-sm texto-suave"> · {{ persona.cedula }}</span>
+            @if (persona.unidad) {
+              <p class="texto-xs texto-tenue">{{ persona.unidad }}</p>
+            }
+          </div>
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="quitarSolicitante()">
+            Cambiar
+          </button>
+        </div>
+      } @else {
+        <div class="campo">
+          <label class="campo__etiqueta" for="busqueda-solicitante">
+            Buscar por nombre o cedula <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="busqueda-solicitante"
+            type="search"
+            placeholder="Ej. Maria Perez o 1710034065"
+            [ngModel]="busquedaPersona()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="buscarPersona($event)"
+          />
+
+          @if (buscandoPersona()) {
+            <p class="texto-sm texto-suave">Buscando…</p>
+          } @else if (resultadosPersona().length > 0) {
+            <ul class="resultados-busqueda">
+              @for (persona of resultadosPersona(); track persona.id) {
+                <li>
+                  <button type="button" (click)="seleccionarPersona(persona)">
+                    <span class="negrita">{{ persona.nombreCompleto }}</span>
+                    <span class="texto-sm texto-suave"> · {{ persona.cedula }}</span>
+                    @if (persona.unidad) {
+                      <span class="texto-xs texto-tenue"> · {{ persona.unidad }}</span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else if (busquedaPersona().trim().length > 0) {
+            <p class="campo__ayuda">Sin resultados para "{{ busquedaPersona() }}".</p>
+          }
+        </div>
+
+        <button type="button" class="btn btn--secundario btn--sm" (click)="abrirModalPersona()">
+          ¿No aparece? Registrar persona nueva
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">La solicitud</h2>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <div class="campo">
+        <label class="campo__etiqueta" for="titulo">
+          Titulo <span class="campo__requerido" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="titulo"
+          type="text"
+          maxlength="200"
+          placeholder="Resumen breve del problema"
+          [ngModel]="titulo()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="titulo.set($event)"
+        />
+      </div>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="descripcion">
+          Descripcion <span class="campo__requerido" aria-hidden="true">*</span>
+        </label>
+        <textarea
+          id="descripcion"
+          rows="5"
+          placeholder="Detalle el problema, cuando ocurre y que se necesita"
+          [ngModel]="descripcion()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="descripcion.set($event)"
+        ></textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="acciones no-imprimir">
+    <a routerLink="/tickets" class="btn btn--secundario">Cancelar</a>
+    <button type="submit" class="btn btn--primario" [disabled]="enviando()">
+      {{ enviando() ? 'Guardando…' : 'Registrar ticket' }}
+    </button>
+  </div>
+</form>
+
+<!-- ------------------------------------------- alta rapida de solicitante --- -->
+@if (mostrarModalPersona()) {
+  <div class="velo" (click)="mostrarModalPersona.set(false)">
+    <div class="dialogo dialogo--ancho" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2 class="dialogo__titulo">Registrar persona</h2>
+      <p class="texto-sm texto-suave">
+        Datos minimos para identificar al solicitante. Podra completarse el resto desde Personas.
+      </p>
+
+      <div class="rejilla rejilla--2">
+        <div class="campo">
+          <label class="campo__etiqueta" for="nueva-cedula">
+            Cedula <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nueva-cedula"
+            type="text"
+            inputmode="numeric"
+            maxlength="10"
+            class="mono"
+            [ngModel]="nuevaCedula()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevaCedula.set($event)"
+          />
+        </div>
+
+        <div></div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nueva-nombres">
+            Nombres <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nueva-nombres"
+            type="text"
+            [ngModel]="nuevosNombres()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevosNombres.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nueva-apellidos">
+            Apellidos <span class="campo__requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nueva-apellidos"
+            type="text"
+            [ngModel]="nuevosApellidos()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevosApellidos.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nueva-facultad">Facultad o direccion</label>
+          <select
+            id="nueva-facultad"
+            [ngModel]="nuevaFacultadId()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevaFacultadId.set($event)"
+          >
+            <option value="">Sin especificar</option>
+            @for (opcion of catalogos.de(TipoCatalogo.FACULTAD); track opcion.id) {
+              <option [value]="opcion.id">{{ opcion.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nueva-carrera">Carrera</label>
+          <select
+            id="nueva-carrera"
+            [ngModel]="nuevaCarreraId()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevaCarreraId.set($event)"
+          >
+            <option value="">Sin especificar</option>
+            @for (opcion of catalogos.de(TipoCatalogo.CARRERA); track opcion.id) {
+              <option [value]="opcion.id">{{ opcion.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nuevo-telefono">Telefono</label>
+          <input
+            id="nuevo-telefono"
+            type="text"
+            inputmode="tel"
+            [ngModel]="nuevoTelefono()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevoTelefono.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nuevo-email-institucional">Correo institucional</label>
+          <input
+            id="nuevo-email-institucional"
+            type="email"
+            placeholder="nombre.apellido@ute.edu.ec"
+            [ngModel]="nuevoEmailInstitucional()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevoEmailInstitucional.set($event)"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="nuevo-email-personal">Correo personal</label>
+          <input
+            id="nuevo-email-personal"
+            type="email"
+            [ngModel]="nuevoEmailPersonal()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevoEmailPersonal.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="dialogo__acciones">
+        <button type="button" class="btn btn--secundario" (click)="mostrarModalPersona.set(false)">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn--primario"
+          [disabled]="creandoPersona()"
+          (click)="crearPersona()"
+        >
+          {{ creandoPersona() ? 'Guardando…' : 'Registrar persona' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

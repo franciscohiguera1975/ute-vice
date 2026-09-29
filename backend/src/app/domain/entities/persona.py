@@ -39,6 +39,10 @@ class Persona:
     tipo_vinculacion: TipoVinculacion = TipoVinculacion.OTRO
     unidad: str | None = None
     """Facultad, carrera o dependencia. Texto libre hasta la Fase 09."""
+    facultad_id: UUID | None = None
+    """Referencia al catalogo `cat_facultades`. Opcional: convive con `unidad`."""
+    carrera_id: UUID | None = None
+    """Referencia al catalogo `cat_carreras`. Opcional: convive con `unidad`."""
     cargo: str | None = None
     codigo_empleado: str | None = None
     fecha_ingreso: date | None = None
@@ -173,6 +177,8 @@ class Persona:
         telefono: str | None = None,
         tipo_vinculacion: TipoVinculacion | None = None,
         unidad: str | None = None,
+        facultad_id: UUID | None = None,
+        carrera_id: UUID | None = None,
         cargo: str | None = None,
         codigo_empleado: str | None = None,
         fecha_ingreso: date | None = None,
@@ -192,6 +198,10 @@ class Persona:
             self.tipo_vinculacion = tipo_vinculacion
         if unidad is not None:
             self.unidad = unidad
+        if facultad_id is not None:
+            self.facultad_id = facultad_id
+        if carrera_id is not None:
+            self.carrera_id = carrera_id
         if cargo is not None:
             self.cargo = cargo
         if codigo_empleado is not None:

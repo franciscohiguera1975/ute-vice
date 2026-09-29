@@ -61,6 +61,9 @@ export const Permiso = {
   USUARIOS_ELIMINAR: 'usuarios:eliminar',
   ROLES_ADMINISTRAR: 'roles:administrar',
   AUDITORIA_LEER: 'auditoria:leer',
+
+  TICKETS_LEER: 'tickets:leer',
+  TICKETS_ESCRIBIR: 'tickets:escribir',
 } as const;
 export type Permiso = (typeof Permiso)[keyof typeof Permiso];
 
@@ -137,6 +140,28 @@ export const FormatoReporte = {
 } as const;
 export type FormatoReporte = (typeof FormatoReporte)[keyof typeof FormatoReporte];
 
+export const EstadoTicket = {
+  RECIBIDO: 'RECIBIDO',
+  ABIERTO: 'ABIERTO',
+  EN_PROCESO: 'EN_PROCESO',
+  BLOQUEADO: 'BLOQUEADO',
+  EN_ESPERA: 'EN_ESPERA',
+  EJECUTADO: 'EJECUTADO',
+  CANCELADO: 'CANCELADO',
+} as const;
+export type EstadoTicket = (typeof EstadoTicket)[keyof typeof EstadoTicket];
+
+/** Los estados en el orden del flujo, para poblar el selector de la interfaz. */
+export const ESTADOS_TICKET: readonly EstadoTicket[] = [
+  EstadoTicket.RECIBIDO,
+  EstadoTicket.ABIERTO,
+  EstadoTicket.EN_PROCESO,
+  EstadoTicket.BLOQUEADO,
+  EstadoTicket.EN_ESPERA,
+  EstadoTicket.EJECUTADO,
+  EstadoTicket.CANCELADO,
+];
+
 // ---------------------------------------------------------------------------
 // Etiquetas para la interfaz
 // ---------------------------------------------------------------------------
@@ -198,6 +223,16 @@ export const ETIQUETAS_ORIGEN: Record<OrigenTitulo, string> = {
   IMPORTACION: 'Importacion',
 };
 
+export const ETIQUETAS_ESTADO_TICKET: Record<EstadoTicket, string> = {
+  RECIBIDO: 'Recibido',
+  ABIERTO: 'Abierto',
+  EN_PROCESO: 'En proceso',
+  BLOQUEADO: 'Bloqueado',
+  EN_ESPERA: 'En espera del solicitante',
+  EJECUTADO: 'Ejecutado',
+  CANCELADO: 'Cancelado',
+};
+
 /** Tono visual asociado a cada estado. Lo consumen las insignias. */
 export type Tono = 'exito' | 'aviso' | 'error' | 'neutro' | 'info';
 
@@ -224,5 +259,15 @@ export const TONO_ESTADO_JOB: Record<EstadoJob, Tono> = {
   EN_CURSO: 'exito',
   PAUSADO: 'aviso',
   COMPLETADO: 'info',
+  CANCELADO: 'neutro',
+};
+
+export const TONO_ESTADO_TICKET: Record<EstadoTicket, Tono> = {
+  RECIBIDO: 'info',
+  ABIERTO: 'info',
+  EN_PROCESO: 'aviso',
+  BLOQUEADO: 'error',
+  EN_ESPERA: 'aviso',
+  EJECUTADO: 'exito',
   CANCELADO: 'neutro',
 };

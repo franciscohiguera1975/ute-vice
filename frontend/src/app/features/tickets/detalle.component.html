@@ -1,0 +1,144 @@
+<nav class="miga no-imprimir" aria-label="Ruta de navegacion">
+  <a routerLink="/tickets">Tickets</a>
+  <span aria-hidden="true">/</span>
+  <span>Detalle</span>
+</nav>
+
+@if (cargando()) {
+  <ute-cargando mensaje="Cargando ticket…" />
+} @else if (detalle(); as det) {
+  <header class="encabezado fila entre envolver hueco">
+    <div>
+      <h1>{{ det.ticket.titulo }}</h1>
+      <p class="texto-sm texto-suave">
+        Solicitado por
+        <span class="negrita">{{ det.ticket.solicitanteNombre }}</span>
+        @if (det.ticket.solicitanteUnidad) {
+          · {{ det.ticket.solicitanteUnidad }}
+        }
+      </p>
+    </div>
+    <ute-insignia
+      [texto]="ETIQUETAS_ESTADO_TICKET[det.ticket.estado]"
+      [tono]="TONO_ESTADO_TICKET[det.ticket.estado]"
+    />
+  </header>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Solicitud</h2>
+    </div>
+    <div class="tarjeta__cuerpo rejilla rejilla--2">
+      <div class="campo campo--ancho">
+        <span class="campo__etiqueta">Descripcion</span>
+        <p>{{ det.ticket.descripcion }}</p>
+      </div>
+
+      <div class="campo">
+        <span class="campo__etiqueta">Responsable</span>
+        @if (sesion.puede(Permiso.TICKETS_ESCRIBIR)) {
+          <select
+            aria-label="Asignar responsable"
+            [ngModel]="det.ticket.asignadoA ?? ''"
+            [disabled]="asignando()"
+            (ngModelChange)="asignar($event)"
+          >
+            <option value="">— sin asignar —</option>
+            @for (responsable of responsables(); track responsable.id) {
+              <option [value]="responsable.id">{{ responsable.nombreCompleto }}</option>
+            }
+          </select>
+        } @else {
+          <p>{{ det.ticket.asignadoANombre || '— sin asignar —' }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <span class="campo__etiqueta">Registrado</span>
+        <p class="texto-sm texto-suave">{{ det.ticket.creadoEn | fechaLocal }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Seguimiento</h2>
+    </div>
+
+    @if (det.seguimientos.length === 0) {
+      <p class="texto-sm texto-suave" style="padding: 1rem;">Aun no hay pasos registrados.</p>
+    } @else {
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <caption class="sr-solo">
+            Tabla de seguimiento del ticket
+          </caption>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Comentario</th>
+              <th>Cambio de estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (paso of det.seguimientos; track paso.id) {
+              <tr>
+                <td class="texto-sm texto-suave">{{ paso.creadoEn | desdeHace }}</td>
+                <td>{{ paso.comentario }}</td>
+                <td class="texto-sm">
+                  @if (paso.estadoNuevo) {
+                    {{ ETIQUETAS_ESTADO_TICKET[paso.estadoAnterior!] }} →
+                    {{ ETIQUETAS_ESTADO_TICKET[paso.estadoNuevo] }}
+                  } @else {
+                    <span class="texto-tenue">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ------------------------------------- agregar paso de seguimiento --- -->
+    <div class="tarjeta__cuerpo" *utePermiso="Permiso.TICKETS_ESCRIBIR">
+      <div class="campo campo--ancho">
+        <label class="campo__etiqueta" for="comentario">Nuevo comentario</label>
+        <textarea
+          id="comentario"
+          rows="3"
+          placeholder="Como avanza el caso…"
+          [ngModel]="nuevoComentario()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="nuevoComentario.set($event)"
+        ></textarea>
+      </div>
+
+      <div class="fila entre envolver hueco-sm">
+        <div class="campo">
+          <label class="campo__etiqueta" for="cambio-estado">Cambiar estado (opcional)</label>
+          <select
+            id="cambio-estado"
+            [ngModel]="nuevoEstado()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="nuevoEstado.set($event)"
+          >
+            <option value="">Mantener estado actual</option>
+            @for (estado of estados; track estado) {
+              <option [value]="estado">{{ ETIQUETAS_ESTADO_TICKET[estado] }}</option>
+            }
+          </select>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--primario"
+          [disabled]="enviandoSeguimiento()"
+          (click)="agregarSeguimiento()"
+        >
+          {{ enviandoSeguimiento() ? 'Guardando…' : 'Agregar seguimiento' }}
+        </button>
+      </div>
+    </div>
+  </section>
+}

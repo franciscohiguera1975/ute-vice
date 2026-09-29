@@ -10,6 +10,7 @@ from app.api.v1.routers import (
     personas,
     reportes,
     tablero,
+    tickets,
     titulos,
     usuarios,
 )
@@ -25,5 +26,6 @@ router_v1.include_router(reportes.router)
 router_v1.include_router(catalogos.router)
 router_v1.include_router(distributivo.router)
 router_v1.include_router(usuarios.router)
+router_v1.include_router(tickets.router)
 
 __all__ = ["router_v1"]

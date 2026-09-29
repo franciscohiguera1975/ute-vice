@@ -1,0 +1,126 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Tickets</h1>
+    <p class="texto-sm texto-suave">
+      Solicitudes de soporte tecnico de las facultades a Vicerrectorado
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <a *utePermiso="Permiso.TICKETS_ESCRIBIR" routerLink="/tickets/nuevo" class="btn btn--primario">
+      Nuevo ticket
+    </a>
+  </div>
+</header>
+
+<section class="tarjeta">
+  <!-- ---------------------------------------------------------- filtros --- -->
+  <div class="filtros no-imprimir">
+    <div class="filtros__busqueda">
+      <label class="sr-solo" for="busqueda">Buscar tickets</label>
+      <input
+        id="busqueda"
+        type="search"
+        placeholder="Buscar por titulo o descripcion…"
+        [ngModel]="texto()"
+        (ngModelChange)="buscar($event)"
+      />
+    </div>
+
+    <select
+      aria-label="Filtrar por estado"
+      [ngModel]="filtro().estado ?? ''"
+      (ngModelChange)="aplicarFiltro({ estado: $event || undefined })"
+    >
+      <option value="">Todo estado</option>
+      @for (estado of estados; track estado) {
+        <option [value]="estado">{{ ETIQUETAS_ESTADO_TICKET[estado] }}</option>
+      }
+    </select>
+
+    <label class="casilla">
+      <input
+        type="checkbox"
+        [ngModel]="filtro().asignadoA === sesion.usuario()?.id"
+        (ngModelChange)="aplicarFiltro({ asignadoA: $event ? sesion.usuario()?.id : undefined })"
+      />
+      <span>Asignados a mi</span>
+    </label>
+
+    @if (hayFiltrosActivos) {
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+    }
+  </div>
+
+  <!-- ------------------------------------------------------------ tabla --- -->
+  @if (cargando() && datos().items.length === 0) {
+    <ute-cargando mensaje="Cargando tickets…" />
+  } @else if (datos().items.length === 0) {
+    <ute-vacio
+      titulo="No hay resultados"
+      [descripcion]="
+        hayFiltrosActivos
+          ? 'Ningun ticket coincide con los filtros aplicados.'
+          : 'Aun no hay tickets registrados.'
+      "
+    >
+      @if (hayFiltrosActivos) {
+        <button type="button" class="btn btn--secundario" (click)="limpiarFiltros()">
+          Quitar filtros
+        </button>
+      }
+    </ute-vacio>
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla tabla--clicable">
+        <caption class="sr-solo">
+          Listado de tickets de soporte tecnico
+        </caption>
+        <thead>
+          <tr>
+            <th>Titulo</th>
+            <th>Solicitante</th>
+            <th>Estado</th>
+            <th>Responsable</th>
+            <th>Creado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ticket of datos().items; track ticket.id) {
+            <tr (click)="abrir(ticket)">
+              <td>
+                <span class="negrita">{{ ticket.titulo }}</span>
+              </td>
+              <td class="texto-sm texto-suave">
+                {{ ticket.solicitanteNombre }}
+                @if (ticket.solicitanteUnidad) {
+                  <br />
+                  <span class="texto-xs texto-tenue">{{ ticket.solicitanteUnidad }}</span>
+                }
+              </td>
+              <td>
+                <ute-insignia
+                  [texto]="ETIQUETAS_ESTADO_TICKET[ticket.estado]"
+                  [tono]="TONO_ESTADO_TICKET[ticket.estado]"
+                />
+              </td>
+              <td class="texto-sm texto-suave">{{ ticket.asignadoANombre || '— sin asignar —' }}</td>
+              <td class="texto-sm texto-suave">{{ ticket.creadoEn | desdeHace }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ute-paginador
+      [pagina]="datos().pagina"
+      [tamano]="datos().tamano"
+      [total]="datos().total"
+      [totalPaginas]="datos().totalPaginas"
+      (paginaCambiada)="irAPagina($event)"
+      (tamanoCambiado)="cambiarTamano($event)"
+    />
+  }
+</section>
