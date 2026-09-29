@@ -58,6 +58,8 @@ export interface OpcionSelector {
   readonly id: string;
   readonly codigo: string;
   readonly nombre: string;
+  /** Solo relevante en `FACULTAD`: una direccion administrativa, no academica. */
+  readonly esDireccion: boolean;
 }
 
 export interface FiltroCatalogo {

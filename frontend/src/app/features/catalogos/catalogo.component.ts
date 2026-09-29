@@ -84,6 +84,8 @@ export class CatalogoComponent {
   protected readonly activo = signal(true);
   protected readonly orden = signal(0);
   protected readonly codigoErp = signal('');
+  /** Solo aplica al catalogo de facultades: ver `abrirEdicion`/`guardar`. */
+  protected readonly esDireccion = signal(false);
   protected readonly guardando = signal(false);
 
   protected readonly aEliminar = signal<ElementoCatalogo | null>(null);
@@ -187,6 +189,7 @@ export class CatalogoComponent {
     this.activo.set(true);
     this.orden.set(this.datos().total);
     this.codigoErp.set('');
+    this.esDireccion.set(false);
   }
 
   protected abrirEdicion(elemento: ElementoCatalogo): void {
@@ -198,6 +201,7 @@ export class CatalogoComponent {
     this.activo.set(elemento.activo);
     this.orden.set(elemento.orden);
     this.codigoErp.set(elemento.codigoErp ?? '');
+    this.esDireccion.set(Boolean(elemento.atributos?.['esDireccion']));
   }
 
   protected cerrarFormulario(): void {
@@ -227,6 +231,11 @@ export class CatalogoComponent {
       },
     };
 
+    // Solo el catalogo de facultades usa este atributo: en el resto no se
+    // envia, para no dejar una llave vacia en `atributos`.
+    const atributos =
+      this.tipo() === TipoCatalogo.FACULTAD ? { esDireccion: this.esDireccion() } : undefined;
+
     const enEdicion = this.editando();
     if (enEdicion) {
       this.repositorio
@@ -236,6 +245,7 @@ export class CatalogoComponent {
           activo: this.activo(),
           orden: this.orden(),
           codigoErp: this.codigoErp().trim(),
+          atributos,
         })
         .subscribe(alTerminar);
       return;
@@ -254,6 +264,7 @@ export class CatalogoComponent {
         activo: this.activo(),
         orden: this.orden(),
         codigoErp: this.codigoErp().trim(),
+        atributos,
       })
       .subscribe(alTerminar);
   }

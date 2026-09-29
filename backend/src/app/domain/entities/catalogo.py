@@ -168,6 +168,15 @@ class ElementoCatalogo:
             return None
         return PeriodoAcademico.desde_codigo(self.codigo)
 
+    @property
+    def es_direccion(self) -> bool:
+        """Solo tiene sentido en `FACULTAD`: una direccion administrativa,
+
+        no una facultad academica. Vive en `atributos` en lugar de una
+        columna porque no aplica a los otros once catalogos.
+        """
+        return bool(self.atributos.get("es_direccion", False))
+
     # ------------------------------------------------------------ mutaciones
     def actualizar(
         self,

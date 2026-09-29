@@ -77,10 +77,13 @@ class OpcionSelector(EsquemaBase):
     id: UUID
     codigo: str
     nombre: str
+    #: Solo relevante en `FACULTAD`: una direccion administrativa, no una
+    #: facultad academica. `False` en los otros once catalogos.
+    es_direccion: bool = False
 
     @classmethod
     def desde(cls, e: ElementoCatalogo) -> OpcionSelector:
-        return cls(id=e.id, codigo=e.codigo, nombre=e.nombre)
+        return cls(id=e.id, codigo=e.codigo, nombre=e.nombre, es_direccion=e.es_direccion)
 
 
 class AmbitoDisponible(EsquemaBase):

@@ -25,10 +25,13 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    cast,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.entities.catalogo import TipoCatalogo
@@ -99,6 +102,24 @@ class PaoModel(Base, MixinCatalogo):
 class FacultadModel(Base, MixinCatalogo):
     __tablename__ = "cat_facultades"
     __table_args__ = _indices_catalogo("cat_facultades")
+
+    @hybrid_property
+    def es_direccion(self) -> bool:
+        """Direccion administrativa, no facultad academica.
+
+        Vive en `atributos` (ver `ElementoCatalogo.es_direccion`) y no en una
+        columna propia: es el unico de los doce catalogos que la necesita.
+        La version `.expression` permite filtrar con ella en SQL, no solo
+        leerla en Python tras cargar la fila.
+        """
+        return bool((self.atributos or {}).get("es_direccion", False))
+
+    @es_direccion.inplace.expression
+    @classmethod
+    def _es_direccion_expression(cls) -> Any:
+        return func.coalesce(
+            cast(cls.atributos["es_direccion"].astext, Boolean), False
+        )
 
 
 class CarreraModel(Base, MixinCatalogo):

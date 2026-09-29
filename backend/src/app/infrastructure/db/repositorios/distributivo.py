@@ -816,20 +816,25 @@ class RepositorioDistributivoSQL:
         ).one()
 
         async def agrupar(modelo: Any, columna_fk: Any) -> list[tuple[str, int]]:
+            consulta = (
+                select(modelo.nombre, func.count())
+                .select_from(FilaDistributivoModel)
+                .join(
+                    DocenteModel,
+                    DocenteModel.id == FilaDistributivoModel.docente_id,
+                )
+                .join(modelo, modelo.id == columna_fk)
+            )
+            if modelo is FacultadModel:
+                # Las direcciones administrativas no entran en la comparativa
+                # por facultad: sus filas siguen contando en los totales
+                # generales, solo no se desglosan aqui.
+                consulta = consulta.where(FacultadModel.es_direccion.is_(False))
             filas = (
                 await self._s.execute(
-                    self._filtrar(
-                        select(modelo.nombre, func.count())
-                        .select_from(FilaDistributivoModel)
-                        .join(
-                            DocenteModel,
-                            DocenteModel.id == FilaDistributivoModel.docente_id,
-                        )
-                        .join(modelo, modelo.id == columna_fk),
-                        filtro,
+                    self._filtrar(consulta, filtro).group_by(modelo.nombre).order_by(
+                        func.count().desc()
                     )
-                    .group_by(modelo.nombre)
-                    .order_by(func.count().desc())
                 )
             ).all()
             return [(str(n), int(c)) for n, c in filas]
@@ -965,6 +970,7 @@ class RepositorioDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
+            .where(FacultadModel.es_direccion.is_(False))
             .order_by(FacultadModel.codigo)
         )
         filas = await self._s.scalars(self._filtrar(consulta, filtro))

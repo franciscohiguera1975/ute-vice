@@ -83,6 +83,19 @@ export class ListaDistributivoComponent {
 
   protected readonly aEliminar = signal<FilaDistributivo | null>(null);
 
+  /**
+   * Opciones de facultad para editar una fila: academicas, mas la que ya
+   * tuviera asignada aunque sea una direccion. Una fila existente no debe
+   * quedar con un selector que no puede mostrar su propio valor.
+   */
+  protected readonly opcionesFacultadEdicion = computed(() => {
+    const academicas = this.catalogos.facultadesAcademicas();
+    const actualId = this.selecciones()['facultadId'];
+    if (!actualId || academicas.some((o) => o.id === actualId)) return academicas;
+    const actual = this.catalogos.de(TipoCatalogo.FACULTAD).find((o) => o.id === actualId);
+    return actual ? [...academicas, actual] : academicas;
+  });
+
   /** Total en vivo mientras se editan las horas. */
   protected readonly totalEditado = computed(() =>
     Math.round(

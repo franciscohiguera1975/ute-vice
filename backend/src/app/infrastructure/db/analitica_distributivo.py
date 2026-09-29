@@ -263,6 +263,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(or_(en_a, en_b))
+            .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.nombre)
             .order_by(func.count().desc())
         )
@@ -294,10 +295,10 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(modelo, modelo.id == columna)
             .where(FilaDistributivoModel.pao_id.in_(list(paos)))
-            .group_by(modelo.nombre)
-            .order_by(func.count().desc())
-            .limit(limite)
         )
+        if modelo is FacultadModel:
+            consulta = consulta.where(FacultadModel.es_direccion.is_(False))
+        consulta = consulta.group_by(modelo.nombre).order_by(func.count().desc()).limit(limite)
         filas = [(f.etiqueta, f.valor) for f in (await self._s.execute(consulta)).all()]
         total = sum(v for _, v in filas) or 1
         return [
@@ -370,6 +371,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(or_(en_a, en_b))
+            .where(FacultadModel.es_direccion.is_(False))
         )
         if dedicacion_ids:
             consulta = consulta.where(FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids)))
@@ -413,6 +415,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(condicion)
+            .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.codigo, FacultadModel.nombre)
             .order_by(FacultadModel.codigo)
         )
@@ -465,6 +468,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(_condicion_dedicacion(paos, dedicacion_id))
+            .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.codigo, FacultadModel.nombre)
             .order_by(FacultadModel.codigo)
         )
@@ -497,6 +501,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .join(CarreraModel, CarreraModel.id == FilaDistributivoModel.carrera_id)
             .where(_condicion_dedicacion(paos, dedicacion_id))
+            .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.codigo, FacultadModel.nombre, CarreraModel.nombre)
             .order_by(FacultadModel.codigo, CarreraModel.nombre)
         )
@@ -612,6 +617,7 @@ class RepositorioAnaliticaDistributivoSQL:
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
             .where(condicion)
+            .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.codigo, FacultadModel.nombre, campo)
             .order_by(FacultadModel.codigo)
         )

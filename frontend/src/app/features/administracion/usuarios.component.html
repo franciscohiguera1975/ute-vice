@@ -257,7 +257,7 @@
             <span class="texto-xs texto-tenue">({{ alcanceFacultades().length }})</span>
           </legend>
           <div class="lista-alcance">
-            @for (f of catalogos.de(TipoCatalogo.FACULTAD); track f.id) {
+            @for (f of catalogos.facultadesAcademicas(); track f.id) {
               <label class="opcion-alcance">
                 <input
                   type="checkbox"

@@ -93,7 +93,7 @@
       (ngModelChange)="aplicar({ facultadId: $event || undefined })"
     >
       <option value="">Todas las facultades</option>
-      @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+      @for (o of catalogos.facultadesAcademicas(); track o.id) {
         <option [value]="o.id">{{ o.codigo }}</option>
       }
     </select>
@@ -314,7 +314,7 @@
             <div class="campo">
               <label class="campo__etiqueta" for="ed-facultad">Facultad</label>
               <select id="ed-facultad" [ngModel]="selecciones()['facultadId']" (ngModelChange)="fijarSeleccion('facultadId', $event)">
-                @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+                @for (o of opcionesFacultadEdicion(); track o.id) {
                   <option [value]="o.id">{{ o.codigo }} — {{ o.nombre }}</option>
                 }
               </select>

@@ -110,6 +110,25 @@
           </label>
         </div>
 
+        @if (tipo() === 'facultades') {
+          <div class="campo">
+            <label class="casilla">
+              <input
+                type="checkbox"
+                [ngModel]="esDireccion()"
+                (ngModelChange)="esDireccion.set($event)"
+              />
+              <span>
+                Dirección
+                <span class="campo__ayuda">
+                  Una dirección administrativa, no una facultad académica: se excluye de los
+                  selectores y las comparativas por facultad del distributivo.
+                </span>
+              </span>
+            </label>
+          </div>
+        }
+
         <div class="campo campo--ancho">
           <label class="campo__etiqueta" for="cat-descripcion">Descripción</label>
           <textarea

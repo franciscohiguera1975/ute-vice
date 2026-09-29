@@ -35,7 +35,7 @@
       <label class="campo__etiqueta" for="asg-facultad">Facultad</label>
       <select id="asg-facultad" [ngModel]="facultadId()" (ngModelChange)="facultadId.set($event)">
         <option value="">Todas</option>
-        @for (o of catalogos.de(TipoCatalogo.FACULTAD); track o.id) {
+        @for (o of catalogos.facultadesAcademicas(); track o.id) {
           <option [value]="o.id">{{ o.codigo }}</option>
         }
       </select>

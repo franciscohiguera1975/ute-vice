@@ -32,6 +32,19 @@ export class CatalogosStore {
     return this.de(tipo).find((o) => o.id === id)?.nombre ?? '';
   }
 
+  /**
+   * Facultades academicas: excluye las marcadas como direccion administrativa.
+   *
+   * Es lo que deben ofrecer los selectores de facultad *dentro de
+   * Distributivo* (filtros, asignacion de una fila, alcance de una cuenta).
+   * Fuera de Distributivo —Personas, Tickets— se sigue usando
+   * `de(TipoCatalogo.FACULTAD)` completo: una direccion tambien es un
+   * destino valido para esos tramites.
+   */
+  facultadesAcademicas(): readonly OpcionSelector[] {
+    return this.de(TipoCatalogo.FACULTAD).filter((o) => !o.esDireccion);
+  }
+
   cargar(forzar = false): void {
     if (this.cargado && !forzar) return;
     this.cargado = true;
