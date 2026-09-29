@@ -148,13 +148,26 @@
         </div>
 
         <div class="campo">
-          <label class="campo__etiqueta" for="unidad">Unidad o dependencia</label>
-          <input
-            id="unidad"
-            formControlName="unidad"
-            type="text"
-            placeholder="Facultad de Ciencias de la Ingenieria"
-          />
+          <label class="campo__etiqueta" for="facultadId">Facultad o direccion</label>
+          <select id="facultadId" formControlName="facultadId">
+            <option value="">Sin especificar</option>
+            @for (opcion of catalogos.de(TipoCatalogo.FACULTAD); track opcion.id) {
+              <option [value]="opcion.id">{{ opcion.nombre }}</option>
+            }
+          </select>
+          @if (unidadActual()) {
+            <p class="campo__ayuda">Valor anterior en el sistema: {{ unidadActual() }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="carreraId">Carrera</label>
+          <select id="carreraId" formControlName="carreraId">
+            <option value="">Sin especificar</option>
+            @for (opcion of catalogos.de(TipoCatalogo.CARRERA); track opcion.id) {
+              <option [value]="opcion.id">{{ opcion.nombre }}</option>
+            }
+          </select>
         </div>
 
         <div class="campo">

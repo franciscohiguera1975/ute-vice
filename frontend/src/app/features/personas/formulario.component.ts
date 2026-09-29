@@ -2,9 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
   ETIQUETAS_VINCULACION,
+  TipoCatalogo,
   TipoVinculacion,
   type CambiosPersona,
   type DatosPersona,
@@ -28,16 +30,21 @@ export class FormularioPersonaComponent {
   private readonly repositorio = inject(RepositorioPersonas);
   private readonly notificaciones = inject(NotificacionesService);
   private readonly router = inject(Router);
+  protected readonly catalogos = inject(CatalogosStore);
 
   /** Presente solo en la ruta de edicion. */
   readonly id = input<string>();
 
+  protected readonly TipoCatalogo = TipoCatalogo;
   protected readonly ETIQUETAS_VINCULACION = ETIQUETAS_VINCULACION;
   protected readonly vinculaciones = Object.values(TipoVinculacion);
 
   protected readonly cargando = signal(false);
   protected readonly enviando = signal(false);
   protected readonly esEdicion = computed(() => Boolean(this.id()));
+
+  /** Unidad en texto libre que ya traia la persona, de antes de los selectores. */
+  protected readonly unidadActual = signal<string | null>(null);
 
   protected readonly formulario = this.fb.nonNullable.group({
     cedula: ['', [Validators.required, validadorCedula]],
@@ -47,7 +54,8 @@ export class FormularioPersonaComponent {
     emailPersonal: ['', [Validators.email]],
     telefono: ['', [Validators.maxLength(32)]],
     tipoVinculacion: [TipoVinculacion.OTRO as TipoVinculacion],
-    unidad: ['', [Validators.maxLength(160)]],
+    facultadId: [''],
+    carreraId: [''],
     cargo: ['', [Validators.maxLength(160)]],
     codigoEmpleado: ['', [Validators.maxLength(40)]],
     fechaIngreso: [''],
@@ -57,6 +65,7 @@ export class FormularioPersonaComponent {
   });
 
   constructor() {
+    this.catalogos.cargar();
     queueMicrotask(() => {
       if (this.esEdicion()) this.cargar();
     });
@@ -77,12 +86,14 @@ export class FormularioPersonaComponent {
           emailPersonal: persona.emailPersonal ?? '',
           telefono: persona.telefono ?? '',
           tipoVinculacion: persona.tipoVinculacion,
-          unidad: persona.unidad ?? '',
+          facultadId: persona.facultadId ?? '',
+          carreraId: persona.carreraId ?? '',
           cargo: persona.cargo ?? '',
           codigoEmpleado: persona.codigoEmpleado ?? '',
           fechaIngreso: persona.fechaIngreso ?? '',
           activo: persona.activo,
         });
+        this.unidadActual.set(persona.unidad);
 
         // La cedula identifica a la persona ante el registro nacional:
         // cambiarla invalidaria todo su historico de consultas.
@@ -111,6 +122,12 @@ export class FormularioPersonaComponent {
     // no como cadena vacia, que quedaria almacenada como un dato falso.
     const opcional = (texto: string): string | null => texto.trim() || null;
 
+    // `unidad` ya no se edita como texto libre: se deriva de los selectores,
+    // igual que en el alta rapida de solicitante del modulo de Tickets.
+    const facultad = this.catalogos.nombreDe(TipoCatalogo.FACULTAD, valores.facultadId);
+    const carrera = this.catalogos.nombreDe(TipoCatalogo.CARRERA, valores.carreraId);
+    const unidad = [facultad, carrera].filter(Boolean).join(' — ') || null;
+
     if (this.esEdicion()) {
       const cambios: CambiosPersona = {
         nombres: valores.nombres.trim(),
@@ -119,7 +136,9 @@ export class FormularioPersonaComponent {
         emailPersonal: opcional(valores.emailPersonal),
         telefono: opcional(valores.telefono),
         tipoVinculacion: valores.tipoVinculacion,
-        unidad: opcional(valores.unidad),
+        unidad,
+        facultadId: valores.facultadId || null,
+        carreraId: valores.carreraId || null,
         cargo: opcional(valores.cargo),
         codigoEmpleado: opcional(valores.codigoEmpleado),
         fechaIngreso: opcional(valores.fechaIngreso),
@@ -145,7 +164,9 @@ export class FormularioPersonaComponent {
       emailPersonal: opcional(valores.emailPersonal),
       telefono: opcional(valores.telefono),
       tipoVinculacion: valores.tipoVinculacion,
-      unidad: opcional(valores.unidad),
+      unidad,
+      facultadId: valores.facultadId || null,
+      carreraId: valores.carreraId || null,
       cargo: opcional(valores.cargo),
       codigoEmpleado: opcional(valores.codigoEmpleado),
       fechaIngreso: opcional(valores.fechaIngreso),
