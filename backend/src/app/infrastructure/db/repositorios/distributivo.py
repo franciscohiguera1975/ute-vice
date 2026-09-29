@@ -832,9 +832,9 @@ class RepositorioDistributivoSQL:
                 consulta = consulta.where(FacultadModel.es_direccion.is_(False))
             filas = (
                 await self._s.execute(
-                    self._filtrar(consulta, filtro).group_by(modelo.nombre).order_by(
-                        func.count().desc()
-                    )
+                    self._filtrar(consulta, filtro)
+                    .group_by(modelo.nombre)
+                    .order_by(func.count().desc())
                 )
             ).all()
             return [(str(n), int(c)) for n, c in filas]

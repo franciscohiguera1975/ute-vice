@@ -117,9 +117,7 @@ class FacultadModel(Base, MixinCatalogo):
     @es_direccion.inplace.expression
     @classmethod
     def _es_direccion_expression(cls) -> Any:
-        return func.coalesce(
-            cast(cls.atributos["es_direccion"].astext, Boolean), False
-        )
+        return func.coalesce(cast(cls.atributos["es_direccion"].astext, Boolean), False)
 
 
 class CarreraModel(Base, MixinCatalogo):
