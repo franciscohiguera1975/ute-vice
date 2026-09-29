@@ -33,3 +33,35 @@
     &:hover, &:focus-visible { background: var(--superficie-2); }
   }
 }
+
+/* Los estilos de dialogo no son globales por diseno del proyecto: cada
+   componente que abre un modal los declara en su propio scss (ver
+   `administracion.scss` y `confirmar.component.ts`). */
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(12 16 26 / 55%);
+}
+
+.dialogo {
+  width: min(28rem, 100%);
+  padding: 1.35rem;
+  background: var(--superficie);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.dialogo--ancho { max-width: 54rem; width: min(54rem, 92vw); }
+.dialogo__titulo { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.dialogo__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}

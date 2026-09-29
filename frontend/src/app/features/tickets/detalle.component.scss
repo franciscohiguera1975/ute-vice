@@ -1,1 +1,6 @@
 .encabezado { margin-bottom: 1.25rem; }
+
+/* No es global por diseno del proyecto: cada componente que usa `.campo--ancho`
+   dentro de una `.rejilla` la declara en su propio scss (ver
+   `personas/formulario.component.scss`). */
+.campo--ancho { grid-column: 1 / -1; }

@@ -277,12 +277,18 @@ class CambiarFechaSolicitud(CasoDeUso[EntradaCambiarFechaSolicitud, Ticket]):
             return actualizado
 
 
+#: Roles que pueden quedar como responsables de un ticket. Se incluye ADMIN
+#: ademas de SOPORTE_TECNICO porque un administrador a veces resuelve el caso
+#: el mismo, en instalaciones donde aun no hay un equipo de soporte dedicado.
+_ROLES_RESPONSABLES = ("SOPORTE_TECNICO", "ADMIN")
+
+
 class ListarResponsables(CasoDeUso[None, list[Responsable]]):
-    """Usuarios activos con rol de soporte tecnico, para poblar el selector de
-    asignacion sin exigirle a soporte tecnico el permiso de administracion."""
+    """Usuarios activos que pueden quedar como responsables de un ticket, para
+    poblar el selector de asignacion sin exigir el permiso de administracion."""
 
     nombre = "tickets.listar_responsables"
-    descripcion = "Lista los usuarios de soporte tecnico disponibles para asignar tickets"
+    descripcion = "Lista los usuarios disponibles para asignar tickets"
     permiso_requerido = Permiso.TICKETS_LEER
 
     def __init__(self, uow: UnidadDeTrabajo) -> None:
@@ -290,9 +296,11 @@ class ListarResponsables(CasoDeUso[None, list[Responsable]]):
 
     async def _ejecutar(self, entrada: None, contexto: ContextoEjecucion) -> list[Responsable]:
         async with self._uow:
-            pagina = await self._uow.usuarios.listar(
-                Paginacion(tamano=200),
-                activo=True,
-                rol="SOPORTE_TECNICO",
-            )
-            return [Responsable(id=u.id, nombre_completo=u.nombre_completo) for u in pagina.items]
+            vistos: dict[UUID, Responsable] = {}
+            for rol in _ROLES_RESPONSABLES:
+                pagina = await self._uow.usuarios.listar(
+                    Paginacion(tamano=200), activo=True, rol=rol
+                )
+                for u in pagina.items:
+                    vistos[u.id] = Responsable(id=u.id, nombre_completo=u.nombre_completo)
+            return sorted(vistos.values(), key=lambda r: r.nombre_completo)
