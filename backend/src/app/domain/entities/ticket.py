@@ -4,10 +4,11 @@ facultades a Vicerrectorado, con su tabla de seguimiento."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 from app.domain.enums import EstadoTicket
+from app.domain.errors import ErrorValidacion
 from app.domain.value_objects import ahora_utc
 
 
@@ -22,10 +23,28 @@ class Ticket:
     asignado_a: UUID | None = None
     """Usuario de soporte responsable. `None` mientras nadie lo ha tomado."""
 
+    fecha_solicitud: date = field(default_factory=lambda: ahora_utc().date())
+    """Cuando se pidio el soporte, no cuando se registro el ticket.
+
+    Nace igual a la fecha de creacion, pero es editable: el registro suele
+    ocurrir con retraso frente al pedido real, y esa diferencia importa para
+    medir tiempos de respuesta.
+    """
+
     id: UUID = field(default_factory=uuid4)
     creado_por: UUID | None = None
     creado_en: datetime = field(default_factory=ahora_utc)
     actualizado_en: datetime = field(default_factory=ahora_utc)
+
+    def __post_init__(self) -> None:
+        self._validar_fecha_solicitud(self.fecha_solicitud)
+
+    @staticmethod
+    def _validar_fecha_solicitud(fecha: date) -> None:
+        if fecha > ahora_utc().date():
+            raise ErrorValidacion(
+                "La fecha de solicitud no puede ser futura", campo="fecha_solicitud"
+            )
 
     def cambiar_estado(self, nuevo: EstadoTicket, *, momento: datetime | None = None) -> None:
         self.estado = nuevo
@@ -33,6 +52,11 @@ class Ticket:
 
     def asignar(self, usuario_id: UUID | None, *, momento: datetime | None = None) -> None:
         self.asignado_a = usuario_id
+        self.actualizado_en = momento or ahora_utc()
+
+    def cambiar_fecha_solicitud(self, fecha: date, *, momento: datetime | None = None) -> None:
+        self._validar_fecha_solicitud(fecha)
+        self.fecha_solicitud = fecha
         self.actualizado_en = momento or ahora_utc()
 
 

@@ -461,6 +461,8 @@ export interface Ticket {
   readonly solicitanteUnidad: string | null;
   readonly asignadoA: string | null;
   readonly asignadoANombre: string | null;
+  /** Cuando se pidio el soporte. Distinta de `creadoEn`: nace igual, pero es editable. */
+  readonly fechaSolicitud: string;
   readonly creadoPor: string | null;
   readonly creadoEn: string;
   readonly actualizadoEn: string;
@@ -491,6 +493,8 @@ export interface DatosTicket {
   readonly titulo: string;
   readonly descripcion: string;
   readonly solicitanteId: string;
+  /** Cuando se pidio el soporte. Omitido, el backend toma la fecha de hoy. */
+  readonly fechaSolicitud?: string | null;
 }
 
 export interface DatosSeguimiento {

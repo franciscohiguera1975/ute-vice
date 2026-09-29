@@ -103,6 +103,22 @@
           (ngModelChange)="descripcion.set($event)"
         ></textarea>
       </div>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="fecha-solicitud">Fecha de solicitud</label>
+        <input
+          id="fecha-solicitud"
+          type="date"
+          [max]="hoy"
+          [ngModel]="fechaSolicitud()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="fechaSolicitud.set($event)"
+        />
+        <p class="campo__ayuda">
+          Cuando se pidio el soporte. Por defecto es hoy; cambiela si el registro llega despues
+          del pedido real.
+        </p>
+      </div>
     </div>
   </section>
 

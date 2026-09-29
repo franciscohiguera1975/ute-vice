@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -19,6 +19,10 @@ class TicketCrear(EsquemaBase):
     titulo: Annotated[str, Field(min_length=3, max_length=200)]
     descripcion: Annotated[str, Field(min_length=1)]
     solicitante_id: UUID
+    fecha_solicitud: date | None = Field(
+        default=None,
+        description="Cuando se pidio el soporte. Por defecto, hoy.",
+    )
 
 
 class SeguimientoCrear(EsquemaBase):
@@ -28,6 +32,10 @@ class SeguimientoCrear(EsquemaBase):
 
 class AsignarTicketEntrada(EsquemaBase):
     usuario_id: UUID | None = None
+
+
+class FechaSolicitudEntrada(EsquemaBase):
+    fecha_solicitud: date
 
 
 class SeguimientoSalida(EsquemaBase):
@@ -60,6 +68,7 @@ class TicketSalida(EsquemaBase):
     solicitante_unidad: str | None
     asignado_a: UUID | None
     asignado_a_nombre: str | None
+    fecha_solicitud: date
     creado_por: UUID | None
     creado_en: datetime
     actualizado_en: datetime
@@ -76,6 +85,7 @@ class TicketSalida(EsquemaBase):
             solicitante_unidad=v.solicitante_unidad,
             asignado_a=v.ticket.asignado_a,
             asignado_a_nombre=v.asignado_a_nombre,
+            fecha_solicitud=v.ticket.fecha_solicitud,
             creado_por=v.ticket.creado_por,
             creado_en=v.ticket.creado_en,
             actualizado_en=v.ticket.actualizado_en,

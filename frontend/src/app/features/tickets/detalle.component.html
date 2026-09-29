@@ -54,6 +54,22 @@
       </div>
 
       <div class="campo">
+        <span class="campo__etiqueta">Fecha de solicitud</span>
+        @if (sesion.puede(Permiso.TICKETS_ESCRIBIR)) {
+          <input
+            type="date"
+            aria-label="Fecha de solicitud"
+            [max]="hoy"
+            [disabled]="guardandoFecha()"
+            [ngModel]="det.ticket.fechaSolicitud"
+            (ngModelChange)="cambiarFechaSolicitud($event)"
+          />
+        } @else {
+          <p>{{ det.ticket.fechaSolicitud | fechaLocal }}</p>
+        }
+      </div>
+
+      <div class="campo">
         <span class="campo__etiqueta">Registrado</span>
         <p class="texto-sm texto-suave">{{ det.ticket.creadoEn | fechaLocal }}</p>
       </div>

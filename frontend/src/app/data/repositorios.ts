@@ -350,6 +350,10 @@ export class TicketsHttp extends RepositorioTickets {
     return this.api.patch<Ticket>(`/tickets/${id}/asignar`, { usuarioId });
   }
 
+  cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket> {
+    return this.api.patch<Ticket>(`/tickets/${id}/fecha-solicitud`, { fechaSolicitud });
+  }
+
   responsables(): Observable<readonly Responsable[]> {
     return this.api.get<Responsable[]>('/tickets/responsables');
   }

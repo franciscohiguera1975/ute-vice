@@ -455,6 +455,7 @@ def ticket_a_dominio(modelo: TicketModel) -> Ticket:
         solicitante_id=modelo.solicitante_id,
         estado=_enum(EstadoTicket, modelo.estado, EstadoTicket.RECIBIDO),
         asignado_a=modelo.asignado_a,
+        fecha_solicitud=modelo.fecha_solicitud,
         creado_por=modelo.creado_por,
         creado_en=modelo.creado_en,
         actualizado_en=modelo.actualizado_en,
@@ -468,6 +469,7 @@ def ticket_a_modelo(entidad: Ticket, modelo: TicketModel | None = None) -> Ticke
     modelo.solicitante_id = entidad.solicitante_id
     modelo.estado = entidad.estado.value
     modelo.asignado_a = entidad.asignado_a
+    modelo.fecha_solicitud = entidad.fecha_solicitud
     modelo.creado_por = entidad.creado_por
     return modelo
 

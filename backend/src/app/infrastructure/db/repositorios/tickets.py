@@ -18,6 +18,7 @@ from app.infrastructure.db.modelos_tickets import SeguimientoTicketModel, Ticket
 _ORDEN_TICKETS = {
     "titulo": TicketModel.titulo,
     "estado": TicketModel.estado,
+    "fecha_solicitud": TicketModel.fecha_solicitud,
     "creado_en": TicketModel.creado_en,
     "actualizado_en": TicketModel.actualizado_en,
 }

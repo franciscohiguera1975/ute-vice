@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from uuid import UUID
 
 from app.application.base import CasoDeUso, ContextoEjecucion
@@ -12,6 +13,7 @@ from app.domain.errors import ErrorValidacion, NoEncontrado
 from app.domain.ports.repositorios import Pagina, Paginacion
 from app.domain.ports.tickets import FiltroTickets, VistaTicket
 from app.domain.ports.uow import UnidadDeTrabajo
+from app.domain.value_objects import ahora_utc
 
 # ---------------------------------------------------------------------------
 # Entradas y salidas
@@ -23,6 +25,8 @@ class EntradaCrearTicket:
     titulo: str
     descripcion: str
     solicitante_id: UUID
+    fecha_solicitud: date | None = None
+    """`None` toma la fecha de hoy: el registro tardio es la excepcion, no la regla."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +54,12 @@ class EntradaAgregarSeguimiento:
 class EntradaAsignarTicket:
     ticket_id: UUID
     usuario_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class EntradaCambiarFechaSolicitud:
+    ticket_id: UUID
+    fecha_solicitud: date
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +93,7 @@ class CrearTicket(CasoDeUso[EntradaCrearTicket, Ticket]):
                 titulo=entrada.titulo,
                 descripcion=entrada.descripcion,
                 solicitante_id=entrada.solicitante_id,
+                fecha_solicitud=entrada.fecha_solicitud or ahora_utc().date(),
                 creado_por=contexto.actor_id,
             )
             creado = await self._uow.tickets.agregar(ticket)
@@ -213,6 +224,52 @@ class AsignarTicket(CasoDeUso[EntradaAsignarTicket, Ticket]):
                     ticket_id=ticket.id,
                     autor_id=contexto.actor_id,
                     comentario=comentario,
+                )
+            )
+
+            await self._uow.commit()
+            return actualizado
+
+
+class CambiarFechaSolicitud(CasoDeUso[EntradaCambiarFechaSolicitud, Ticket]):
+    """Corrige la fecha en que se pidio el soporte.
+
+    Existe porque el registro del ticket suele quedar unos dias detras del
+    pedido real; se deja un seguimiento automatico con el valor anterior para
+    que el ajuste no borre el rastro de lo que decia antes.
+    """
+
+    nombre = "tickets.cambiar_fecha_solicitud"
+    descripcion = "Corrige la fecha de solicitud de un ticket"
+    permiso_requerido = Permiso.TICKETS_ESCRIBIR
+
+    def __init__(self, uow: UnidadDeTrabajo) -> None:
+        self._uow = uow
+
+    async def _ejecutar(
+        self, entrada: EntradaCambiarFechaSolicitud, contexto: ContextoEjecucion
+    ) -> Ticket:
+        async with self._uow:
+            vista = await self._uow.tickets.obtener(entrada.ticket_id)
+            if vista is None:
+                raise NoEncontrado("Ticket", entrada.ticket_id)
+            ticket = vista.ticket
+
+            fecha_anterior = ticket.fecha_solicitud
+            if fecha_anterior == entrada.fecha_solicitud:
+                return ticket
+
+            ticket.cambiar_fecha_solicitud(entrada.fecha_solicitud)
+            actualizado = await self._uow.tickets.actualizar(ticket)
+
+            await self._uow.tickets.agregar_seguimiento(
+                SeguimientoTicket(
+                    ticket_id=ticket.id,
+                    autor_id=contexto.actor_id,
+                    comentario=(
+                        f"Fecha de solicitud corregida: {fecha_anterior.isoformat()} → "
+                        f"{entrada.fecha_solicitud.isoformat()}"
+                    ),
                 )
             )
 

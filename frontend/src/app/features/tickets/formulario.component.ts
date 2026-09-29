@@ -16,6 +16,9 @@ import { RepositorioPersonas, RepositorioTickets } from '@domain/puertos';
 
 import { validadorCedula } from '../personas/validador-cedula';
 
+/** Fecha de hoy en formato `yyyy-MM-dd`, el que espera un `<input type="date">`. */
+const hoyISO = (): string => new Date().toISOString().slice(0, 10);
+
 @Component({
   selector: 'ute-formulario-ticket',
   standalone: true,
@@ -55,6 +58,9 @@ export class FormularioTicketComponent {
   // --- Ticket ---
   protected readonly titulo = signal('');
   protected readonly descripcion = signal('');
+  /** Cuando se pidio el soporte. Nace en hoy, pero es editable desde el formulario. */
+  protected readonly fechaSolicitud = signal(hoyISO());
+  protected readonly hoy = hoyISO();
   protected readonly enviando = signal(false);
 
   constructor() {
@@ -175,6 +181,7 @@ export class FormularioTicketComponent {
         titulo: this.titulo().trim(),
         descripcion: this.descripcion().trim(),
         solicitanteId: solicitante.id,
+        fechaSolicitud: this.fechaSolicitud(),
       })
       .subscribe({
         next: (ticket) => {

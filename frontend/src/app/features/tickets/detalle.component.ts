@@ -54,6 +54,8 @@ export class DetalleTicketComponent {
   protected readonly cargando = signal(true);
   protected readonly responsables = signal<readonly Responsable[]>([]);
   protected readonly asignando = signal(false);
+  protected readonly hoy = new Date().toISOString().slice(0, 10);
+  protected readonly guardandoFecha = signal(false);
 
   // --- Nuevo seguimiento ---
   protected readonly nuevoComentario = signal('');
@@ -97,6 +99,24 @@ export class DetalleTicketComponent {
       error: (error: ErrorApi) => {
         this.asignando.set(false);
         this.notificaciones.error('No fue posible asignar el ticket', error.mensaje);
+      },
+    });
+  }
+
+  protected cambiarFechaSolicitud(fecha: string): void {
+    const actual = this.detalle()?.ticket.fechaSolicitud;
+    if (!fecha || fecha === actual) return;
+
+    this.guardandoFecha.set(true);
+    this.repositorio.cambiarFechaSolicitud(this.id(), fecha).subscribe({
+      next: () => {
+        this.guardandoFecha.set(false);
+        this.notificaciones.exito('Fecha de solicitud actualizada');
+        this.cargar();
+      },
+      error: (error: ErrorApi) => {
+        this.guardandoFecha.set(false);
+        this.notificaciones.error('No fue posible actualizar la fecha', error.mensaje);
       },
     });
   }

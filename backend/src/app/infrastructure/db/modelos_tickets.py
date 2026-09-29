@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import Date, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,8 @@ class TicketModel(Base, MixinAuditoria):
     titulo: Mapped[str] = mapped_column(String(200), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text, nullable=False)
     estado: Mapped[str] = mapped_column(String(24), default="RECIBIDO", nullable=False)
+    fecha_solicitud: Mapped[date] = mapped_column(Date, nullable=False)
+    """Cuando se pidio el soporte. Nace igual a `creado_en`, pero es editable."""
 
     # Sin `ondelete`: una persona con tickets no se puede borrar, igual que con
     # titulos (`EliminarPersona` ya exige el expediente vacio).

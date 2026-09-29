@@ -176,5 +176,6 @@ export abstract class RepositorioTickets {
     datos: DatosSeguimiento,
   ): Observable<SeguimientoTicket>;
   abstract asignar(id: string, usuarioId: string | null): Observable<Ticket>;
+  abstract cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket>;
   abstract responsables(): Observable<readonly Responsable[]>;
 }

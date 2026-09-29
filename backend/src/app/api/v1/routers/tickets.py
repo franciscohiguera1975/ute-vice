@@ -11,6 +11,7 @@ from app.api.dependencias import ContextoDep, UowDep, requiere
 from app.api.esquemas.comunes import ParametrosPaginacion, RespuestaPaginada
 from app.api.esquemas.tickets import (
     AsignarTicketEntrada,
+    FechaSolicitudEntrada,
     ResponsableSalida,
     SeguimientoCrear,
     SeguimientoSalida,
@@ -21,9 +22,11 @@ from app.api.esquemas.tickets import (
 from app.application.casos_uso.tickets import (
     AgregarSeguimiento,
     AsignarTicket,
+    CambiarFechaSolicitud,
     CrearTicket,
     EntradaAgregarSeguimiento,
     EntradaAsignarTicket,
+    EntradaCambiarFechaSolicitud,
     EntradaCrearTicket,
     EntradaListarTickets,
     ListarResponsables,
@@ -82,6 +85,7 @@ async def crear(datos: TicketCrear, uow: UowDep, contexto: ContextoDep) -> Ticke
             titulo=datos.titulo,
             descripcion=datos.descripcion,
             solicitante_id=datos.solicitante_id,
+            fecha_solicitud=datos.fecha_solicitud,
         ),
         contexto,
     )
@@ -144,5 +148,23 @@ async def asignar(
 ) -> TicketSalida:
     caso = AsignarTicket(uow)
     await caso(EntradaAsignarTicket(ticket_id=ticket_id, usuario_id=datos.usuario_id), contexto)
+    detalle = await ObtenerTicket(uow)(ticket_id, contexto)
+    return TicketSalida.desde(detalle.vista)
+
+
+@router.patch(
+    "/{ticket_id}/fecha-solicitud",
+    response_model=TicketSalida,
+    summary="Corrige la fecha en que se pidio el soporte",
+    dependencies=[requiere(Permiso.TICKETS_ESCRIBIR)],
+)
+async def cambiar_fecha_solicitud(
+    ticket_id: UUID, datos: FechaSolicitudEntrada, uow: UowDep, contexto: ContextoDep
+) -> TicketSalida:
+    caso = CambiarFechaSolicitud(uow)
+    await caso(
+        EntradaCambiarFechaSolicitud(ticket_id=ticket_id, fecha_solicitud=datos.fecha_solicitud),
+        contexto,
+    )
     detalle = await ObtenerTicket(uow)(ticket_id, contexto)
     return TicketSalida.desde(detalle.vista)
