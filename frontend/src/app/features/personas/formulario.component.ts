@@ -14,13 +14,14 @@ import {
 } from '@domain/modelos';
 import { RepositorioPersonas } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
+import { SelectorBuscableComponent } from '@shared/componentes/selector-buscable.component';
 
 import { validadorCedula } from './validador-cedula';
 
 @Component({
   selector: 'ute-formulario-persona',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, CargandoComponent],
+  imports: [ReactiveFormsModule, RouterLink, CargandoComponent, SelectorBuscableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formulario.component.html',
   styleUrl: './formulario.component.scss',

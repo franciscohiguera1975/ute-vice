@@ -186,32 +186,22 @@
 
         <div class="campo">
           <label class="campo__etiqueta" for="nueva-facultad">Facultad o direccion</label>
-          <select
-            id="nueva-facultad"
-            [ngModel]="nuevaFacultadId()"
-            [ngModelOptions]="{ standalone: true }"
-            (ngModelChange)="nuevaFacultadId.set($event)"
-          >
-            <option value="">Sin especificar</option>
-            @for (opcion of catalogos.de(TipoCatalogo.FACULTAD); track opcion.id) {
-              <option [value]="opcion.id">{{ opcion.nombre }}</option>
-            }
-          </select>
+          <ute-selector-buscable
+            idCampo="nueva-facultad"
+            [opciones]="catalogos.de(TipoCatalogo.FACULTAD)"
+            [valorId]="nuevaFacultadId()"
+            (cambio)="nuevaFacultadId.set($event ?? '')"
+          />
         </div>
 
         <div class="campo">
           <label class="campo__etiqueta" for="nueva-carrera">Carrera</label>
-          <select
-            id="nueva-carrera"
-            [ngModel]="nuevaCarreraId()"
-            [ngModelOptions]="{ standalone: true }"
-            (ngModelChange)="nuevaCarreraId.set($event)"
-          >
-            <option value="">Sin especificar</option>
-            @for (opcion of catalogos.de(TipoCatalogo.CARRERA); track opcion.id) {
-              <option [value]="opcion.id">{{ opcion.nombre }}</option>
-            }
-          </select>
+          <ute-selector-buscable
+            idCampo="nueva-carrera"
+            [opciones]="catalogos.de(TipoCatalogo.CARRERA)"
+            [valorId]="nuevaCarreraId()"
+            (cambio)="nuevaCarreraId.set($event ?? '')"
+          />
         </div>
 
         <div class="campo">

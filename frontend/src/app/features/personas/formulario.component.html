@@ -149,12 +149,12 @@
 
         <div class="campo">
           <label class="campo__etiqueta" for="facultadId">Facultad o direccion</label>
-          <select id="facultadId" formControlName="facultadId">
-            <option value="">Sin especificar</option>
-            @for (opcion of catalogos.de(TipoCatalogo.FACULTAD); track opcion.id) {
-              <option [value]="opcion.id">{{ opcion.nombre }}</option>
-            }
-          </select>
+          <ute-selector-buscable
+            idCampo="facultadId"
+            [opciones]="catalogos.de(TipoCatalogo.FACULTAD)"
+            [valorId]="formulario.controls.facultadId.value"
+            (cambio)="formulario.controls.facultadId.setValue($event ?? '')"
+          />
           @if (unidadActual()) {
             <p class="campo__ayuda">Valor anterior en el sistema: {{ unidadActual() }}</p>
           }
@@ -162,12 +162,12 @@
 
         <div class="campo">
           <label class="campo__etiqueta" for="carreraId">Carrera</label>
-          <select id="carreraId" formControlName="carreraId">
-            <option value="">Sin especificar</option>
-            @for (opcion of catalogos.de(TipoCatalogo.CARRERA); track opcion.id) {
-              <option [value]="opcion.id">{{ opcion.nombre }}</option>
-            }
-          </select>
+          <ute-selector-buscable
+            idCampo="carreraId"
+            [opciones]="catalogos.de(TipoCatalogo.CARRERA)"
+            [valorId]="formulario.controls.carreraId.value"
+            (cambio)="formulario.controls.carreraId.setValue($event ?? '')"
+          />
         </div>
 
         <div class="campo">

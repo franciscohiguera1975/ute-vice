@@ -13,6 +13,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
 import {
@@ -61,6 +62,13 @@ export class CatalogoComponent {
   private readonly repositorio = inject(RepositorioCatalogos);
   private readonly notificaciones = inject(NotificacionesService);
   protected readonly sesion = inject(SesionStore);
+  /**
+   * Cache compartida que usan los selectores de Facultad/Carrera en Personas,
+   * Tickets y Distributivo. Sin refrescarla aqui, un catalogo creado o
+   * editado en esta pantalla no aparece en esos selectores hasta recargar
+   * toda la aplicacion.
+   */
+  private readonly catalogosCompartidos = inject(CatalogosStore);
 
   /** Llega de la ruta `/catalogos/:tipo`. */
   readonly tipo = input.required<TipoCatalogo>();
@@ -224,6 +232,7 @@ export class CatalogoComponent {
           this.editando() ? 'Elemento actualizado' : 'Elemento agregado',
         );
         this.cargar();
+        this.catalogosCompartidos.cargar(true);
       },
       error: (error: ErrorApi) => {
         this.guardando.set(false);
@@ -278,6 +287,7 @@ export class CatalogoComponent {
             elemento.activo ? 'Elemento desactivado' : 'Elemento activado',
           );
           this.cargar();
+          this.catalogosCompartidos.cargar(true);
         },
         error: (error: ErrorApi) =>
           this.notificaciones.error('No fue posible cambiar el estado', error.mensaje),
@@ -293,6 +303,7 @@ export class CatalogoComponent {
         this.aEliminar.set(null);
         this.notificaciones.exito('Elemento eliminado');
         this.cargar();
+        this.catalogosCompartidos.cargar(true);
       },
       error: (error: ErrorApi) => {
         this.aEliminar.set(null);

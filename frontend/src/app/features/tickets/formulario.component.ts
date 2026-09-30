@@ -13,6 +13,7 @@ import {
   type Persona,
 } from '@domain/modelos';
 import { RepositorioPersonas, RepositorioTickets } from '@domain/puertos';
+import { SelectorBuscableComponent } from '@shared/componentes/selector-buscable.component';
 
 import { validadorCedula } from '../personas/validador-cedula';
 
@@ -22,7 +23,7 @@ const hoyISO = (): string => new Date().toISOString().slice(0, 10);
 @Component({
   selector: 'ute-formulario-ticket',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SelectorBuscableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formulario.component.html',
   styleUrl: './formulario.component.scss',
