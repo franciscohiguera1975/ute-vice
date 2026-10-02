@@ -467,6 +467,10 @@ class ResultadoImportacionSalida(EsquemaBase):
     total_filas_leidas: int
     filas_creadas: int
     filas_actualizadas: int
+    #: Filas que existian para el mismo PAO y ya no venian en el archivo: se
+    #: borraron para que el PAO quede identico al archivo. Solo se calcula
+    #: cuando se pidio actualizar las filas existentes.
+    filas_eliminadas: int
     docentes_creados: int
     docentes_existentes: int
     filas_consolidadas: int
@@ -498,6 +502,7 @@ class ResultadoImportacionSalida(EsquemaBase):
             total_filas_leidas=r.total_filas_leidas,
             filas_creadas=r.filas_creadas,
             filas_actualizadas=r.filas_actualizadas,
+            filas_eliminadas=r.filas_eliminadas,
             docentes_creados=r.docentes_creados,
             docentes_existentes=r.docentes_existentes,
             filas_consolidadas=r.filas_consolidadas,

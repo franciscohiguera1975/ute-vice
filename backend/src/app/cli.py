@@ -345,6 +345,7 @@ async def importar_distributivo() -> None:
     print(f"  filas creadas        : {resultado.filas_creadas:,}".replace(",", "."))
     if reemplazar:
         print(f"  filas actualizadas   : {resultado.filas_actualizadas:,}".replace(",", "."))
+        print(f"  filas eliminadas     : {resultado.filas_eliminadas:,}".replace(",", "."))
     print(f"  docentes nuevos      : {resultado.docentes_creados:,}".replace(",", "."))
     print(f"  docentes ya existentes: {resultado.docentes_existentes:,}".replace(",", "."))
     print(f"  titulos profesionales : {resultado.titulos_creados:,}".replace(",", "."))
@@ -647,6 +648,7 @@ async def importar_pao() -> None:
     print(f"  filas creadas        : {resultado.filas_creadas:,}".replace(",", "."))
     if reemplazar:
         print(f"  filas actualizadas   : {resultado.filas_actualizadas:,}".replace(",", "."))
+        print(f"  filas eliminadas     : {resultado.filas_eliminadas:,}".replace(",", "."))
     print(f"  docentes nuevos      : {resultado.docentes_creados:,}".replace(",", "."))
 
     if resultado.elementos_catalogo_creados:

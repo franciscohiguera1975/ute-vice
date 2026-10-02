@@ -561,6 +561,26 @@ class RepoDistributivo:
                 cambios += 1
         return (altas, cambios)
 
+    async def sincronizar_muchas(self, filas):  # type: ignore[no-untyped-def]
+        """Como `reemplazar_muchas`, y ademas borra lo que el archivo ya no trae."""
+
+        def clave(f):  # type: ignore[no-untyped-def]
+            return (f.docente_id, f.pao_id, f.carrera_id, f.sede_id)
+
+        pao_ids = {f.pao_id for f in filas}
+        claves_nuevas = {clave(f) for f in filas}
+
+        a_borrar = [
+            f.id
+            for f in self.datos.values()
+            if f.pao_id in pao_ids and clave(f) not in claves_nuevas
+        ]
+        for fila_id in a_borrar:
+            self.datos.pop(fila_id, None)
+
+        altas, cambios = await self.reemplazar_muchas(filas)
+        return (altas, cambios, len(a_borrar))
+
     async def eliminar(self, fila_id: UUID) -> None:
         self.datos.pop(fila_id, None)
 

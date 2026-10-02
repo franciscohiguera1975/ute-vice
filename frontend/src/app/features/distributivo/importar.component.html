@@ -81,8 +81,9 @@
         <span>
           <strong>Actualizar las filas que ya existan</strong>
           <span class="campo__ayuda">
-            Recomendado al recargar un periodo corregido. Sin esto, la carga rechaza
-            cada fila que ya este registrada.
+            Recomendado al recargar un periodo corregido: deja el PAO identico al
+            archivo, incluyendo borrar las filas que ya no aparecen en el. Sin esto,
+            la carga rechaza cada fila que ya este registrada.
           </span>
         </span>
       </label>
@@ -146,6 +147,15 @@
           <p class="metrica__etiqueta">Actualizadas</p>
           <p class="metrica__valor">{{ r.filasActualizadas | number }}</p>
         </article>
+        @if (r.filasEliminadas > 0) {
+          <article class="metrica">
+            <p class="metrica__etiqueta">Eliminadas</p>
+            <p class="metrica__valor">{{ r.filasEliminadas | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              Ya no estaban en el archivo
+            </p>
+          </article>
+        }
         <article class="metrica">
           <p class="metrica__etiqueta">Docentes nuevos</p>
           <p class="metrica__valor">{{ r.docentesCreados | number }}</p>

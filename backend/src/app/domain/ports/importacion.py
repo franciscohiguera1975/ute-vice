@@ -119,6 +119,9 @@ class ResultadoImportacionDistributivo:
     docentes_existentes: int = 0
     filas_creadas: int = 0
     filas_actualizadas: int = 0
+    #: Filas que existian para el mismo PAO y no venian en el archivo nuevo:
+    #: se borraron para que el PAO quede identico al archivo, no una mezcla.
+    filas_eliminadas: int = 0
     filas_consolidadas: int = 0
     elementos_catalogo_creados: dict[str, int] = field(default_factory=dict)
     titulos_creados: int = 0

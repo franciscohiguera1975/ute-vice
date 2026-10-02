@@ -754,6 +754,50 @@ class RepositorioDistributivoSQL:
 
         return (altas, cambios)
 
+    async def sincronizar_muchas(self, filas: list[FilaDistributivo]) -> tuple[int, int, int]:
+        """Como `reemplazar_muchas`, y ademas borra lo que el archivo ya no trae.
+
+        El upsert por si solo nunca borra: un docente que salio de un PAO se
+        quedaria con una fila fantasma para siempre. Aqui se calcula la clave
+        natural de cada fila del archivo nuevo y se borra, antes del upsert,
+        cualquier fila existente de esos mismos PAO cuya clave no este en ese
+        conjunto.
+
+        Las filas que si siguen existiendo no se tocan en este paso: las
+        actualiza `reemplazar_muchas` conservando su `id`, y con el sus
+        materias enlazadas. Solo se borra lo que de verdad desaparecio.
+        """
+        if not filas:
+            return (0, 0, 0)
+
+        pao_ids = {f.pao_id for f in filas}
+        claves_nuevas = {(f.docente_id, f.pao_id, f.carrera_id, f.sede_id) for f in filas}
+
+        existentes = (
+            await self._s.execute(
+                select(
+                    FilaDistributivoModel.id,
+                    FilaDistributivoModel.docente_id,
+                    FilaDistributivoModel.pao_id,
+                    FilaDistributivoModel.carrera_id,
+                    FilaDistributivoModel.sede_id,
+                ).where(FilaDistributivoModel.pao_id.in_(pao_ids))
+            )
+        ).all()
+
+        a_borrar = [
+            fila_id
+            for fila_id, docente_id, pao_id, carrera_id, sede_id in existentes
+            if (docente_id, pao_id, carrera_id, sede_id) not in claves_nuevas
+        ]
+        if a_borrar:
+            await self._s.execute(
+                delete(FilaDistributivoModel).where(FilaDistributivoModel.id.in_(a_borrar))
+            )
+
+        altas, cambios = await self.reemplazar_muchas(filas)
+        return (altas, cambios, len(a_borrar))
+
     async def actualizar(self, fila: FilaDistributivo) -> FilaDistributivo:
         modelo = await self._s.get(FilaDistributivoModel, fila.id)
         if modelo is None:

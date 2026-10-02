@@ -393,13 +393,71 @@ class TestReemplazarExistentes:
         caso = ImportarDistributivo(uow)
         resultado = await caso(
             EntradaImportacion(
-                filas=(cruda(sede="SANTO DOMINGO", horas={"Da": 10.0}),),
+                # El archivo trae las dos sedes: si solo trajera la nueva, la
+                # de QUITO se borraria por no venir en el. Ver
+                # test_borra_lo_que_el_archivo_ya_no_trae.
+                filas=(
+                    cruda(sede="QUITO", horas={"Da": 10.0}),
+                    cruda(sede="SANTO DOMINGO", horas={"Da": 10.0}),
+                ),
                 reemplazar_existentes=True,
             ),
             ContextoEjecucion.sistema(),
         )
         # Mismo docente, periodo y carrera, pero otro campus: es otra fila.
         assert resultado.filas_creadas == 1
+        assert resultado.filas_actualizadas == 1
+        assert resultado.filas_eliminadas == 0
+        assert len(uow.distributivo.datos) == 2
+
+    async def test_borra_lo_que_el_archivo_ya_no_trae(self, uow) -> None:
+        """Recargar el PAO con un archivo que ya no trae a un docente lo borra.
+
+        Sin esto, un docente que sale del PAO se queda con una fila fantasma:
+        el upsert por clave natural solo actualiza o crea, nunca borra.
+        """
+        await importar(
+            uow,
+            [
+                cruda(numero=2, identificacion="1710034065", carrera="MEDICINA"),
+                cruda(numero=3, identificacion="1720000000", carrera="ODONTOLOGIA"),
+            ],
+        )
+        assert len(uow.distributivo.datos) == 2
+
+        caso = ImportarDistributivo(uow)
+        resultado = await caso(
+            EntradaImportacion(
+                filas=(cruda(numero=2, identificacion="1710034065", carrera="MEDICINA"),),
+                reemplazar_existentes=True,
+            ),
+            ContextoEjecucion.sistema(),
+        )
+
+        assert resultado.filas_eliminadas == 1
+        assert resultado.filas_actualizadas == 1
+        assert len(uow.distributivo.datos) == 1
+        restante = next(iter(uow.distributivo.datos.values()))
+        assert restante.carrera_id is not None
+
+    async def test_no_toca_otros_pao(self, uow) -> None:
+        """El borrado es por PAO: recargar uno no toca las filas de otro."""
+        await importar(uow, [cruda(pao="2025-1", horas={"Da": 5.0})])
+        await importar(uow, [cruda(pao="2026-1", horas={"Da": 5.0})])
+        assert len(uow.distributivo.datos) == 2
+
+        caso = ImportarDistributivo(uow)
+        resultado = await caso(
+            EntradaImportacion(
+                filas=(cruda(pao="2026-1", carrera="ODONTOLOGIA", horas={"Da": 5.0}),),
+                reemplazar_existentes=True,
+            ),
+            ContextoEjecucion.sistema(),
+        )
+
+        # La fila de 2026-1 (MEDICINA) ya no viene: se borra. La de 2025-1 no
+        # se toca porque ese PAO no esta en el archivo que se esta cargando.
+        assert resultado.filas_eliminadas == 1
         assert len(uow.distributivo.datos) == 2
 
 

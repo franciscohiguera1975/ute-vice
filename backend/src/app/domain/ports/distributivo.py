@@ -261,6 +261,15 @@ class RepositorioDistributivo(Protocol):
         """Inserta o actualiza segun la clave natural. Devuelve `(altas, cambios)`."""
         ...
 
+    async def sincronizar_muchas(self, filas: list[FilaDistributivo]) -> tuple[int, int, int]:
+        """Como `reemplazar_muchas`, y ademas borra lo que el archivo ya no trae.
+
+        Deja el conjunto de filas de cada PAO tocado identico al archivo:
+        borra las filas de esos mismos PAO que no aparecen entre `filas` antes
+        de hacer el upsert. Devuelve `(altas, cambios, eliminadas)`.
+        """
+        ...
+
     async def actualizar(self, fila: FilaDistributivo) -> FilaDistributivo: ...
 
     async def eliminar(self, fila_id: UUID) -> None: ...

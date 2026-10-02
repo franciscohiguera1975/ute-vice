@@ -121,11 +121,14 @@ class EntradaImportacion:
     tamano_lote: int = 1000
 
     reemplazar_existentes: bool = False
-    """Actualiza la fila que ya tenga la misma clave natural en vez de fallar.
+    """Deja cada PAO tocado identico a lo que trae el archivo.
 
-    Es lo que hace falta al recargar un periodo corregido: sin esto, la carga
-    aborta en la primera fila que ya existe y hay que borrar el periodo entero
-    antes, perdiendo de paso las materias enlazadas.
+    La fila que ya tenga la misma clave natural se actualiza en vez de fallar
+    —conservando su `id`, y con el sus materias enlazadas—, y la que existia
+    para ese PAO y ya no aparece en el archivo se borra. Es lo que hace falta
+    al recargar un periodo corregido: sin esto, la carga aborta en la primera
+    fila que ya existe, y aun activandolo un docente que salio del PAO se
+    quedaria con una fila fantasma si no se borrara lo que ya no trae.
     """
 
 
@@ -504,9 +507,12 @@ class ImportarDistributivo(CasoDeUso[EntradaImportacion, ResultadoImportacionDis
         resultado.elementos_catalogo_creados = dict(catalogos.creados)
 
         if entrada.reemplazar_existentes:
-            altas, cambios = await self._uow.distributivo.reemplazar_muchas(construidas)
+            altas, cambios, eliminadas = await self._uow.distributivo.sincronizar_muchas(
+                construidas
+            )
             resultado.filas_creadas = altas
             resultado.filas_actualizadas = cambios
+            resultado.filas_eliminadas = eliminadas
             return
 
         for inicio in range(0, len(construidas), entrada.tamano_lote):
