@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Float, Select, cast, func, or_, select
+from sqlalchemy import Float, Select, case, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EstadoValidacion, TipoFlujoContrato
@@ -62,6 +62,22 @@ _DESGLOSES: dict[str, tuple[Any, Any]] = {
 
 def _cuenta_si(condicion: Any) -> Any:
     return func.count().filter(condicion)
+
+
+def _rango_estado(columna: Any) -> Any:
+    """Prioridad de `estado_validacion`, del mejor al peor.
+
+    Usado para que un docente con varias carreras en la misma facultad
+    represente ahi su mejor estado: si una esta validada, cuenta como
+    validado aunque otra siga pendiente.
+    """
+    return case(
+        (columna == EstadoValidacion.OK.value, 1),
+        (columna == EstadoValidacion.OK_EXCEPCION.value, 2),
+        (columna == EstadoValidacion.PENDIENTE.value, 3),
+        (columna == EstadoValidacion.ERROR.value, 4),
+        else_=5,
+    )
 
 
 def _ordenar_estado_lote(estados: Sequence[str], orden: Sequence[str]) -> tuple[str, ...]:
@@ -365,8 +381,8 @@ class RepositorioAnaliticaDistributivoSQL:
                 FacultadModel.nombre.label("nombre"),
                 distintos(en_a).label("docentes_a"),
                 distintos(en_b).label("docentes_b"),
-                _cuenta_si(en_b & estado.in_(_APROBADOS)).label("filas_aprobadas_b"),
-                _cuenta_si(en_b & estado.is_not(None)).label("filas_evaluadas_b"),
+                distintos(en_b & estado.in_(_APROBADOS)).label("filas_aprobadas_b"),
+                distintos(en_b & estado.is_not(None)).label("filas_evaluadas_b"),
             )
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
@@ -398,23 +414,47 @@ class RepositorioAnaliticaDistributivoSQL:
             return []
 
         estado = FilaDistributivoModel.estado_validacion
+        docente = FilaDistributivoModel.docente_id
         condicion: Any = FilaDistributivoModel.pao_id.in_(list(paos))
         if dedicacion_ids:
             condicion = condicion & FilaDistributivoModel.dedicacion_id.in_(list(dedicacion_ids))
+
+        # Un docente con dos o mas carreras en la misma facultad no debe
+        # contarse dos veces: se queda con su mejor estado de validacion ahi
+        # (`_rango_estado`), y el resto de sus filas en esa facultad se
+        # descartan con el `where fila_num == 1` de abajo.
+        mejor_fila = (
+            select(
+                FilaDistributivoModel.facultad_id.label("facultad_id"),
+                estado.label("estado"),
+                func.row_number()
+                .over(
+                    partition_by=(FilaDistributivoModel.facultad_id, docente),
+                    order_by=_rango_estado(estado),
+                )
+                .label("fila_num"),
+            )
+            .where(condicion)
+            .subquery()
+        )
 
         consulta = (
             select(
                 FacultadModel.codigo.label("codigo"),
                 FacultadModel.nombre.label("nombre"),
-                _cuenta_si(estado == EstadoValidacion.OK.value).label("ok"),
-                _cuenta_si(estado == EstadoValidacion.OK_EXCEPCION.value).label("ok_excepcion"),
-                _cuenta_si(estado == EstadoValidacion.PENDIENTE.value).label("pendiente"),
-                _cuenta_si(estado == EstadoValidacion.ERROR.value).label("con_error"),
-                _cuenta_si(estado.is_(None)).label("sin_estado"),
+                _cuenta_si(mejor_fila.c.estado == EstadoValidacion.OK.value).label("ok"),
+                _cuenta_si(mejor_fila.c.estado == EstadoValidacion.OK_EXCEPCION.value).label(
+                    "ok_excepcion"
+                ),
+                _cuenta_si(mejor_fila.c.estado == EstadoValidacion.PENDIENTE.value).label(
+                    "pendiente"
+                ),
+                _cuenta_si(mejor_fila.c.estado == EstadoValidacion.ERROR.value).label("con_error"),
+                _cuenta_si(mejor_fila.c.estado.is_(None)).label("sin_estado"),
             )
-            .select_from(FilaDistributivoModel)
-            .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)
-            .where(condicion)
+            .select_from(mejor_fila)
+            .join(FacultadModel, FacultadModel.id == mejor_fila.c.facultad_id)
+            .where(mejor_fila.c.fila_num == 1)
             .where(FacultadModel.es_direccion.is_(False))
             .group_by(FacultadModel.codigo, FacultadModel.nombre)
             .order_by(FacultadModel.codigo)
@@ -612,7 +652,7 @@ class RepositorioAnaliticaDistributivoSQL:
                 FacultadModel.codigo.label("codigo"),
                 FacultadModel.nombre.label("nombre"),
                 campo.label("estado"),
-                func.count().label("valor"),
+                func.count(func.distinct(FilaDistributivoModel.docente_id)).label("valor"),
             )
             .select_from(FilaDistributivoModel)
             .join(FacultadModel, FacultadModel.id == FilaDistributivoModel.facultad_id)

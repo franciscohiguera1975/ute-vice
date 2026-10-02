@@ -514,7 +514,7 @@ async def horas_por_docentes_del_distributivo(
 @router.get(
     "/distributivo/estado-lote",
     response_model=EstadoLotePorFacultadSalida,
-    summary="Filas por facultad y estado de lote o proceso",
+    summary="Docentes por facultad y estado de lote o proceso",
     dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
 )
 async def estado_lote_por_facultad(
@@ -537,7 +537,9 @@ async def estado_lote_por_facultad(
 
     Es el estado de lote o proceso del sistema academico —«Aprobado», «En
     revision por DGA»…—, no la validacion academica de la carga horaria que
-    cubre `/distributivo/tablero`. Solo cuenta filas que traen ese dato.
+    cubre `/distributivo/tablero`. Cuenta docentes distintos con ese dato, no
+    filas: un docente con dos o mas carreras en la misma facultad cuenta una
+    sola vez.
 
     Hay tres flujos de aprobacion distintos que comparten la misma columna de
     estado —normal, contratacion (pasa ademas por Canciller y Rector) y

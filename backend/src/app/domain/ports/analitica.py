@@ -316,8 +316,12 @@ class AvanceDeFacultad:
     docentes_a: int
     docentes_b: int
     filas_aprobadas_b: int
+    """Docentes distintos del grupo 2 con alguna carga aprobada. Pese al
+    nombre, no es una cuenta de filas: un docente con dos o mas carreras en la
+    misma facultad cuenta una sola vez."""
     filas_evaluadas_b: int
-    """Filas del grupo 2 que si traen estado. Es el denominador del porcentaje."""
+    """Docentes distintos del grupo 2 que si traen estado. Es el denominador
+    del porcentaje; misma deduplicacion que `filas_aprobadas_b`."""
 
     @property
     def porcentaje_aprobado_b(self) -> float:
@@ -328,7 +332,13 @@ class AvanceDeFacultad:
 
 @dataclass(frozen=True, slots=True)
 class EstadosDeFacultad:
-    """Las filas de una facultad repartidas por estado de validacion."""
+    """Los docentes distintos de una facultad, repartidos por su mejor estado
+    de validacion.
+
+    Un docente con dos o mas carreras en la misma facultad cuenta una sola
+    vez, en la casilla de su mejor estado: si alguna carrera esta validada
+    cuenta como validado, aunque otra siga pendiente o con error.
+    """
 
     codigo: str
     nombre: str
@@ -373,13 +383,14 @@ class ResumenComparativo:
 
 @dataclass(frozen=True, slots=True)
 class FacultadPorEstadoLote:
-    """Una facultad con sus filas repartidas por estado de lote/proceso."""
+    """Una facultad con sus docentes repartidos por estado de lote/proceso."""
 
     codigo: str
     nombre: str
     conteos: dict[str, int] = field(default_factory=dict)
-    """Estado -> cantidad de filas. Solo trae los estados que esa facultad
-    tiene; los demas se asumen en cero."""
+    """Estado -> cantidad de docentes distintos. Un docente con dos o mas
+    carreras en la misma facultad cuenta una sola vez. Solo trae los estados
+    que esa facultad tiene; los demas se asumen en cero."""
 
     @property
     def total(self) -> int:
@@ -388,10 +399,12 @@ class FacultadPorEstadoLote:
 
 @dataclass(frozen=True, slots=True)
 class EstadoLotePorFacultad:
-    """Filas por facultad y estado de lote/proceso, acotadas a un flujo.
+    """Docentes por facultad y estado de lote/proceso, acotados a un flujo.
 
-    Solo cuenta filas con el dato informado: es el estado de la contratacion,
-    no de la validacion academica, y la mayoria de filas todavia no lo tienen.
+    Cuenta docentes distintos con el dato informado, no filas: es el estado de
+    la contratacion, no de la validacion academica, y la mayoria de filas
+    todavia no lo tienen. Un docente con dos o mas carreras en la misma
+    facultad cuenta una sola vez.
     Ademas se acotan al `TipoFlujoContrato` que se pidio: los tres comparten
     la misma columna de estado, pero son procesos distintos —ver
     `_condicion_flujo` en el repositorio— y mezclarlos en una sola tabla

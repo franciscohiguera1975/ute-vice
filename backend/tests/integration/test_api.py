@@ -708,6 +708,89 @@ class TestResumenesDelDistributivo:
         assert estados[0]["evaluadas"] == 1
         assert estados[0]["porcentaje_aprobado"] == 0.0
 
+    async def test_el_mejor_estado_de_varias_carreras_representa_al_docente(
+        self, sembrado, cabeceras_admin
+    ) -> None:
+        """Un docente con dos carreras en la misma facultad, una validada y
+        otra pendiente, cuenta una sola vez: en la casilla de la mejor.
+
+        Si se repartiera entre las dos casillas, el total de la facultad
+        duplicaria a ese docente — el mismo bug que `avance_por_facultad` y
+        `estado_lote_por_facultad` ya evitan contando docentes distintos.
+        """
+        _, cliente = sembrado
+        from io import BytesIO
+
+        from openpyxl import Workbook
+
+        cabecera = [
+            "Identificación",
+            "Apellidos y Nombres",
+            "Sede",
+            "Nivel",
+            "Facultad",
+            "Carrera/Programa",
+            "Modalidad",
+            "Da",
+            "Ga",
+            "Titularidad",
+            "Categoría",
+            "Dedicación",
+            "Relación Laboral",
+            "Estado de la Validación",
+            "N.º Semanas",
+            "Fase",
+            "Tutores Posgrado",
+            "Tutores Medicina",
+        ]
+
+        def fila(carrera: str, estado: str) -> list:
+            return [
+                CEDULA,
+                "YEPEZ ANA",
+                "SEDE QUITO",
+                "GRADO",
+                "ARQUITECTURA Y URBANISMO",
+                carrera,
+                "PRESENCIAL",
+                20,
+                4,
+                "NO TITULAR",
+                "AUXILIAR",
+                "TIEMPO COMPLETO",
+                "Dependencia Laboral",
+                estado,
+                16,
+                "Planificación",
+                "No",
+                "No",
+            ]
+
+        libro = Workbook()
+        hoja = libro.active
+        hoja.append(cabecera)
+        hoja.append(fila("ARQUITECTURA", "Validación Pendiente"))
+        hoja.append(fila("DISEÑO", "OK"))
+        memoria = BytesIO()
+        libro.save(memoria)
+
+        await cliente.post(
+            "/api/v1/distributivo/importaciones/pao",
+            headers=cabeceras_admin,
+            files={"archivo": ("PAO_2026-2.xlsx", memoria.getvalue())},
+            data={"semestre": "2026-2", "actualizar_existentes": "true"},
+        )
+
+        cuerpo = (
+            await cliente.get("/api/v1/distributivo/resumenes", headers=cabeceras_admin)
+        ).json()
+
+        estados = cuerpo["estados_a"] or cuerpo["estados_b"]
+        fau = next(e for e in estados if e["codigo"] == "FAU")
+        assert fau["ok"] == 1
+        assert fau["pendiente"] == 0
+        assert fau["total"] == 1
+
     async def test_acepta_los_grupos_que_se_le_indiquen(self, sembrado, cabeceras_admin) -> None:
         _, cliente = sembrado
         await self._cargar(cliente, cabeceras_admin, "2025-2")
