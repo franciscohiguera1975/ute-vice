@@ -29,9 +29,7 @@ async def guardar_imagen(archivo: UploadFile, settings: TicketsSettings) -> str:
     """Valida y guarda la imagen. Devuelve el nombre generado para servirla despues."""
     extension = _TIPOS_PERMITIDOS.get(archivo.content_type or "")
     if extension is None:
-        raise ErrorValidacion(
-            "Solo se admiten imagenes PNG, JPEG, WEBP o GIF", campo="archivo"
-        )
+        raise ErrorValidacion("Solo se admiten imagenes PNG, JPEG, WEBP o GIF", campo="archivo")
 
     contenido = await archivo.read()
     limite_bytes = settings.max_imagen_mb * 1024 * 1024
