@@ -1,0 +1,88 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Estadisticas de soporte</h1>
+    <p class="texto-sm texto-suave">
+      @if (sesion.puede(Permiso.TICKETS_ADMINISTRAR)) {
+        Situacion de todos los tickets registrados
+      } @else {
+        Tus soportes realizados
+      }
+    </p>
+  </div>
+
+  <div class="fila hueco-sm no-imprimir">
+    <div class="periodo" role="group" aria-label="Ventana de la tendencia diaria">
+      @for (opcion of opcionesDias; track opcion) {
+        <button
+          type="button"
+          class="periodo__opcion"
+          [class.periodo__opcion--activa]="dias() === opcion"
+          (click)="cambiarPeriodo(opcion)"
+        >
+          {{ opcion }}d
+        </button>
+      }
+    </div>
+    <button type="button" class="btn btn--secundario btn--sm" (click)="cargar()">
+      Actualizar
+    </button>
+  </div>
+</header>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando estadisticas…" />
+} @else if (datos(); as d) {
+  <section class="rejilla rejilla--4 seccion" aria-label="Indicadores principales">
+    <article class="metrica">
+      <p class="metrica__etiqueta">Total de tickets</p>
+      <p class="metrica__valor">{{ d.total | number }}</p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Abiertos</p>
+      <p class="metrica__valor">{{ d.totalAbiertos | number }}</p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Vencidos</p>
+      <p class="metrica__valor" [class.metrica__valor--alerta]="d.totalVencidos > 0">
+        {{ d.totalVencidos | number }}
+      </p>
+    </article>
+
+    <article class="metrica">
+      <p class="metrica__etiqueta">Tiempo promedio de resolucion</p>
+      <p class="metrica__valor">{{ tiempoPromedio() }}</p>
+    </article>
+  </section>
+
+  <div class="rejilla rejilla--2 seccion">
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Por estado</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-anillo [datos]="d.porEstado" titulo="Tickets por estado" unidad="tickets" />
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Por prioridad</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-grafico-barras [datos]="d.porPrioridad" titulo="Tickets por prioridad" />
+      </div>
+    </section>
+  </div>
+
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Creados por dia</h2>
+      <span class="texto-xs texto-tenue">ultimos {{ dias() }} dias</span>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <ute-grafico-linea [puntos]="d.creadosPorDia" titulo="Tickets creados por dia" />
+    </div>
+  </section>
+}

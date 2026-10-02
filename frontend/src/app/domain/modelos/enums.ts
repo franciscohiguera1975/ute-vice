@@ -64,6 +64,7 @@ export const Permiso = {
 
   TICKETS_LEER: 'tickets:leer',
   TICKETS_ESCRIBIR: 'tickets:escribir',
+  TICKETS_ADMINISTRAR: 'tickets:administrar',
 } as const;
 export type Permiso = (typeof Permiso)[keyof typeof Permiso];
 
@@ -270,4 +271,34 @@ export const TONO_ESTADO_TICKET: Record<EstadoTicket, Tono> = {
   EN_ESPERA: 'aviso',
   EJECUTADO: 'exito',
   CANCELADO: 'neutro',
+};
+
+export const PrioridadTicket = {
+  BAJA: 'BAJA',
+  MEDIA: 'MEDIA',
+  ALTA: 'ALTA',
+  URGENTE: 'URGENTE',
+} as const;
+export type PrioridadTicket = (typeof PrioridadTicket)[keyof typeof PrioridadTicket];
+
+/** Las prioridades en orden creciente, para poblar el selector de la interfaz. */
+export const PRIORIDADES_TICKET: readonly PrioridadTicket[] = [
+  PrioridadTicket.BAJA,
+  PrioridadTicket.MEDIA,
+  PrioridadTicket.ALTA,
+  PrioridadTicket.URGENTE,
+];
+
+export const ETIQUETAS_PRIORIDAD_TICKET: Record<PrioridadTicket, string> = {
+  BAJA: 'Baja',
+  MEDIA: 'Media',
+  ALTA: 'Alta',
+  URGENTE: 'Urgente',
+};
+
+export const TONO_PRIORIDAD_TICKET: Record<PrioridadTicket, Tono> = {
+  BAJA: 'neutro',
+  MEDIA: 'info',
+  ALTA: 'aviso',
+  URGENTE: 'error',
 };

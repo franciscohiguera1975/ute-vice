@@ -2,23 +2,33 @@ import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angu
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
+import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import { SesionStore } from '@core/sesion.store';
 import {
   ESTADOS_TICKET,
   ETIQUETAS_ESTADO_TICKET,
+  ETIQUETAS_PRIORIDAD_TICKET,
   Permiso,
+  PRIORIDADES_TICKET,
+  TipoCatalogo,
   TONO_ESTADO_TICKET,
+  TONO_PRIORIDAD_TICKET,
   type ErrorApi,
   type EstadoTicket,
+  type PrioridadTicket,
   type Responsable,
   type TicketDetalle,
 } from '@domain/modelos';
 import { RepositorioTickets } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
+import { EditorEnriquecidoComponent } from '@shared/componentes/editor-enriquecido.component';
 import { InsigniaComponent } from '@shared/componentes/insignia.component';
+import { SelectorBuscableComponent } from '@shared/componentes/selector-buscable.component';
 import { PermisoDirective } from '@shared/directivas/permiso.directive';
 import { DesdeHacePipe, FechaLocalPipe } from '@shared/pipes/formato.pipe';
+
+import { sinContenido } from './html-sin-contenido';
 
 @Component({
   selector: 'ute-detalle-ticket',
@@ -28,6 +38,8 @@ import { DesdeHacePipe, FechaLocalPipe } from '@shared/pipes/formato.pipe';
     RouterLink,
     CargandoComponent,
     InsigniaComponent,
+    SelectorBuscableComponent,
+    EditorEnriquecidoComponent,
     PermisoDirective,
     DesdeHacePipe,
     FechaLocalPipe,
@@ -41,14 +53,19 @@ export class DetalleTicketComponent {
   private readonly notificaciones = inject(NotificacionesService);
   private readonly router = inject(Router);
   protected readonly sesion = inject(SesionStore);
+  protected readonly catalogos = inject(CatalogosStore);
 
   /** Enlazado desde la ruta gracias a `withComponentInputBinding()`. */
   readonly id = input.required<string>();
 
   protected readonly Permiso = Permiso;
+  protected readonly TipoCatalogo = TipoCatalogo;
   protected readonly ETIQUETAS_ESTADO_TICKET = ETIQUETAS_ESTADO_TICKET;
   protected readonly TONO_ESTADO_TICKET = TONO_ESTADO_TICKET;
+  protected readonly ETIQUETAS_PRIORIDAD_TICKET = ETIQUETAS_PRIORIDAD_TICKET;
+  protected readonly TONO_PRIORIDAD_TICKET = TONO_PRIORIDAD_TICKET;
   protected readonly estados = ESTADOS_TICKET;
+  protected readonly prioridades = PRIORIDADES_TICKET;
 
   protected readonly detalle = signal<TicketDetalle | null>(null);
   protected readonly cargando = signal(true);
@@ -56,6 +73,12 @@ export class DetalleTicketComponent {
   protected readonly asignando = signal(false);
   protected readonly hoy = new Date().toISOString().slice(0, 10);
   protected readonly guardandoFecha = signal(false);
+
+  // --- Triage: prioridad, categoria y fecha limite se guardan juntos ---
+  protected readonly prioridadEdit = signal<PrioridadTicket | ''>('');
+  protected readonly categoriaIdEdit = signal('');
+  protected readonly fechaLimiteEdit = signal('');
+  protected readonly guardandoDetalles = signal(false);
 
   // --- Nuevo seguimiento ---
   protected readonly nuevoComentario = signal('');
@@ -67,6 +90,7 @@ export class DetalleTicketComponent {
     // enrutador enlaza las entradas antes de crear el componente.
     queueMicrotask(() => this.cargar());
 
+    this.catalogos.cargar();
     this.repositorio.responsables().subscribe({
       next: (lista) => this.responsables.set(lista),
       error: () => this.notificaciones.aviso('No fue posible cargar la lista de responsables'),
@@ -79,6 +103,9 @@ export class DetalleTicketComponent {
       next: (detalle) => {
         this.detalle.set(detalle);
         this.cargando.set(false);
+        this.prioridadEdit.set(detalle.ticket.prioridad ?? '');
+        this.categoriaIdEdit.set(detalle.ticket.categoriaId ?? '');
+        this.fechaLimiteEdit.set(detalle.ticket.fechaLimite ?? '');
       },
       error: (error: ErrorApi) => {
         this.cargando.set(false);
@@ -86,6 +113,38 @@ export class DetalleTicketComponent {
         void this.router.navigate(['/tickets']);
       },
     });
+  }
+
+  /** `true` si el triage cambio frente a lo ya guardado: habilita el boton. */
+  protected hayCambiosDetalles(): boolean {
+    const ticket = this.detalle()?.ticket;
+    if (!ticket) return false;
+    return (
+      (ticket.prioridad ?? '') !== this.prioridadEdit() ||
+      (ticket.categoriaId ?? '') !== this.categoriaIdEdit() ||
+      (ticket.fechaLimite ?? '') !== this.fechaLimiteEdit()
+    );
+  }
+
+  protected guardarDetalles(): void {
+    this.guardandoDetalles.set(true);
+    this.repositorio
+      .actualizarDetalles(this.id(), {
+        prioridad: this.prioridadEdit() || null,
+        categoriaId: this.categoriaIdEdit() || null,
+        fechaLimite: this.fechaLimiteEdit() || null,
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoDetalles.set(false);
+          this.notificaciones.exito('Detalles actualizados');
+          this.cargar();
+        },
+        error: (error: ErrorApi) => {
+          this.guardandoDetalles.set(false);
+          this.notificaciones.error('No fue posible actualizar los detalles', error.mensaje);
+        },
+      });
   }
 
   protected asignar(usuarioId: string): void {
@@ -122,7 +181,7 @@ export class DetalleTicketComponent {
   }
 
   protected agregarSeguimiento(): void {
-    if (!this.nuevoComentario().trim()) {
+    if (sinContenido(this.nuevoComentario())) {
       this.notificaciones.aviso('Escriba un comentario');
       return;
     }
@@ -130,7 +189,7 @@ export class DetalleTicketComponent {
     this.enviandoSeguimiento.set(true);
     this.repositorio
       .agregarSeguimiento(this.id(), {
-        comentario: this.nuevoComentario().trim(),
+        comentario: this.nuevoComentario(),
         estadoNuevo: this.nuevoEstado() || null,
       })
       .subscribe({

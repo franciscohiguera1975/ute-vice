@@ -38,6 +38,17 @@
       }
     </select>
 
+    <select
+      aria-label="Filtrar por prioridad"
+      [ngModel]="filtro().prioridad ?? ''"
+      (ngModelChange)="aplicarFiltro({ prioridad: $event || undefined })"
+    >
+      <option value="">Toda prioridad</option>
+      @for (prioridad of prioridades; track prioridad) {
+        <option [value]="prioridad">{{ ETIQUETAS_PRIORIDAD_TICKET[prioridad] }}</option>
+      }
+    </select>
+
     <label class="casilla">
       <input
         type="checkbox"
@@ -83,6 +94,7 @@
             <th>Titulo</th>
             <th>Solicitante</th>
             <th>Estado</th>
+            <th>Prioridad</th>
             <th>Responsable</th>
             <th>Creado</th>
           </tr>
@@ -92,6 +104,9 @@
             <tr (click)="abrir(ticket)">
               <td>
                 <span class="negrita">{{ ticket.titulo }}</span>
+                @if (ticket.vencido) {
+                  <ute-insignia texto="Vencido" tono="error" />
+                }
               </td>
               <td class="texto-sm texto-suave">
                 {{ ticket.solicitanteNombre }}
@@ -105,6 +120,16 @@
                   [texto]="ETIQUETAS_ESTADO_TICKET[ticket.estado]"
                   [tono]="TONO_ESTADO_TICKET[ticket.estado]"
                 />
+              </td>
+              <td>
+                @if (ticket.prioridad) {
+                  <ute-insignia
+                    [texto]="ETIQUETAS_PRIORIDAD_TICKET[ticket.prioridad]"
+                    [tono]="TONO_PRIORIDAD_TICKET[ticket.prioridad]"
+                  />
+                } @else {
+                  <span class="texto-tenue">—</span>
+                }
               </td>
               <td class="texto-sm texto-suave">{{ ticket.asignadoANombre || '— sin asignar —' }}</td>
               <td class="texto-sm texto-suave">{{ ticket.creadoEn | desdeHace }}</td>

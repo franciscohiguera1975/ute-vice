@@ -17,12 +17,14 @@ import type {
   CambiosTitulo,
   CambiosUsuario,
   ConsultaLog,
+  DatosDetallesTicket,
   DatosJob,
   DatosPersona,
   DatosSeguimiento,
   DatosTicket,
   DatosTitulo,
   DatosUsuario,
+  EstadisticasTickets,
   EstadoPlanificador,
   FilaImportacion,
   FiltroLogs,
@@ -352,6 +354,18 @@ export class TicketsHttp extends RepositorioTickets {
 
   cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket> {
     return this.api.patch<Ticket>(`/tickets/${id}/fecha-solicitud`, { fechaSolicitud });
+  }
+
+  actualizarDetalles(id: string, datos: DatosDetallesTicket): Observable<Ticket> {
+    return this.api.patch<Ticket>(`/tickets/${id}/detalles`, datos);
+  }
+
+  estadisticas(dias?: number): Observable<EstadisticasTickets> {
+    return this.api.get<EstadisticasTickets>('/tickets/estadisticas', dias ? { dias } : {});
+  }
+
+  subirImagen(archivo: File): Observable<{ url: string }> {
+    return this.api.subir<{ url: string }>('/tickets/imagenes', archivo, {});
   }
 
   responsables(): Observable<readonly Responsable[]> {

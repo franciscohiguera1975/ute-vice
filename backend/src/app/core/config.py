@@ -254,6 +254,17 @@ class ReportSettings(BaseModel):
     institution_unit: str = "Vicerrectorado"
 
 
+class TicketsSettings(BaseModel):
+    """Imagenes insertadas desde el editor enriquecido de un ticket.
+
+    No es un sistema de adjuntos: solo guarda lo que el boton de imagen del
+    editor sube, para no incrustar base64 en la columna de descripcion.
+    """
+
+    imagenes_dir: Path = Path("/app/storage/tickets/imagenes")
+    max_imagen_mb: int = 5
+
+
 class SecuritySettings(BaseModel):
     password_min_length: int = Field(default=10, ge=8, le=128)
     max_failed_logins: int = Field(default=5, ge=1, le=50)
@@ -306,6 +317,7 @@ class Settings(BaseSettings):
     senescyt: SenescytSettings = Field(default_factory=SenescytSettings)
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     reports: ReportSettings = Field(default_factory=ReportSettings)
+    tickets: TicketsSettings = Field(default_factory=TicketsSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
 
     @field_validator("cors_origins", mode="before")
@@ -468,6 +480,10 @@ def _build_settings() -> Settings:
         reports=ReportSettings(
             output_dir=Path(get("REPORTS_OUTPUT_DIR", "/app/storage/reports")),
             max_rows=as_int("REPORTS_MAX_ROWS", 100_000),
+        ),
+        tickets=TicketsSettings(
+            imagenes_dir=Path(get("TICKETS_IMAGENES_DIR", "/app/storage/tickets/imagenes")),
+            max_imagen_mb=as_int("TICKETS_MAX_IMAGEN_MB", 5),
         ),
         security=SecuritySettings(
             password_min_length=as_int("PASSWORD_MIN_LENGTH", 10),

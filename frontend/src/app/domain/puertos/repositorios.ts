@@ -20,12 +20,14 @@ import type {
   CambiosTitulo,
   CambiosUsuario,
   ConsultaLog,
+  DatosDetallesTicket,
   DatosJob,
   DatosPersona,
   DatosSeguimiento,
   DatosTicket,
   DatosTitulo,
   DatosUsuario,
+  EstadisticasTickets,
   EstadoPlanificador,
   FilaImportacion,
   FiltroLogs,
@@ -177,5 +179,8 @@ export abstract class RepositorioTickets {
   ): Observable<SeguimientoTicket>;
   abstract asignar(id: string, usuarioId: string | null): Observable<Ticket>;
   abstract cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket>;
+  abstract actualizarDetalles(id: string, datos: DatosDetallesTicket): Observable<Ticket>;
+  abstract estadisticas(dias?: number): Observable<EstadisticasTickets>;
+  abstract subirImagen(archivo: File): Observable<{ url: string }>;
   abstract responsables(): Observable<readonly Responsable[]>;
 }

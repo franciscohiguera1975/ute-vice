@@ -8,8 +8,8 @@ import type { Conteo } from './entidades';
 // ---------------------------------------------------------------------------
 
 /**
- * Los doce catalogos. El valor es el segmento de URL de su API, igual que en el
- * backend: `/api/v1/catalogos/carreras`.
+ * Los trece catalogos. El valor es el segmento de URL de su API, igual que en
+ * el backend: `/api/v1/catalogos/carreras`.
  */
 export const TipoCatalogo = {
   PAO: 'paos',
@@ -24,6 +24,7 @@ export const TipoCatalogo = {
   TIPO_TITULO: 'tipos-titulo',
   GENERO: 'generos',
   ASIGNATURA: 'asignaturas',
+  CATEGORIA_TICKET: 'categorias-ticket',
 } as const;
 export type TipoCatalogo = (typeof TipoCatalogo)[keyof typeof TipoCatalogo];
 
@@ -439,6 +440,9 @@ export interface ResultadoCargaPao {
   readonly totalFilasLeidas: number;
   readonly filasCreadas: number;
   readonly filasActualizadas: number;
+  /** Filas que existian para el mismo PAO y ya no venian en el archivo: se
+   *  borraron para que el PAO quede identico al archivo. */
+  readonly filasEliminadas: number;
   readonly docentesCreados: number;
   readonly docentesExistentes: number;
   readonly filasConsolidadas: number;

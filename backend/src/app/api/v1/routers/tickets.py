@@ -5,13 +5,17 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
-from app.api.dependencias import ContextoDep, UowDep, requiere
+from app.api.dependencias import ContextoDep, SettingsDep, UowDep, requiere
 from app.api.esquemas.comunes import ParametrosPaginacion, RespuestaPaginada
 from app.api.esquemas.tickets import (
     AsignarTicketEntrada,
+    DetallesTicketEntrada,
+    EstadisticasTicketsSalida,
     FechaSolicitudEntrada,
+    ImagenSubidaSalida,
     ResponsableSalida,
     SeguimientoCrear,
     SeguimientoSalida,
@@ -20,21 +24,27 @@ from app.api.esquemas.tickets import (
     TicketSalida,
 )
 from app.application.casos_uso.tickets import (
+    ActualizarDetallesTicket,
     AgregarSeguimiento,
     AsignarTicket,
     CambiarFechaSolicitud,
     CrearTicket,
+    EntradaActualizarDetallesTicket,
     EntradaAgregarSeguimiento,
     EntradaAsignarTicket,
     EntradaCambiarFechaSolicitud,
     EntradaCrearTicket,
+    EntradaEstadisticasTickets,
     EntradaListarTickets,
     ListarResponsables,
     ListarTickets,
+    ObtenerEstadisticasTickets,
     ObtenerTicket,
 )
-from app.domain.enums import EstadoTicket, Permiso
+from app.domain.enums import EstadoTicket, Permiso, PrioridadTicket
+from app.domain.errors import NoEncontrado
 from app.domain.ports.tickets import FiltroTickets
+from app.infrastructure.almacenamiento.imagenes_editor import guardar_imagen, resolver_imagen
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
@@ -53,6 +63,8 @@ async def listar(
     estado: EstadoTicket | None = None,
     solicitante_id: UUID | None = None,
     asignado_a: UUID | None = None,
+    prioridad: PrioridadTicket | None = None,
+    categoria_id: UUID | None = None,
 ) -> RespuestaPaginada[TicketSalida]:
     caso = ListarTickets(uow)
     pagina = await caso(
@@ -62,12 +74,30 @@ async def listar(
                 estado=estado,
                 solicitante_id=solicitante_id,
                 asignado_a=asignado_a,
+                prioridad=prioridad,
+                categoria_id=categoria_id,
             ),
             paginacion=paginacion.a_dominio(),
         ),
         contexto,
     )
     return RespuestaPaginada.desde(pagina, [TicketSalida.desde(v) for v in pagina.items])
+
+
+@router.get(
+    "/estadisticas",
+    response_model=EstadisticasTicketsSalida,
+    summary="Metricas de tickets para el dashboard de soporte",
+    dependencies=[requiere(Permiso.TICKETS_LEER)],
+)
+async def estadisticas(
+    uow: UowDep,
+    contexto: ContextoDep,
+    dias: Annotated[int, Query(ge=1, le=365, description="Ventana de la tendencia diaria")] = 30,
+) -> EstadisticasTicketsSalida:
+    caso = ObtenerEstadisticasTickets(uow)
+    resultado = await caso(EntradaEstadisticasTickets(dias=dias), contexto)
+    return EstadisticasTicketsSalida.desde(resultado)
 
 
 @router.post(
@@ -86,6 +116,9 @@ async def crear(datos: TicketCrear, uow: UowDep, contexto: ContextoDep) -> Ticke
             descripcion=datos.descripcion,
             solicitante_id=datos.solicitante_id,
             fecha_solicitud=datos.fecha_solicitud,
+            prioridad=datos.prioridad,
+            categoria_id=datos.categoria_id,
+            fecha_limite=datos.fecha_limite,
         ),
         contexto,
     )
@@ -102,6 +135,42 @@ async def crear(datos: TicketCrear, uow: UowDep, contexto: ContextoDep) -> Ticke
 async def responsables(uow: UowDep, contexto: ContextoDep) -> list[ResponsableSalida]:
     caso = ListarResponsables(uow)
     return [ResponsableSalida.desde(r) for r in await caso(None, contexto)]
+
+
+@router.post(
+    "/imagenes",
+    response_model=ImagenSubidaSalida,
+    status_code=status.HTTP_201_CREATED,
+    summary="Sube una imagen insertada desde el editor enriquecido",
+    dependencies=[requiere(Permiso.TICKETS_ESCRIBIR)],
+)
+async def subir_imagen(
+    settings: SettingsDep,
+    archivo: Annotated[UploadFile, File(description="Imagen PNG, JPEG, WEBP o GIF")],
+) -> ImagenSubidaSalida:
+    nombre = await guardar_imagen(archivo, settings.tickets)
+    # Relativa a la raiz de la API (como el resto de rutas de este router): el
+    # frontend le antepone su URL base configurada, igual que a cualquier otra
+    # peticion — no conviene que el backend asuma su propio host o prefijo.
+    return ImagenSubidaSalida(url=f"/tickets/imagenes/{nombre}")
+
+
+@router.get(
+    "/imagenes/{nombre}",
+    summary="Sirve una imagen insertada desde el editor enriquecido",
+)
+async def obtener_imagen(nombre: str, settings: SettingsDep) -> FileResponse:
+    """Sin `requiere(...)`, a proposito: un `<img src>` de HTML no puede llevar
+    el encabezado `Authorization`, asi que esta ruta no puede exigir el token
+    Bearer que protege al resto de la API. Queda resguardada solo por el
+    nombre aleatorio (UUID) que genera `guardar_imagen` — nunca listable ni
+    adivinable —, igual que un enlace de archivo "no listado" de cualquier
+    proveedor de almacenamiento. La subida si exige `TICKETS_ESCRIBIR`.
+    """
+    ruta = resolver_imagen(nombre, settings.tickets)
+    if ruta is None:
+        raise NoEncontrado("Imagen", nombre)
+    return FileResponse(ruta)
 
 
 @router.get(
@@ -164,6 +233,29 @@ async def cambiar_fecha_solicitud(
     caso = CambiarFechaSolicitud(uow)
     await caso(
         EntradaCambiarFechaSolicitud(ticket_id=ticket_id, fecha_solicitud=datos.fecha_solicitud),
+        contexto,
+    )
+    detalle = await ObtenerTicket(uow)(ticket_id, contexto)
+    return TicketSalida.desde(detalle.vista)
+
+
+@router.patch(
+    "/{ticket_id}/detalles",
+    response_model=TicketSalida,
+    summary="Actualiza prioridad, categoria y fecha limite de un ticket",
+    dependencies=[requiere(Permiso.TICKETS_ESCRIBIR)],
+)
+async def actualizar_detalles(
+    ticket_id: UUID, datos: DetallesTicketEntrada, uow: UowDep, contexto: ContextoDep
+) -> TicketSalida:
+    caso = ActualizarDetallesTicket(uow)
+    await caso(
+        EntradaActualizarDetallesTicket(
+            ticket_id=ticket_id,
+            prioridad=datos.prioridad,
+            categoria_id=datos.categoria_id,
+            fecha_limite=datos.fecha_limite,
+        ),
         contexto,
     )
     detalle = await ObtenerTicket(uow)(ticket_id, contexto)

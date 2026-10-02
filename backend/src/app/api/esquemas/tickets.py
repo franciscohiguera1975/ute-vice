@@ -9,10 +9,11 @@ from uuid import UUID
 from pydantic import Field
 
 from app.api.esquemas.comunes import EsquemaBase
+from app.api.esquemas.nucleo import ConteoSalida, PuntoSerieSalida
 from app.application.casos_uso.tickets import Responsable, TicketConSeguimiento
 from app.domain.entities.ticket import SeguimientoTicket
-from app.domain.enums import EstadoTicket
-from app.domain.ports.tickets import VistaTicket
+from app.domain.enums import EstadoTicket, PrioridadTicket
+from app.domain.ports.tickets import EstadisticasTickets, VistaTicket
 
 
 class TicketCrear(EsquemaBase):
@@ -23,6 +24,9 @@ class TicketCrear(EsquemaBase):
         default=None,
         description="Cuando se pidio el soporte. Por defecto, hoy.",
     )
+    prioridad: PrioridadTicket | None = None
+    categoria_id: UUID | None = None
+    fecha_limite: date | None = None
 
 
 class SeguimientoCrear(EsquemaBase):
@@ -36,6 +40,16 @@ class AsignarTicketEntrada(EsquemaBase):
 
 class FechaSolicitudEntrada(EsquemaBase):
     fecha_solicitud: date
+
+
+class DetallesTicketEntrada(EsquemaBase):
+    prioridad: PrioridadTicket | None = None
+    categoria_id: UUID | None = None
+    fecha_limite: date | None = None
+
+
+class ImagenSubidaSalida(EsquemaBase):
+    url: str
 
 
 class SeguimientoSalida(EsquemaBase):
@@ -69,7 +83,13 @@ class TicketSalida(EsquemaBase):
     asignado_a: UUID | None
     asignado_a_nombre: str | None
     fecha_solicitud: date
+    prioridad: PrioridadTicket | None
+    categoria_id: UUID | None
+    categoria_nombre: str | None
+    fecha_limite: date | None
+    vencido: bool
     creado_por: UUID | None
+    creado_por_nombre: str | None
     creado_en: datetime
     actualizado_en: datetime
 
@@ -86,7 +106,13 @@ class TicketSalida(EsquemaBase):
             asignado_a=v.ticket.asignado_a,
             asignado_a_nombre=v.asignado_a_nombre,
             fecha_solicitud=v.ticket.fecha_solicitud,
+            prioridad=v.ticket.prioridad,
+            categoria_id=v.ticket.categoria_id,
+            categoria_nombre=v.categoria_nombre,
+            fecha_limite=v.ticket.fecha_limite,
+            vencido=v.ticket.vencido,
             creado_por=v.ticket.creado_por,
+            creado_por_nombre=v.creado_por_nombre,
             creado_en=v.ticket.creado_en,
             actualizado_en=v.ticket.actualizado_en,
         )
@@ -111,3 +137,33 @@ class ResponsableSalida(EsquemaBase):
     @classmethod
     def desde(cls, r: Responsable) -> ResponsableSalida:
         return cls(id=r.id, nombre_completo=r.nombre_completo)
+
+
+class EstadisticasTicketsSalida(EsquemaBase):
+    total: int
+    total_abiertos: int
+    total_vencidos: int
+    tiempo_promedio_resolucion_horas: float | None
+    por_estado: list[ConteoSalida]
+    por_prioridad: list[ConteoSalida]
+    creados_por_dia: list[PuntoSerieSalida]
+
+    @classmethod
+    def desde(cls, e: EstadisticasTickets) -> EstadisticasTicketsSalida:
+        return cls(
+            total=e.total,
+            total_abiertos=e.total_abiertos,
+            total_vencidos=e.total_vencidos,
+            tiempo_promedio_resolucion_horas=e.tiempo_promedio_resolucion_horas,
+            por_estado=[
+                ConteoSalida(etiqueta=c.etiqueta, valor=c.valor, porcentaje=c.porcentaje)
+                for c in e.por_estado
+            ],
+            por_prioridad=[
+                ConteoSalida(etiqueta=c.etiqueta, valor=c.valor, porcentaje=c.porcentaje)
+                for c in e.por_prioridad
+            ],
+            creados_por_dia=[
+                PuntoSerieSalida(fecha=p.fecha, valor=p.valor) for p in e.creados_por_dia
+            ],
+        )

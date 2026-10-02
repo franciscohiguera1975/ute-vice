@@ -18,10 +18,21 @@
         }
       </p>
     </div>
-    <ute-insignia
-      [texto]="ETIQUETAS_ESTADO_TICKET[det.ticket.estado]"
-      [tono]="TONO_ESTADO_TICKET[det.ticket.estado]"
-    />
+    <div class="fila hueco-sm">
+      @if (det.ticket.vencido) {
+        <ute-insignia texto="Vencido" tono="error" />
+      }
+      @if (det.ticket.prioridad) {
+        <ute-insignia
+          [texto]="ETIQUETAS_PRIORIDAD_TICKET[det.ticket.prioridad]"
+          [tono]="TONO_PRIORIDAD_TICKET[det.ticket.prioridad]"
+        />
+      }
+      <ute-insignia
+        [texto]="ETIQUETAS_ESTADO_TICKET[det.ticket.estado]"
+        [tono]="TONO_ESTADO_TICKET[det.ticket.estado]"
+      />
+    </div>
   </header>
 
   <section class="tarjeta">
@@ -31,7 +42,7 @@
     <div class="tarjeta__cuerpo rejilla rejilla--2">
       <div class="campo campo--ancho">
         <span class="campo__etiqueta">Descripcion</span>
-        <p>{{ det.ticket.descripcion }}</p>
+        <div class="contenido-enriquecido" [innerHTML]="det.ticket.descripcion"></div>
       </div>
 
       <div class="campo">
@@ -70,9 +81,68 @@
       </div>
 
       <div class="campo">
+        <span class="campo__etiqueta">Creado por</span>
+        <p class="texto-sm texto-suave">{{ det.ticket.creadoPorNombre || '—' }}</p>
+      </div>
+
+      <div class="campo">
         <span class="campo__etiqueta">Registrado</span>
         <p class="texto-sm texto-suave">{{ det.ticket.creadoEn | fechaLocal }}</p>
       </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ triage --- -->
+  <section class="tarjeta" *utePermiso="Permiso.TICKETS_ESCRIBIR">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Prioridad, categoria y fecha limite</h2>
+    </div>
+    <div class="tarjeta__cuerpo rejilla rejilla--3">
+      <div class="campo">
+        <label class="campo__etiqueta" for="prioridad-edit">Prioridad</label>
+        <select
+          id="prioridad-edit"
+          [ngModel]="prioridadEdit()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="prioridadEdit.set($event)"
+        >
+          <option value="">— sin definir —</option>
+          @for (opcion of prioridades; track opcion) {
+            <option [value]="opcion">{{ ETIQUETAS_PRIORIDAD_TICKET[opcion] }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="categoria-edit">Categoria</label>
+        <ute-selector-buscable
+          idCampo="categoria-edit"
+          [opciones]="catalogos.de(TipoCatalogo.CATEGORIA_TICKET)"
+          [valorId]="categoriaIdEdit()"
+          (cambio)="categoriaIdEdit.set($event ?? '')"
+        />
+      </div>
+
+      <div class="campo">
+        <label class="campo__etiqueta" for="fecha-limite-edit">Fecha limite</label>
+        <input
+          id="fecha-limite-edit"
+          type="date"
+          [ngModel]="fechaLimiteEdit()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="fechaLimiteEdit.set($event)"
+        />
+      </div>
+    </div>
+    <div class="tarjeta__cuerpo">
+      <button
+        type="button"
+        class="btn btn--secundario btn--sm"
+        [disabled]="guardandoDetalles() || !hayCambiosDetalles()"
+        (click)="guardarDetalles()"
+      >
+        {{ guardandoDetalles() ? 'Guardando…' : 'Guardar detalles' }}
+      </button>
     </div>
   </section>
 
@@ -100,7 +170,9 @@
             @for (paso of det.seguimientos; track paso.id) {
               <tr>
                 <td class="texto-sm texto-suave">{{ paso.creadoEn | desdeHace }}</td>
-                <td>{{ paso.comentario }}</td>
+                <td>
+                  <div class="contenido-enriquecido" [innerHTML]="paso.comentario"></div>
+                </td>
                 <td class="texto-sm">
                   @if (paso.estadoNuevo) {
                     {{ ETIQUETAS_ESTADO_TICKET[paso.estadoAnterior!] }} →
@@ -119,15 +191,12 @@
     <!-- ------------------------------------- agregar paso de seguimiento --- -->
     <div class="tarjeta__cuerpo" *utePermiso="Permiso.TICKETS_ESCRIBIR">
       <div class="campo campo--ancho">
-        <label class="campo__etiqueta" for="comentario">Nuevo comentario</label>
-        <textarea
-          id="comentario"
-          rows="3"
+        <span class="campo__etiqueta">Nuevo comentario</span>
+        <ute-editor-enriquecido
           placeholder="Como avanza el caso…"
-          [ngModel]="nuevoComentario()"
-          [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="nuevoComentario.set($event)"
-        ></textarea>
+          [valor]="nuevoComentario()"
+          (valorCambio)="nuevoComentario.set($event)"
+        />
       </div>
 
       <div class="fila entre envolver hueco-sm">

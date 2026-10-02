@@ -76,6 +76,25 @@ const DISTRIBUTIVO: readonly Seccion[] = [
   },
 ];
 
+/**
+ * Las dos pantallas de soporte.
+ *
+ * Estadisticas va primero: con el grupo asi, `rutaDeInicio` —que recorre
+ * `SECCIONES_PLANAS` en orden y aterriza en la primera hoja permitida— manda
+ * a quien solo tiene permisos de tickets (el rol `SOPORTE_TECNICO`) directo al
+ * dashboard de sus propios soportes, en vez del listado. El admin no lo nota:
+ * para el, `/tablero` sigue siendo la primera seccion disponible.
+ */
+const SOPORTES: readonly Seccion[] = [
+  {
+    ruta: '/tickets/estadisticas',
+    etiqueta: 'Estadisticas',
+    icono: '◉',
+    permisos: [Permiso.TICKETS_LEER],
+  },
+  { ruta: '/tickets', etiqueta: 'Tickets', icono: '☎', permisos: [Permiso.TICKETS_LEER] },
+];
+
 /** Los permisos de un grupo son los de sus hijos: si ninguno aplica, se oculta. */
 function permisosDe(hijos: readonly Seccion[]): readonly Permiso[] {
   return [...new Set(hijos.flatMap((h) => h.permisos))];
@@ -102,7 +121,13 @@ export const SECCIONES: readonly Seccion[] = [
     icono: '⚙',
     permisos: [Permiso.USUARIOS_LEER],
   },
-  { ruta: '/tickets', etiqueta: 'Tickets', icono: '☎', permisos: [Permiso.TICKETS_LEER] },
+  {
+    ruta: '/tickets/estadisticas',
+    etiqueta: 'Soportes',
+    icono: '☎',
+    permisos: permisosDe(SOPORTES),
+    hijos: SOPORTES,
+  },
 ];
 
 /**

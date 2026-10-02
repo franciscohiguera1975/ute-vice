@@ -1,6 +1,6 @@
 """Modelos ORM del distributivo docente.
 
-Doce tablas de catalogo con el prefijo `cat_`, mas `docentes`, `distributivo` y
+Trece tablas de catalogo con el prefijo `cat_`, mas `docentes`, `distributivo` y
 la relacion `docente_titulos`.
 
 El prefijo no es decorativo: hace visible en el esquema que son catalogos, y
@@ -177,6 +177,17 @@ class AsignaturaModel(Base, MixinCatalogo):
     __table_args__ = _indices_catalogo("cat_asignaturas")
 
 
+class CategoriaTicketModel(Base, MixinCatalogo):
+    """Categorias de los tickets de soporte tecnico (Hardware, Software, Red, ...).
+
+    Catalogo administrable como los demas, en vez de un enum fijo: el equipo de
+    soporte ajusta sus categorias sin que eso implique un cambio de codigo.
+    """
+
+    __tablename__ = "cat_categorias_ticket"
+    __table_args__ = _indices_catalogo("cat_categorias_ticket")
+
+
 #: Traduccion entre el tipo de catalogo del dominio y su tabla. Es lo que hace
 #: posible que un solo repositorio sirva a los doce.
 MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
@@ -192,6 +203,7 @@ MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.TIPO_TITULO: TipoTituloModel,
     TipoCatalogo.GENERO: GeneroModel,
     TipoCatalogo.ASIGNATURA: AsignaturaModel,
+    TipoCatalogo.CATEGORIA_TICKET: CategoriaTicketModel,
 }
 
 

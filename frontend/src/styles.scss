@@ -6,6 +6,8 @@
    cambio en un solo bloque.
    ===================================================================== */
 
+@import 'quill/dist/quill.snow.css';
+
 :root {
   /* --- Identidad --- */
   --azul-900: #14264a;
@@ -420,3 +422,51 @@ textarea { resize: vertical; min-height: 76px; }
   .no-imprimir { display: none !important; }
   body { background: #fff; }
 }
+
+/* --------------------------------------------- editor enriquecido (Quill) --- *
+ * El tema "snow" trae sus propios colores fijos; se redefinen aqui con las
+ * variables del proyecto para que el editor siga el tema claro u oscuro en
+ * vez de quedar siempre blanco. */
+.ql-toolbar.ql-snow {
+  background: var(--superficie-2);
+  border-color: var(--borde-fuerte);
+  border-radius: var(--radio) var(--radio) 0 0;
+}
+.ql-container.ql-snow {
+  background: var(--superficie);
+  border-color: var(--borde-fuerte);
+  border-radius: 0 0 var(--radio) var(--radio);
+  color: var(--texto);
+  font-family: var(--fuente);
+  font-size: 0.9rem;
+}
+.ql-editor.ql-blank::before { color: var(--texto-tenue); font-style: normal; }
+.ql-snow .ql-stroke { stroke: var(--texto-suave); }
+.ql-snow .ql-fill { fill: var(--texto-suave); }
+.ql-snow .ql-picker { color: var(--texto-suave); }
+.ql-snow .ql-picker-options {
+  background: var(--superficie);
+  border-color: var(--borde);
+}
+.ql-snow .ql-tooltip {
+  background: var(--superficie);
+  border-color: var(--borde);
+  color: var(--texto);
+  box-shadow: var(--sombra-2);
+}
+.ql-editor pre.ql-syntax {
+  background: var(--superficie-2);
+  color: var(--texto);
+  border-radius: var(--radio);
+}
+/* Contenido ya guardado (descripcion, comentarios de seguimiento), fuera del
+   editor: mismo tipografiado de codigo que dentro de el. */
+.contenido-enriquecido pre {
+  background: var(--superficie-2);
+  color: var(--texto);
+  padding: 0.75rem;
+  border-radius: var(--radio);
+  overflow-x: auto;
+  font-family: var(--fuente-mono);
+}
+.contenido-enriquecido img { max-width: 100%; border-radius: var(--radio); }

@@ -9,6 +9,7 @@ import type {
   NivelTitulo,
   OrigenTitulo,
   Permiso,
+  PrioridadTicket,
   TipoVinculacion,
 } from './enums';
 
@@ -463,7 +464,15 @@ export interface Ticket {
   readonly asignadoANombre: string | null;
   /** Cuando se pidio el soporte. Distinta de `creadoEn`: nace igual, pero es editable. */
   readonly fechaSolicitud: string;
+  readonly prioridad: PrioridadTicket | null;
+  readonly categoriaId: string | null;
+  readonly categoriaNombre: string | null;
+  /** Vencimiento declarado a mano, sin calculo automatico de SLA. */
+  readonly fechaLimite: string | null;
+  /** `fechaLimite` ya pasada y el ticket sigue abierto. */
+  readonly vencido: boolean;
   readonly creadoPor: string | null;
+  readonly creadoPorNombre: string | null;
   readonly creadoEn: string;
   readonly actualizadoEn: string;
 }
@@ -487,6 +496,8 @@ export interface FiltroTickets {
   readonly estado?: EstadoTicket;
   readonly solicitanteId?: string;
   readonly asignadoA?: string;
+  readonly prioridad?: PrioridadTicket;
+  readonly categoriaId?: string;
 }
 
 export interface DatosTicket {
@@ -495,11 +506,32 @@ export interface DatosTicket {
   readonly solicitanteId: string;
   /** Cuando se pidio el soporte. Omitido, el backend toma la fecha de hoy. */
   readonly fechaSolicitud?: string | null;
+  readonly prioridad?: PrioridadTicket | null;
+  readonly categoriaId?: string | null;
+  readonly fechaLimite?: string | null;
 }
 
 export interface DatosSeguimiento {
   readonly comentario: string;
   readonly estadoNuevo?: EstadoTicket | null;
+}
+
+/** Triage del caso: los tres se guardan juntos. */
+export interface DatosDetallesTicket {
+  readonly prioridad?: PrioridadTicket | null;
+  readonly categoriaId?: string | null;
+  readonly fechaLimite?: string | null;
+}
+
+/** Dashboard de soporte: propio o global, segun `Permiso.TICKETS_ADMINISTRAR`. */
+export interface EstadisticasTickets {
+  readonly total: number;
+  readonly totalAbiertos: number;
+  readonly totalVencidos: number;
+  readonly tiempoPromedioResolucionHoras: number | null;
+  readonly porEstado: readonly Conteo[];
+  readonly porPrioridad: readonly Conteo[];
+  readonly creadosPorDia: readonly PuntoSerie[];
 }
 
 /** Usuario de soporte tecnico disponible para asignar un ticket. */

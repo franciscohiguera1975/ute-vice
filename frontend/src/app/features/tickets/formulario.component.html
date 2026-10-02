@@ -90,18 +90,54 @@
         />
       </div>
 
-      <div class="campo">
-        <label class="campo__etiqueta" for="descripcion">
+      <div class="campo campo--ancho">
+        <span class="campo__etiqueta">
           Descripcion <span class="campo__requerido" aria-hidden="true">*</span>
-        </label>
-        <textarea
-          id="descripcion"
-          rows="5"
-          placeholder="Detalle el problema, cuando ocurre y que se necesita"
-          [ngModel]="descripcion()"
-          [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="descripcion.set($event)"
-        ></textarea>
+        </span>
+        <ute-editor-enriquecido
+          placeholder="Detalle el problema, cuando ocurre y que se necesita. Puede incluir codigo o capturas de pantalla."
+          [valor]="descripcion()"
+          (valorCambio)="descripcion.set($event)"
+        />
+      </div>
+
+      <div class="rejilla rejilla--3">
+        <div class="campo">
+          <label class="campo__etiqueta" for="prioridad">Prioridad</label>
+          <select
+            id="prioridad"
+            [ngModel]="prioridad()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="prioridad.set($event)"
+          >
+            <option value="">— sin definir —</option>
+            @for (opcion of prioridades; track opcion) {
+              <option [value]="opcion">{{ ETIQUETAS_PRIORIDAD_TICKET[opcion] }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="categoria">Categoria</label>
+          <ute-selector-buscable
+            idCampo="categoria"
+            [opciones]="catalogos.de(TipoCatalogo.CATEGORIA_TICKET)"
+            [valorId]="categoriaId()"
+            (cambio)="categoriaId.set($event ?? '')"
+          />
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="fecha-limite">Fecha limite</label>
+          <input
+            id="fecha-limite"
+            type="date"
+            [min]="fechaSolicitud()"
+            [ngModel]="fechaLimite()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="fechaLimite.set($event)"
+          />
+        </div>
       </div>
 
       <div class="campo">

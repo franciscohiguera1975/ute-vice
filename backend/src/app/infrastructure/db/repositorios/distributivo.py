@@ -43,6 +43,7 @@ from app.infrastructure.db.modelos_distributivo import (
     distributivo_asignaturas,
     docente_titulos,
 )
+from app.infrastructure.db.modelos_tickets import TicketModel
 
 #: Columnas por las que se admite ordenar. Lista blanca: el `ORDER BY` nunca se
 #: construye con texto que venga de la peticion.
@@ -293,6 +294,15 @@ class RepositorioCatalogosSQL:
                     select(func.count())
                     .select_from(docente_titulos)
                     .where(docente_titulos.c.titulo_id == elemento_id)
+                )
+            ) or 0
+
+        if tipo is TipoCatalogo.CATEGORIA_TICKET:
+            return (
+                await self._s.scalar(
+                    select(func.count())
+                    .select_from(TicketModel)
+                    .where(TicketModel.categoria_id == elemento_id)
                 )
             ) or 0
 

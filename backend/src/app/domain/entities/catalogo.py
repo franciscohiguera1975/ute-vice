@@ -48,6 +48,7 @@ class TipoCatalogo(StrEnum):
     TIPO_TITULO = "tipos-titulo"
     GENERO = "generos"
     ASIGNATURA = "asignaturas"
+    CATEGORIA_TICKET = "categorias-ticket"
 
     @property
     def etiqueta(self) -> str:
@@ -71,6 +72,7 @@ _ETIQUETAS: dict[TipoCatalogo, str] = {
     TipoCatalogo.TIPO_TITULO: "Tipos de titulo",
     TipoCatalogo.GENERO: "Generos",
     TipoCatalogo.ASIGNATURA: "Asignaturas",
+    TipoCatalogo.CATEGORIA_TICKET: "Categorias de ticket",
 }
 
 _SINGULARES: dict[TipoCatalogo, str] = {
@@ -86,6 +88,7 @@ _SINGULARES: dict[TipoCatalogo, str] = {
     TipoCatalogo.TIPO_TITULO: "tipo de titulo",
     TipoCatalogo.GENERO: "genero",
     TipoCatalogo.ASIGNATURA: "asignatura",
+    TipoCatalogo.CATEGORIA_TICKET: "categoria de ticket",
 }
 
 

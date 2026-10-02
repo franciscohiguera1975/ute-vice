@@ -7,15 +7,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogosStore } from '@core/catalogos.store';
 import { NotificacionesService } from '@core/notificaciones.service';
 import {
+  ETIQUETAS_PRIORIDAD_TICKET,
+  PRIORIDADES_TICKET,
   TipoCatalogo,
   type DatosPersona,
   type ErrorApi,
   type Persona,
+  type PrioridadTicket,
 } from '@domain/modelos';
 import { RepositorioPersonas, RepositorioTickets } from '@domain/puertos';
+import { EditorEnriquecidoComponent } from '@shared/componentes/editor-enriquecido.component';
 import { SelectorBuscableComponent } from '@shared/componentes/selector-buscable.component';
 
 import { validadorCedula } from '../personas/validador-cedula';
+import { sinContenido } from './html-sin-contenido';
 
 /** Fecha de hoy en formato `yyyy-MM-dd`, el que espera un `<input type="date">`. */
 const hoyISO = (): string => new Date().toISOString().slice(0, 10);
@@ -23,7 +28,7 @@ const hoyISO = (): string => new Date().toISOString().slice(0, 10);
 @Component({
   selector: 'ute-formulario-ticket',
   standalone: true,
-  imports: [FormsModule, RouterLink, SelectorBuscableComponent],
+  imports: [FormsModule, RouterLink, SelectorBuscableComponent, EditorEnriquecidoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formulario.component.html',
   styleUrl: './formulario.component.scss',
@@ -36,6 +41,8 @@ export class FormularioTicketComponent {
   protected readonly catalogos = inject(CatalogosStore);
 
   protected readonly TipoCatalogo = TipoCatalogo;
+  protected readonly prioridades = PRIORIDADES_TICKET;
+  protected readonly ETIQUETAS_PRIORIDAD_TICKET = ETIQUETAS_PRIORIDAD_TICKET;
 
   // --- Solicitante ---
   protected readonly busquedaPersona = signal('');
@@ -63,6 +70,11 @@ export class FormularioTicketComponent {
   protected readonly fechaSolicitud = signal(hoyISO());
   protected readonly hoy = hoyISO();
   protected readonly enviando = signal(false);
+
+  // --- Triage: ninguno es obligatorio, soporte los define al revisar el caso ---
+  protected readonly prioridad = signal<PrioridadTicket | ''>('');
+  protected readonly categoriaId = signal('');
+  protected readonly fechaLimite = signal('');
 
   constructor() {
     this.catalogos.cargar();
@@ -171,7 +183,7 @@ export class FormularioTicketComponent {
       this.notificaciones.aviso('Seleccione o registre al solicitante');
       return;
     }
-    if (!this.titulo().trim() || !this.descripcion().trim()) {
+    if (!this.titulo().trim() || sinContenido(this.descripcion())) {
       this.notificaciones.aviso('Complete el titulo y la descripcion');
       return;
     }
@@ -183,6 +195,9 @@ export class FormularioTicketComponent {
         descripcion: this.descripcion().trim(),
         solicitanteId: solicitante.id,
         fechaSolicitud: this.fechaSolicitud(),
+        prioridad: this.prioridad() || null,
+        categoriaId: this.categoriaId() || null,
+        fechaLimite: this.fechaLimite() || null,
       })
       .subscribe({
         next: (ticket) => {

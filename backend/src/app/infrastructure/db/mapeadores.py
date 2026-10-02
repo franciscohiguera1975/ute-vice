@@ -33,6 +33,7 @@ from app.domain.enums import (
     NivelTitulo,
     OrigenTitulo,
     Permiso,
+    PrioridadTicket,
     TipoCambio,
     TipoDocumento,
     TipoVinculacion,
@@ -456,6 +457,9 @@ def ticket_a_dominio(modelo: TicketModel) -> Ticket:
         estado=_enum(EstadoTicket, modelo.estado, EstadoTicket.RECIBIDO),
         asignado_a=modelo.asignado_a,
         fecha_solicitud=modelo.fecha_solicitud,
+        prioridad=_enum(PrioridadTicket, modelo.prioridad, None),
+        categoria_id=modelo.categoria_id,
+        fecha_limite=modelo.fecha_limite,
         creado_por=modelo.creado_por,
         creado_en=modelo.creado_en,
         actualizado_en=modelo.actualizado_en,
@@ -470,6 +474,9 @@ def ticket_a_modelo(entidad: Ticket, modelo: TicketModel | None = None) -> Ticke
     modelo.estado = entidad.estado.value
     modelo.asignado_a = entidad.asignado_a
     modelo.fecha_solicitud = entidad.fecha_solicitud
+    modelo.prioridad = entidad.prioridad.value if entidad.prioridad else None
+    modelo.categoria_id = entidad.categoria_id
+    modelo.fecha_limite = entidad.fecha_limite
     modelo.creado_por = entidad.creado_por
     return modelo
 

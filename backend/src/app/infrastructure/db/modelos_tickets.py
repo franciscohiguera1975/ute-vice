@@ -27,6 +27,7 @@ class TicketModel(Base, MixinAuditoria):
         Index("ix_tickets_estado", "estado"),
         Index("ix_tickets_solicitante", "solicitante_id"),
         Index("ix_tickets_asignado", "asignado_a"),
+        Index("ix_tickets_categoria", "categoria_id"),
     )
 
     id: Mapped[UUID] = _uuid_pk()
@@ -35,6 +36,12 @@ class TicketModel(Base, MixinAuditoria):
     estado: Mapped[str] = mapped_column(String(24), default="RECIBIDO", nullable=False)
     fecha_solicitud: Mapped[date] = mapped_column(Date, nullable=False)
     """Cuando se pidio el soporte. Nace igual a `creado_en`, pero es editable."""
+
+    prioridad: Mapped[str | None] = mapped_column(String(16))
+    """Urgencia del caso. Nula hasta que soporte la determina al triar."""
+
+    fecha_limite: Mapped[date | None] = mapped_column(Date)
+    """Vencimiento declarado a mano, sin calculo automatico de SLA."""
 
     # Sin `ondelete`: una persona con tickets no se puede borrar, igual que con
     # titulos (`EliminarPersona` ya exige el expediente vacio).
@@ -46,6 +53,9 @@ class TicketModel(Base, MixinAuditoria):
     )
     creado_por: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="SET NULL")
+    )
+    categoria_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("cat_categorias_ticket.id", ondelete="SET NULL")
     )
 
 

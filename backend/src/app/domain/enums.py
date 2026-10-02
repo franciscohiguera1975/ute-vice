@@ -200,6 +200,8 @@ class Permiso(StrEnum):
     TICKETS_LEER = "tickets:leer"
     TICKETS_ESCRIBIR = "tickets:escribir"
     """Crear tickets, comentar, cambiar de estado y asignar o reasignar el responsable."""
+    TICKETS_ADMINISTRAR = "tickets:administrar"
+    """Ver las estadisticas globales de todos los tickets, no solo los propios."""
 
 
 #: Composicion de cada rol. Fuente de verdad para la siembra inicial.
@@ -500,4 +502,26 @@ _ETIQUETAS_ESTADO_TICKET: dict[EstadoTicket, str] = {
     EstadoTicket.EN_ESPERA: "En espera del solicitante",
     EstadoTicket.EJECUTADO: "Ejecutado",
     EstadoTicket.CANCELADO: "Cancelado",
+}
+
+
+class PrioridadTicket(StrEnum):
+    """Urgencia declarada de un ticket. Nace sin asignar: la determina soporte
+    al triar el caso, no quien lo registra."""
+
+    BAJA = "BAJA"
+    MEDIA = "MEDIA"
+    ALTA = "ALTA"
+    URGENTE = "URGENTE"
+
+    @property
+    def etiqueta(self) -> str:
+        return _ETIQUETAS_PRIORIDAD_TICKET[self]
+
+
+_ETIQUETAS_PRIORIDAD_TICKET: dict[PrioridadTicket, str] = {
+    PrioridadTicket.BAJA: "Baja",
+    PrioridadTicket.MEDIA: "Media",
+    PrioridadTicket.ALTA: "Alta",
+    PrioridadTicket.URGENTE: "Urgente",
 }

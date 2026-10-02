@@ -9,8 +9,11 @@ import { SesionStore } from '@core/sesion.store';
 import {
   ESTADOS_TICKET,
   ETIQUETAS_ESTADO_TICKET,
+  ETIQUETAS_PRIORIDAD_TICKET,
   Permiso,
+  PRIORIDADES_TICKET,
   TONO_ESTADO_TICKET,
+  TONO_PRIORIDAD_TICKET,
   type ErrorApi,
   type FiltroTickets,
   type Pagina,
@@ -51,7 +54,10 @@ export class ListaTicketsComponent {
   protected readonly Permiso = Permiso;
   protected readonly ETIQUETAS_ESTADO_TICKET = ETIQUETAS_ESTADO_TICKET;
   protected readonly TONO_ESTADO_TICKET = TONO_ESTADO_TICKET;
+  protected readonly ETIQUETAS_PRIORIDAD_TICKET = ETIQUETAS_PRIORIDAD_TICKET;
+  protected readonly TONO_PRIORIDAD_TICKET = TONO_PRIORIDAD_TICKET;
   protected readonly estados = ESTADOS_TICKET;
+  protected readonly prioridades = PRIORIDADES_TICKET;
 
   protected readonly datos = signal<Pagina<Ticket>>(paginaVacia<Ticket>());
   protected readonly cargando = signal(true);

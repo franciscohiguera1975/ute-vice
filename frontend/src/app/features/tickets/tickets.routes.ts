@@ -16,6 +16,14 @@ export const rutas: Routes = [
     title: 'Nuevo ticket — UTE Vice',
   },
   {
+    // Antes de `:id`: si no, '/tickets/estadisticas' se interpretaria como el
+    // detalle del ticket con id "estadisticas".
+    path: 'estadisticas',
+    loadComponent: () =>
+      import('./estadisticas.component').then((m) => m.EstadisticasTicketsComponent),
+    title: 'Estadisticas de soporte — UTE Vice',
+  },
+  {
     path: ':id',
     loadComponent: () => import('./detalle.component').then((m) => m.DetalleTicketComponent),
     title: 'Detalle de ticket — UTE Vice',
