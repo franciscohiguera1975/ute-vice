@@ -264,15 +264,28 @@ class ImportarEstudiantes(
         estudiantes_por_cedula: dict[str, Estudiante],
         resultado: ResultadoImportacionEstudiantes,
     ) -> list[MatriculaEstudiante]:
-        matriculas: list[MatriculaEstudiante] = []
+        """Una `MatriculaEstudiante` por clave natural `(estudiante, periodo,
+        carrera, sede)`, no una por fila.
+
+        El origen puede repetir la misma matricula en varias filas cuando
+        trae mas de una beca sin concatenarlas en la misma celda —a
+        diferencia del caso ya previsto de becas separadas por coma—. Sin
+        fusionarlas, el upsert por lote le pide a Postgres actualizar la
+        misma fila dos veces en una sola sentencia, y `ON CONFLICT DO UPDATE`
+        lo rechaza con `CardinalityViolationError`. Aqui se fusionan: la
+        primera fila de la clave fija los datos de la matricula y las
+        siguientes solo le suman sus becas.
+        """
+        por_clave: dict[tuple[UUID, str, str | None, str | None], MatriculaEstudiante] = {}
+        orden: list[tuple[UUID, str, str | None, str | None]] = []
+
         for fila in filas:
             cedula = _texto(fila.cedula) or ""
             estudiante = estudiantes_por_cedula[cedula]
 
             carrera_texto = _texto(fila.carrera)
-            carrera_id = carreras.resolver(carrera_texto)
-            if carrera_id is None and carrera_texto:
-                resultado.sin_carrera_reconocida += 1
+            periodo_texto = _texto(fila.periodo) or ""
+            sede_texto = _texto(fila.sede)
 
             becas = [
                 BecaEstudiante(
@@ -284,25 +297,37 @@ class ImportarEstudiantes(
                 for beca in fila.becas
             ]
 
-            matriculas.append(
-                MatriculaEstudiante(
-                    estudiante_id=estudiante.id,
-                    periodo=_texto(fila.periodo) or "",
-                    sede=_texto(fila.sede),
-                    facultad=_texto(fila.facultad),
-                    carrera=carrera_texto,
-                    carrera_id=carrera_id,
-                    tipo_carrera=_texto(fila.tipo_carrera),
-                    modalidad=_texto(fila.modalidad),
-                    nivel_formacion_1=_texto(fila.nivel_formacion_1),
-                    nivel_formacion_2=_texto(fila.nivel_formacion_2),
-                    tipo_estudiante=_texto(fila.tipo_estudiante),
-                    sistema=_texto(fila.sistema),
-                    matriculado=_texto(fila.matriculado),
-                    solicitud_retiro=_texto(fila.solicitud_retiro),
-                    bloqueo_plataforma=fila.bloqueo_plataforma,
-                    estado=_texto(fila.estado),
-                    becas=becas,
-                )
+            clave = (estudiante.id, periodo_texto, carrera_texto, sede_texto)
+            existente = por_clave.get(clave)
+            if existente is not None:
+                existente.becas.extend(becas)
+                resultado.filas_combinadas_por_duplicado += 1
+                continue
+
+            carrera_id = carreras.resolver(carrera_texto)
+            if carrera_id is None and carrera_texto:
+                resultado.sin_carrera_reconocida += 1
+
+            nueva = MatriculaEstudiante(
+                estudiante_id=estudiante.id,
+                periodo=periodo_texto,
+                sede=sede_texto,
+                facultad=_texto(fila.facultad),
+                carrera=carrera_texto,
+                carrera_id=carrera_id,
+                tipo_carrera=_texto(fila.tipo_carrera),
+                modalidad=_texto(fila.modalidad),
+                nivel_formacion_1=_texto(fila.nivel_formacion_1),
+                nivel_formacion_2=_texto(fila.nivel_formacion_2),
+                tipo_estudiante=_texto(fila.tipo_estudiante),
+                sistema=_texto(fila.sistema),
+                matriculado=_texto(fila.matriculado),
+                solicitud_retiro=_texto(fila.solicitud_retiro),
+                bloqueo_plataforma=fila.bloqueo_plataforma,
+                estado=_texto(fila.estado),
+                becas=becas,
             )
-        return matriculas
+            por_clave[clave] = nueva
+            orden.append(clave)
+
+        return [por_clave[clave] for clave in orden]

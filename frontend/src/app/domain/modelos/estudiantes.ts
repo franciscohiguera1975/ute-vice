@@ -32,6 +32,10 @@ export interface ResultadoCargaEstudiantes {
    *  del catalogo de carreras. No se rechazaron ni se creo una carrera nueva:
    *  solo quedaron sin resolver. */
   readonly sinCarreraReconocida: number;
+  /** Filas que repetian la clave natural de una matricula ya vista en el
+   *  mismo archivo -casi siempre una beca adicional sin concatenar en la
+   *  misma celda- y se fusionaron con ella en vez de contarse aparte. */
+  readonly filasCombinadasPorDuplicado: number;
   readonly rechazadas: readonly FilaRechazadaEstudiante[];
   readonly exitosa: boolean;
   readonly resumen: string;

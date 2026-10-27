@@ -85,7 +85,7 @@
         </article>
       </div>
 
-      <div class="rejilla rejilla--3 seccion">
+      <div class="rejilla rejilla--4 seccion">
         <article class="metrica">
           <p class="metrica__etiqueta">Becas registradas</p>
           <p class="metrica__valor">{{ r.becasCreadas | number }}</p>
@@ -99,6 +99,13 @@
           <p class="metrica__valor">{{ r.sinCarreraReconocida | number }}</p>
           <p class="metrica__pie texto-xs texto-tenue">
             No se rechazan: quedan sin carrera_id
+          </p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Filas combinadas</p>
+          <p class="metrica__valor">{{ r.filasCombinadasPorDuplicado | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            Misma matricula repetida, casi siempre por una beca adicional
           </p>
         </article>
       </div>

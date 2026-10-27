@@ -106,6 +106,39 @@ class TestCargaBasica:
         assert len(uow.estudiantes.estudiantes) == 1
         assert len(uow.estudiantes.matriculas) == 2
 
+    async def test_fusiona_filas_que_repiten_la_misma_matricula(self, uow) -> None:
+        """Dos filas con la misma clave natural -estudiante, periodo,
+        carrera y sede- no son una doble matricula -esa exige carrera o
+        sede distinta-: en produccion resultaron ser la misma matricula con
+        dos becas, cada una en su propia fila en lugar de concatenadas en la
+        misma celda. Sin fusionarlas, el upsert por lote le pedia a Postgres
+        actualizar la misma fila dos veces en una sola sentencia y
+        `ON CONFLICT DO UPDATE` lo rechazaba con `CardinalityViolationError`.
+        """
+        await _sembrar_carrera(uow, "MEDICINA")
+
+        resultado = await importar(
+            uow,
+            [
+                cruda(
+                    numero=2,
+                    becas=(BecaCruda(codigo_beca="B1", tipo_beca="DEPORTIVA", porcentaje="50"),),
+                ),
+                cruda(
+                    numero=3,
+                    becas=(BecaCruda(codigo_beca="B2", tipo_beca="HERMANO", porcentaje="10"),),
+                ),
+            ],
+        )
+
+        assert resultado.matriculas_creadas == 1
+        assert resultado.filas_combinadas_por_duplicado == 1
+        assert resultado.becas_creadas == 2
+        assert len(uow.estudiantes.matriculas) == 1
+
+        matricula = next(iter(uow.estudiantes.matriculas.values()))
+        assert {b.codigo_beca for b in matricula.becas} == {"B1", "B2"}
+
     async def test_reutiliza_el_estudiante_ya_registrado(self, uow) -> None:
         await _sembrar_carrera(uow, "MEDICINA")
         await importar(uow, [cruda(numero=2, periodo="262651")])

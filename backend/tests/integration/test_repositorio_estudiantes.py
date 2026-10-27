@@ -115,3 +115,64 @@ async def test_agrupa_por_prefijo_de_semestre_y_excluye_lo_que_no_cuenta(
             assert await repo.conteo_por_carrera_en_semestres(()) == []
     finally:
         await motor.dispose()
+
+
+async def test_importar_no_revienta_con_filas_que_repiten_la_matricula(
+    esquema: None,
+) -> None:  # type: ignore[no-untyped-def]
+    """Reproduce el `CardinalityViolationError` de produccion: dos filas del
+    archivo con la misma clave natural -estudiante, periodo, carrera, sede-,
+    cada una con una beca distinta en vez de concatenadas en la misma celda.
+
+    `ON CONFLICT DO UPDATE` de Postgres rechaza una sentencia que le pide
+    actualizar la misma fila dos veces; `ImportarEstudiantes` tiene que
+    fusionarlas antes de llegar al upsert, no dejar que el repositorio se
+    entere de dos matriculas con la misma clave.
+    """
+    from app.application.base import ContextoEjecucion
+    from app.application.casos_uso.importar_estudiantes import (
+        EntradaImportacionEstudiantes,
+        ImportarEstudiantes,
+    )
+    from app.core.config import get_settings
+    from app.domain.entities.catalogo import ElementoCatalogo, TipoCatalogo
+    from app.domain.ports.importacion_estudiantes import BecaCruda, FilaCrudaEstudiante
+    from app.infrastructure.db.uow import UnidadDeTrabajoSQL
+
+    motor, fabrica = await _sesion(get_settings())
+    try:
+        uow = UnidadDeTrabajoSQL(fabrica)
+        async with uow:
+            await uow.catalogos.agregar(
+                ElementoCatalogo(tipo=TipoCatalogo.CARRERA, codigo="MEDICINA", nombre="MEDICINA")
+            )
+            await uow.commit()
+
+        def fila(numero: int, beca: BecaCruda) -> FilaCrudaEstudiante:
+            return FilaCrudaEstudiante(
+                numero_fila=numero,
+                periodo="262651",
+                cedula="1710034065",
+                sede="SEDE QUITO",
+                carrera="MEDICINA",
+                nombre="PEREZ LUIS",
+                matriculado="MATRICULADO",
+                becas=(beca,),
+            )
+
+        caso = ImportarEstudiantes(uow)
+        resultado = await caso(
+            EntradaImportacionEstudiantes(
+                filas=(
+                    fila(2, BecaCruda(codigo_beca="B1", tipo_beca="DEPORTIVA", porcentaje="50")),
+                    fila(3, BecaCruda(codigo_beca="B2", tipo_beca="HERMANO", porcentaje="10")),
+                )
+            ),
+            ContextoEjecucion.sistema(),
+        )
+
+        assert resultado.matriculas_creadas == 1
+        assert resultado.filas_combinadas_por_duplicado == 1
+        assert resultado.becas_creadas == 2
+    finally:
+        await motor.dispose()

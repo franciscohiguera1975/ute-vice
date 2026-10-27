@@ -90,6 +90,12 @@ class ResultadoImportacionEstudiantes:
     #: quedan con `carrera_id = None` y se cuentan aqui para que alguien las
     #: revise.
     sin_carrera_reconocida: int = 0
+    #: Filas que repetian la clave natural `(estudiante, periodo, carrera,
+    #: sede)` de una matricula ya vista en el mismo archivo. No son una
+    #: doble matricula -esa exige carrera o sede distinta-, sino casi siempre
+    #: una beca adicional sin concatenar en la misma celda: se fusiona con
+    #: la primera fila de la clave en vez de contarla aparte.
+    filas_combinadas_por_duplicado: int = 0
     rechazadas: list[ErrorImportacionEstudiante] = field(default_factory=list)
 
     @property
@@ -101,6 +107,7 @@ class ResultadoImportacionEstudiantes:
             f"{self.matriculas_creadas + self.matriculas_actualizadas} matriculas de "
             f"{self.total_filas_leidas} leidas · {self.estudiantes_creados} estudiantes nuevos · "
             f"{self.sin_carrera_reconocida} sin carrera reconocida · "
+            f"{self.filas_combinadas_por_duplicado} filas combinadas por duplicado · "
             f"{len(self.rechazadas)} rechazadas"
         )
 

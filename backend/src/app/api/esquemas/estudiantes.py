@@ -24,6 +24,10 @@ class ResultadoImportacionEstudiantesSalida(EsquemaBase):
     #: elemento de `cat_carreras`. No se rechazaron ni crearon una carrera
     #: nueva: solo quedaron sin `carrera_id`.
     sin_carrera_reconocida: int
+    #: Filas que repetian la clave natural de una matricula ya vista en el
+    #: mismo archivo -casi siempre una beca adicional sin concatenar en la
+    #: misma celda- y se fusionaron con ella en vez de contarse aparte.
+    filas_combinadas_por_duplicado: int
     rechazadas: list[FilaRechazadaEstudianteSalida]
     exitosa: bool
     resumen: str
@@ -39,6 +43,7 @@ class ResultadoImportacionEstudiantesSalida(EsquemaBase):
             becas_creadas=r.becas_creadas,
             generos_creados=r.generos_creados,
             sin_carrera_reconocida=r.sin_carrera_reconocida,
+            filas_combinadas_por_duplicado=r.filas_combinadas_por_duplicado,
             # Se recorta a 200, igual que en la importacion del distributivo:
             # un archivo mal exportado puede rechazar miles de filas.
             rechazadas=[
