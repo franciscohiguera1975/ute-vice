@@ -50,6 +50,9 @@ export const Permiso = {
   DISTRIBUTIVO_ELIMINAR: 'distributivo:eliminar',
   DISTRIBUTIVO_IMPORTAR: 'distributivo:importar',
 
+  ESTUDIANTES_LEER: 'estudiantes:leer',
+  ESTUDIANTES_IMPORTAR: 'estudiantes:importar',
+
   CATALOGOS_LEER: 'catalogos:leer',
   CATALOGOS_ESCRIBIR: 'catalogos:escribir',
 

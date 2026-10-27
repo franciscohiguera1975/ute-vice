@@ -281,6 +281,10 @@ class RepositorioAnaliticaDistributivo(Protocol):
         estados: Sequence[str] = (),
     ) -> EstadoLotePorFacultad: ...
 
+    async def docentes_resumen(self, paos: Sequence[UUID]) -> list[DocenteResumen]: ...
+
+    async def split_por_carrera(self, paos: Sequence[UUID]) -> list[FilaSplitCarrera]: ...
+
 
 # ---------------------------------------------------------------------------
 # Resumenes: dos grupos de periodos, uno frente al otro
@@ -490,6 +494,136 @@ class DocenteConPocasHoras:
     facultad_nombre: str
     carrera: str
     horas_da: float
+
+
+# ---------------------------------------------------------------------------
+# Tablero Docente: un docente agregado, y su detalle por carrera
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class DocenteResumen:
+    """Un docente, con sus horas sumadas entre todas sus filas de un grupo de
+    periodos.
+
+    Es la fuente de las pestanas del Tablero Docente que miran al docente como
+    unidad entera —alertas, ETC, mas horas, tiempos parciales, organizacion—.
+    El desglose por facultad y carrera no sale de aqui: viene de
+    `FilaSplitCarrera`, que ya trae cada fila repartida.
+
+    `facultad_*`, `titularidad`, `categoria`, `dedicacion` y `relacion_laboral`
+    son el valor de su fila con mas horas en el grupo —su fila «principal»—.
+    Un docente que dicta en dos facultades cuenta con la de mas carga, igual
+    que ya se hace en `avance_por_facultad` para la facultad del periodo
+    anterior. Para la lista completa de carreras o sedes, que si varia fila a
+    fila, estan `carreras` y `sedes`.
+    """
+
+    docente_id: UUID
+    identificacion: str
+    nombre_completo: str
+    facultad_codigo: str
+    facultad_nombre: str
+    carreras: str
+    """Nombres de carrera distintos del docente en el grupo, unidos por coma.
+    Solo para mostrar; no se usa para agrupar."""
+    sedes: str
+    """Igual que `carreras`, pero de sede. Vacio si ninguna fila trae sede."""
+    niveles: tuple[str, ...] = ()
+    """Los niveles donde dicta —Grado, Posgrado...—, sin repetir."""
+    titularidad: str = ""
+    categoria: str = ""
+    dedicacion: str = ""
+    """Texto del catalogo (`TIEMPO COMPLETO`, `MEDIO TIEMPO`...). El tablero lo
+    normaliza a TC/MT/TP/NA en el cliente, junto al resto de formulas."""
+    relacion_laboral: str = ""
+    cargo_directivo: str = ""
+    """Nombres de cargo directivo distintos del docente en el grupo, unidos por
+    coma. Igual que `carreras`/`sedes`: vacio si ninguna fila trae cargo."""
+    da: float = 0.0
+    d: float = 0.0
+    i: float = 0.0
+    v: float = 0.0
+    g: float = 0.0
+    tot: float = 0.0
+    es_tecnico_docente: bool = False
+    es_directivo: bool = False
+    """`True` si alguna de las filas del docente en el grupo tiene un cargo
+    directivo asignado."""
+    es_valido: bool = False
+    """`True` si su mejor estado de validacion es `OK` u `OK_EXCEPCION`."""
+    estado_validacion: str | None = None
+    """Su mejor estado entre todas sus filas, o `None` si ninguna lo trae."""
+
+
+@dataclass(frozen=True, slots=True)
+class FilaSplitCarrera:
+    """Una fila docente x carrera x nivel x dedicacion, ya repartida.
+
+    En el distributivo real cada fila de `FilaDistributivoModel` ya es por
+    carrera: a diferencia de un consolidado en una sola hoja, aqui no hace
+    falta prorratear nada para desglosar por carrera, se toma la fila directa.
+    """
+
+    docente_id: UUID
+    facultad_codigo: str
+    facultad_nombre: str
+    carrera: str
+    carrera_id: UUID
+    sede: str
+    nivel: str
+    dedicacion: str
+    titularidad: str
+    categoria: str
+    da: float
+    d: float
+    i: float
+    v: float
+    g: float
+    tot: float
+    es_tecnico_docente: bool
+
+
+@dataclass(frozen=True, slots=True)
+class EstudiantesPorCarrera:
+    """Estudiantes matriculados en una carrera, en el semestre que se examina.
+
+    Cuenta por `carrera_id` y no por sede: `matriculas_estudiante.sede` es
+    texto libre de Banner, sin catalogo propio, y cruzarlo con `cat_sedes` por
+    nombre caeria en el mismo fuzzy-matching que se evito para la carrera. Una
+    carrera con varias sedes reporta aqui su total conjunto, no un reparto por
+    sede.
+    """
+
+    carrera_id: UUID
+    total_estudiantes: int
+
+
+@dataclass(frozen=True, slots=True)
+class TableroDocente:
+    """Todo lo que pinta el Tablero Docente, en una sola respuesta.
+
+    `docentes` es el grupo que se examina y `docentes_anterior` el de
+    comparacion; `split` y `estudiantes_por_carrera` solo traen el grupo que
+    se examina, porque las pestanas que los usan —Docencia directa, Gestion,
+    Estudiantes— no comparan periodos.
+
+    `codigos_actual` y `codigos_anterior` son los codigos de PAO de cada
+    grupo —elegidos por quien consulta, o los dos ultimos semestres completos
+    por defecto—. Viajan aparte porque ni `DocenteResumen` ni
+    `FilaSplitCarrera` traen el id del periodo: sirven para que la pantalla
+    refleje en el selector que grupos esta mostrando, igual que
+    `ValidacionDeGrupo.codigos` en `/distributivo/tablero`.
+    """
+
+    periodos: list[PeriodoDisponible] = field(default_factory=list)
+    docentes: list[DocenteResumen] = field(default_factory=list)
+    docentes_anterior: list[DocenteResumen] = field(default_factory=list)
+    split: list[FilaSplitCarrera] = field(default_factory=list)
+    estudiantes_por_carrera: list[EstudiantesPorCarrera] = field(default_factory=list)
+    codigos_actual: tuple[str, ...] = ()
+    codigos_anterior: tuple[str, ...] = ()
+    generado_en: str = ""
 
 
 @dataclass(frozen=True, slots=True)

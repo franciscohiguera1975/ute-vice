@@ -204,6 +204,7 @@ class TestConsultaDistributivo:
         usuario = hacer_usuario(roles={catalogo[RolCodigo.CONSULTA_DISTRIBUTIVO]})
 
         assert usuario.puede(Permiso.DISTRIBUTIVO_LEER)
+        assert usuario.puede(Permiso.ESTUDIANTES_LEER)
         assert usuario.puede(Permiso.CATALOGOS_LEER)
         assert usuario.puede(Permiso.REPORTES_GENERAR)
 
@@ -214,6 +215,7 @@ class TestConsultaDistributivo:
             Permiso.DISTRIBUTIVO_ESCRIBIR,
             Permiso.DISTRIBUTIVO_ELIMINAR,
             Permiso.DISTRIBUTIVO_IMPORTAR,
+            Permiso.ESTUDIANTES_IMPORTAR,
             Permiso.CATALOGOS_ESCRIBIR,
         ):
             assert not usuario.puede(permiso), permiso
@@ -234,7 +236,7 @@ class TestConsultaDistributivo:
     def test_es_mas_estrecho_que_consulta_en_lo_suyo(self, catalogo) -> None:  # type: ignore[no-untyped-def]
         propios = PERMISOS_POR_ROL[RolCodigo.CONSULTA_DISTRIBUTIVO]
 
-        assert len(propios) == 3, "cada permiso que se agregue aqui abre una pantalla"
+        assert len(propios) == 4, "cada permiso que se agregue aqui abre una pantalla"
         # `CONSULTA` ve mas cosas, pero no emite reportes: no es que uno
         # contenga al otro, son alcances distintos.
         assert Permiso.REPORTES_GENERAR not in PERMISOS_POR_ROL[RolCodigo.CONSULTA]

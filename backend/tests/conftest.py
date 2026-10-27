@@ -636,6 +636,79 @@ class RepoDistributivo:
         return sum(len(a) for a in enlaces.values())
 
 
+class RepoEstudiantes:
+    """Estudiantes y matriculas en memoria, con el mismo upsert por clave
+    natural que usa `RepoDistributivo` para sus filas."""
+
+    def __init__(self) -> None:
+        self.estudiantes: dict[UUID, Any] = {}
+        self.matriculas: dict[UUID, Any] = {}
+
+    async def obtener_por_cedula(self, cedula: str):  # type: ignore[no-untyped-def]
+        candidatos = sorted(
+            (e for e in self.estudiantes.values() if e.cedula == cedula),
+            key=lambda e: e.creado_en,
+        )
+        return candidatos[0] if candidatos else None
+
+    async def importar_lote(self, estudiantes, matriculas):  # type: ignore[no-untyped-def]
+        for estudiante in estudiantes:
+            self.estudiantes[estudiante.id] = estudiante
+
+        def clave(matricula):  # type: ignore[no-untyped-def]
+            return (matricula.estudiante_id, matricula.periodo, matricula.carrera, matricula.sede)
+
+        existentes = {clave(m): m.id for m in self.matriculas.values()}
+        altas = cambios = 0
+        for matricula in matriculas:
+            previo = existentes.get(clave(matricula))
+            if previo is None:
+                self.matriculas[matricula.id] = matricula
+                existentes[clave(matricula)] = matricula.id
+                altas += 1
+            else:
+                # Se conserva el id existente, igual que en SQL con el upsert.
+                matricula.id = previo
+                self.matriculas[previo] = matricula
+                cambios += 1
+        return (altas, cambios)
+
+    async def conteo_por_carrera(self, periodo, carreras_ids=()):  # type: ignore[no-untyped-def]
+        from app.domain.ports.estudiantes import ConteoPorCarrera
+
+        contador: dict[UUID, int] = {}
+        for matricula in self.matriculas.values():
+            if matricula.periodo != periodo or matricula.carrera_id is None:
+                continue
+            if matricula.matriculado != "MATRICULADO":
+                continue
+            if carreras_ids and matricula.carrera_id not in carreras_ids:
+                continue
+            contador[matricula.carrera_id] = contador.get(matricula.carrera_id, 0) + 1
+        return [
+            ConteoPorCarrera(carrera_id=cid, total_estudiantes=n) for cid, n in contador.items()
+        ]
+
+    async def conteo_por_carrera_en_semestres(self, prefijos_periodo, carreras_ids=()):  # type: ignore[no-untyped-def]
+        from app.domain.ports.estudiantes import ConteoPorCarrera
+
+        if not prefijos_periodo:
+            return []
+
+        contador: dict[UUID, int] = {}
+        for matricula in self.matriculas.values():
+            if matricula.periodo[:3] not in prefijos_periodo or matricula.carrera_id is None:
+                continue
+            if matricula.matriculado != "MATRICULADO":
+                continue
+            if carreras_ids and matricula.carrera_id not in carreras_ids:
+                continue
+            contador[matricula.carrera_id] = contador.get(matricula.carrera_id, 0) + 1
+        return [
+            ConteoPorCarrera(carrera_id=cid, total_estudiantes=n) for cid, n in contador.items()
+        ]
+
+
 class UowFalsa:
     """Unidad de trabajo en memoria.
 
@@ -655,6 +728,7 @@ class UowFalsa:
         self.docentes = RepoDocentes()
         self.distributivo = RepoDistributivo()
         self.distributivo.uow = self
+        self.estudiantes = RepoEstudiantes()
         self.commits = 0
         self.rollbacks = 0
 

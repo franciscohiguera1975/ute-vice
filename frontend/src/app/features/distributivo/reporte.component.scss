@@ -16,6 +16,9 @@
 .grupo { margin: 0 0 1.25rem; padding: 0; border: none; min-width: 0; }
 .grupo legend { width: 100%; padding: 0; margin-bottom: 0.5rem; }
 
+/* Descripcion de la plantilla elegida, debajo del selector. */
+.grupo select + p { margin-top: 0.4rem; }
+
 .acciones-seleccion { margin-bottom: 0.4rem; }
 .filtro-carrera { flex: 1 1 10rem; min-width: 8rem; padding: 0.3rem 0.5rem; font-size: 0.82rem; }
 
@@ -92,25 +95,6 @@
 .ficha:hover { background: var(--superficie-2); }
 .ficha--activa { border-color: var(--azul-600); background: var(--azul-50); font-weight: 600; }
 .ficha input { width: auto; margin: 0; flex-shrink: 0; }
-
-/* Plantillas: una debajo de otra, porque la descripcion es lo que distingue
-   un formato del otro y en columna se lee. */
-.plantillas { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.plantilla {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--borde-fuerte);
-  border-radius: var(--radio);
-  cursor: pointer;
-}
-.plantilla:hover { background: var(--superficie-2); }
-.plantilla--activa { border-color: var(--azul-600); background: var(--azul-50); }
-.plantilla input { width: auto; margin-top: 0.2rem; flex-shrink: 0; }
-.plantilla__nombre { display: block; font-size: 0.85rem; font-weight: 600; }
-.plantilla__nota { display: block; font-size: 0.72rem; color: var(--texto-tenue); line-height: 1.4; }
 
 .opcion {
   display: flex;

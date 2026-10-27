@@ -120,6 +120,7 @@ async def esquema(base_disponible: bool) -> AsyncIterator[None]:
     from app.infrastructure.db import (
         modelos,  # noqa: F401
         modelos_distributivo,  # noqa: F401
+        modelos_estudiantes,  # noqa: F401
     )
     from app.infrastructure.db.base import Base
     from app.infrastructure.db.sesion import crear_motor

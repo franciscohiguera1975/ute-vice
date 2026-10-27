@@ -53,6 +53,7 @@ class FiltroDistributivo:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
     sin_asignatura: bool | None = None
     """`True` aisla las filas con docencia pero sin asignatura registrada."""
     con_carga: bool | None = None
@@ -98,6 +99,7 @@ class FilaDistributivoResuelta:
     categoria: str | None = None
     tipo_titulo: str | None = None
     genero: str | None = None
+    cargo_directivo: str | None = None
 
     #: Nombres de las asignaturas de la fila, en el orden en que se escribieron.
     asignaturas: tuple[str, ...] = ()
@@ -118,6 +120,7 @@ class FilaDistributivoResuelta:
     codigo_categoria: str | None = None
     codigo_tipo_titulo: str | None = None
     codigo_genero: str | None = None
+    codigo_cargo_directivo: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +159,41 @@ class FilaReporteDocencia:
     def requiere_asignatura(self) -> bool:
         """`True` si dicta clase y nadie registro que materia."""
         return self.total_docencia > 0 and not self.asignatura
+
+
+@dataclass(frozen=True, slots=True)
+class FilaReporteIndicadoresDocentes:
+    """Fila del reporte institucional de indicadores docentes.
+
+    Reproduce `Reporte_Docentes.xlsx`: la misma informacion de docente, carrera
+    y condicion contractual que `FilaReporteDocencia`, mas el detalle de horas
+    por funcion —docencia, investigacion, vinculacion y gestion— que alimenta
+    los indicadores institucionales (Relacion D/Da, % de horas por funcion).
+    Esos indicadores no se calculan aqui: esta fila es el detalle por docente,
+    no el resumen agregado.
+    """
+
+    numero: int
+    identificacion: str
+    nombre: str
+    titulo_profesional: str
+    grado_academico: str
+    asignatura: str
+    anio_inicio_carrera: int | None
+    jerarquia_docente: str
+    dedicacion_horaria: str
+    tipo_contrato: str
+    unidad: str
+    comuna: str
+    anio_actual: int
+    total_horas: float
+    total_da: float
+    total_d: float
+    total_i: float
+    total_v: float
+    total_g: float
+    medida: str
+    genero: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -306,6 +344,16 @@ class RepositorioDistributivo(Protocol):
 
     async def filas_para_reporte(self, filtro: FiltroDistributivo) -> list[FilaReporteDocencia]:
         """Arma el reporte institucional, con el anio de inicio ya derivado."""
+        ...
+
+    async def filas_para_reporte_indicadores(
+        self, filtro: FiltroDistributivo
+    ) -> list[FilaReporteIndicadoresDocentes]:
+        """Arma el reporte de indicadores docentes (`Reporte_Docentes.xlsx`).
+
+        Comparte con `filas_para_reporte` el docente, la carrera y la condicion
+        contractual; suma el detalle de horas por funcion y el genero.
+        """
         ...
 
     async def unidades_por_docente(self) -> dict[UUID, str]:

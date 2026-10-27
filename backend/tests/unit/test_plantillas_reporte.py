@@ -14,10 +14,12 @@ import pytest
 from app.application.plantillas import (
     COLUMNAS_CONSOLIDADO,
     COLUMNAS_DOCENCIA,
+    COLUMNAS_INDICADORES_DOCENTES,
     COLUMNAS_PAO,
     REGISTRO_PLANTILLAS,
     PlantillaConsolidadoOrigen,
     PlantillaDocenciaPorCarrera,
+    PlantillaIndicadoresDocentes,
     PlantillaPaoOrigen,
     RegistroPlantillas,
 )
@@ -27,6 +29,7 @@ from app.domain.errors import ErrorValidacion
 from app.domain.ports.distributivo import (
     FilaDistributivoResuelta,
     FilaReporteDocencia,
+    FilaReporteIndicadoresDocentes,
     FiltroDistributivo,
 )
 from app.domain.value_objects_distributivo import DistribucionHoras
@@ -68,17 +71,23 @@ def contexto_admin(roles):  # type: ignore[no-untyped-def]
 class _Uow:
     """Unidad de trabajo minima: solo el repositorio que usan las plantillas."""
 
-    def __init__(self, *, reporte=None, resueltas=None) -> None:  # type: ignore[no-untyped-def]
-        self.distributivo = _Repo(reporte or [], resueltas or [])
+    def __init__(  # type: ignore[no-untyped-def]
+        self, *, reporte=None, resueltas=None, indicadores=None
+    ) -> None:
+        self.distributivo = _Repo(reporte or [], resueltas or [], indicadores or [])
 
 
 class _Repo:
-    def __init__(self, reporte, resueltas) -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, reporte, resueltas, indicadores=None) -> None:  # type: ignore[no-untyped-def]
         self._reporte = reporte
         self._resueltas = resueltas
+        self._indicadores = indicadores or []
 
     async def filas_para_reporte(self, filtro):  # type: ignore[no-untyped-def]
         return list(self._reporte)
+
+    async def filas_para_reporte_indicadores(self, filtro):  # type: ignore[no-untyped-def]
+        return list(self._indicadores)
 
     async def filas_resueltas(self, filtro):  # type: ignore[no-untyped-def]
         return list(self._resueltas)
@@ -118,9 +127,14 @@ def _resuelta(**cambios) -> FilaDistributivoResuelta:  # type: ignore[no-untyped
 # ===========================================================================
 
 
-def test_registro_ofrece_las_tres_plantillas() -> None:
+def test_registro_ofrece_las_cuatro_plantillas() -> None:
     codigos = [p.codigo for p in REGISTRO_PLANTILLAS.disponibles()]
-    assert codigos == ["docencia-carrera", "consolidado-origen", "pao-origen"]
+    assert codigos == [
+        "docencia-carrera",
+        "consolidado-origen",
+        "pao-origen",
+        "indicadores-docentes",
+    ]
 
 
 def test_sin_codigo_usa_la_institucional() -> None:
@@ -576,6 +590,108 @@ async def test_cuenta_docentes_distintos_y_no_filas() -> None:
     )
     assert contenido.total_filas == 2
     assert contenido.total_docentes == 1
+
+
+# ===========================================================================
+# Plantilla de indicadores docentes
+# ===========================================================================
+
+
+def _indicadores(**cambios) -> FilaReporteIndicadoresDocentes:  # type: ignore[no-untyped-def]
+    base = {
+        "numero": 1,
+        "identificacion": "1710034065",
+        "nombre": "PEREZ LUIS",
+        "titulo_profesional": "INGENIERO DE SISTEMAS",
+        "grado_academico": "MAESTRIA O EQUIVALENTE",
+        "asignatura": "",
+        "anio_inicio_carrera": 2020,
+        "jerarquia_docente": "AUXILIAR 1",
+        "dedicacion_horaria": "TIEMPO COMPLETO",
+        "tipo_contrato": "TITULAR",
+        "unidad": "FCID",
+        "comuna": "MATRIZ QUITO",
+        "anio_actual": 2026,
+        "total_horas": 40.0,
+        "total_da": 12.0,
+        "total_d": 32.0,
+        "total_i": 4.0,
+        "total_v": 2.0,
+        "total_g": 2.0,
+        "medida": "Horas",
+        "genero": "MASCULINO",
+    }
+    return FilaReporteIndicadoresDocentes(**{**base, **cambios})
+
+
+def test_la_plantilla_de_indicadores_tiene_veinte_columnas() -> None:
+    assert len(COLUMNAS_INDICADORES_DOCENTES) == 20
+    assert [c.clave for c in COLUMNAS_INDICADORES_DOCENTES] == [
+        "identificacion",
+        "nombre",
+        "titulo_profesional",
+        "grado_academico",
+        "asignatura",
+        "anio_inicio_carrera",
+        "jerarquia_docente",
+        "dedicacion_horaria",
+        "tipo_contrato",
+        "unidad",
+        "comuna",
+        "anio_actual",
+        "total_horas",
+        "total_da",
+        "total_d",
+        "total_i",
+        "total_v",
+        "total_g",
+        "medida",
+        "genero",
+    ]
+
+
+def test_el_bloque_de_resultado_tiene_un_color_distinto_al_de_insumo() -> None:
+    """A y M-T (resultado) van en un color; B-L (insumo) en otro."""
+    resultado = [COLUMNAS_INDICADORES_DOCENTES[0], *COLUMNAS_INDICADORES_DOCENTES[12:]]
+    insumo = COLUMNAS_INDICADORES_DOCENTES[1:12]
+    assert len({c.color_cabecera for c in resultado}) == 1
+    assert len({c.color_cabecera for c in insumo}) == 1
+    assert resultado[0].color_cabecera != insumo[0].color_cabecera
+
+
+def test_construir_con_filtro_vacio_no_truena() -> None:
+    plantilla = PlantillaIndicadoresDocentes()
+    assert plantilla.solo_datos is True
+
+
+async def test_la_plantilla_de_indicadores_no_truena_sin_filas() -> None:
+    contenido = await PlantillaIndicadoresDocentes().construir(
+        _Uow(indicadores=[]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.total_filas == 0
+    assert contenido.filas == []
+
+
+async def test_total_da_sale_de_la_fila_que_arma_el_repositorio() -> None:
+    contenido = await PlantillaIndicadoresDocentes().construir(
+        _Uow(indicadores=[_indicadores(total_da=7.5)]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    fila = contenido.filas[0]
+    assert fila["total_da"] == 7.5
+    assert fila["total_d"] == 32.0
+    assert fila["medida"] == "Horas"
+
+
+async def test_cuenta_docentes_distintos_en_indicadores() -> None:
+    contenido = await PlantillaIndicadoresDocentes().construir(
+        _Uow(indicadores=[_indicadores(), _indicadores(numero=2, unidad="TELEMATICA")]),  # type: ignore[arg-type]
+        FiltroDistributivo(),
+    )
+    assert contenido.total_filas == 2
+    assert contenido.total_docentes == 1
+    assert contenido.totales["Total de horas"] == 80.0
 
 
 # ===========================================================================

@@ -1,0 +1,40 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1.25rem; }
+
+.der { text-align: right; }
+
+.aviso-formato {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--superficie-2);
+  border-left: 3px solid var(--azul-600);
+  border-radius: var(--radio-sm);
+}
+
+.subtitulo {
+  margin: 1.5rem 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.metrica {
+  padding: 0.85rem 1rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.metrica__etiqueta {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+}
+.metrica__valor {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.metrica__pie { margin: 0.25rem 0 0; }

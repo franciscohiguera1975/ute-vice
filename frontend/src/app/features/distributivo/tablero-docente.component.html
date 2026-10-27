@@ -1,0 +1,832 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Tablero <span class="acento">Docente</span></h1>
+    <p class="texto-sm texto-suave">
+      {{ subtitulo() || 'Avance de la carga docente, un periodo frente a otro' }}
+    </p>
+  </div>
+  <button type="button" class="btn btn--secundario btn--sm no-imprimir" (click)="cargar()">
+    Actualizar
+  </button>
+</header>
+
+<div class="leyenda no-imprimir">
+  <span class="leyenda__chip leyenda__chip--tc"><b>TC</b> Tiempo completo</span>
+  <span class="leyenda__chip leyenda__chip--mt"><b>MT</b> Medio tiempo</span>
+  <span class="leyenda__chip leyenda__chip--tp"><b>TP</b> Tiempo parcial</span>
+</div>
+
+@if (cargando() && !datos()) {
+  <ute-cargando mensaje="Calculando el tablero docente…" />
+} @else if (datos(); as d) {
+  @if (d.periodos.length === 0) {
+    <ute-vacio
+      titulo="Todavia no hay carga"
+      mensaje="Cuando se importe un periodo, sus indicadores apareceran aqui."
+    />
+  } @else {
+    <!-- ------------------------------------------------ grupos de periodos -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cabecera">
+        <h2 class="tarjeta__titulo">Periodos que se comparan</h2>
+      </div>
+      <div class="tarjeta__cuerpo">
+        <ute-selector-grupos
+          [periodos]="d.periodos"
+          [(grupoA)]="grupoB"
+          [(grupoB)]="grupoA"
+          etiquetaA="Período(s)"
+          etiquetaB="Comparar con"
+          (comparar)="cargar()"
+        />
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------- filtros -->
+    <section class="tarjeta seccion no-imprimir">
+      <div class="tarjeta__cuerpo fila envolver hueco filtros">
+        <label class="campo filtros__campo">
+          <span class="campo__etiqueta">Facultad</span>
+          <select [value]="facultad()" (change)="facultad.set($any($event.target).value)">
+            <option value="">Todas</option>
+            @for (f of facultadesDisponibles(); track f.codigo) {
+              <option [value]="f.codigo">{{ f.nombre }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="campo filtros__campo">
+          <span class="campo__etiqueta">Nivel</span>
+          <select [value]="nivel()" (change)="nivel.set($any($event.target).value)">
+            <option value="">Todos</option>
+            @for (n of nivelesDisponibles(); track n) {
+              <option [value]="n">{{ n }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="campo filtros__campo">
+          <span class="campo__etiqueta">Dedicación</span>
+          <select [value]="dedicacion()" (change)="dedicacion.set($any($event.target).value)">
+            <option value="">Todas</option>
+            @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+              <option [value]="ded">{{ ETIQUETAS_DEDICACION[ded] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="campo filtros__campo">
+          <span class="campo__etiqueta">Titularidad</span>
+          <select [value]="titularidad()" (change)="titularidad.set($any($event.target).value)">
+            <option value="">Todas</option>
+            <option value="titular">Titulares</option>
+            <option value="no_titular">No titulares</option>
+          </select>
+        </label>
+
+        <label class="casilla">
+          <input
+            type="checkbox"
+            [checked]="incluirTecnicos()"
+            (change)="incluirTecnicos.set($any($event.target).checked)"
+          />
+          <span>Incluir técnicos docentes</span>
+        </label>
+
+        <label class="casilla">
+          <input
+            type="checkbox"
+            [checked]="excluirDirectivos()"
+            (change)="excluirDirectivos.set($any($event.target).checked)"
+          />
+          <span>Excluir directivos</span>
+        </label>
+
+        @if (hayFiltrosActivos()) {
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiarFiltros()">
+            Limpiar filtros
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ tabs -->
+    <nav class="tabs no-imprimir" aria-label="Pestañas del tablero docente">
+      @for (p of PESTANAS; track p.id) {
+        <button
+          type="button"
+          class="tabs__boton"
+          [class.tabs__boton--activo]="pestana() === p.id"
+          (click)="pestana.set(p.id)"
+        >
+          {{ p.etiqueta }}
+        </button>
+      }
+    </nav>
+
+    @switch (pestana()) {
+      <!-- ======================================================= variacion -->
+      @case ('variacion') {
+        <section class="rejilla rejilla--3 seccion" aria-label="Indicadores de variación">
+          <article class="metrica">
+            <p class="metrica__etiqueta">Docentes</p>
+            <p class="metrica__valor">{{ docentesFiltrados().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ docentesAnteriorFiltrados().length | number }} en el periodo de comparación ·
+              <span
+                [class.positivo]="docentesFiltrados().length > docentesAnteriorFiltrados().length"
+                [class.negativo]="docentesFiltrados().length < docentesAnteriorFiltrados().length"
+              >
+                {{ docentesFiltrados().length - docentesAnteriorFiltrados().length > 0 ? '+' : '' }}{{
+                  docentesFiltrados().length - docentesAnteriorFiltrados().length
+                }}
+              </span>
+            </p>
+          </article>
+
+          <article class="metrica">
+            <p class="metrica__etiqueta">% tiempo completo</p>
+            <p class="metrica__valor">
+              <span class="pill" [class]="'pill--' + tcPillDe(porcentajeTCActual())">
+                {{ porcentajeTCActual() * 100 | number: '1.0-1' }} %
+              </span>
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              Comparación: {{ porcentajeTCAnterior() * 100 | number: '1.0-1' }} % · mínimo 50 %,
+              óptimo 60 % — Art. 109 LOES
+            </p>
+          </article>
+
+          <article class="metrica">
+            <p class="metrica__etiqueta">Movimiento de personas</p>
+            <p class="metrica__valor">
+              <span class="positivo">+{{ movimiento().entran.length }}</span> /
+              <span class="negativo">−{{ movimiento().salen.length }}</span>
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">Ingresan / salen entre periodos</p>
+          </article>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Movimiento por facultad</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Cada docente cuenta una vez, en su facultad principal —aquella donde tiene más horas—.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">Comparación</th>
+                  <th scope="col" class="der">Actual</th>
+                  <th scope="col" class="der">Ingresan</th>
+                  <th scope="col" class="der">Salen</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of movimientoFacultades(); track f.codigo) {
+                  <tr>
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.anterior | number }}</td>
+                    <td class="der mono fuerte">{{ f.actual | number }}</td>
+                    <td class="der mono positivo">+{{ f.entran | number }}</td>
+                    <td class="der mono negativo">−{{ f.salen | number }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <!-- ============================================================= Da -->
+      @case ('da') {
+        <section class="rejilla rejilla--4 seccion" aria-label="Indicadores de docencia directa">
+          <article class="metrica">
+            <p class="metrica__etiqueta">Horas en clases (Da)</p>
+            <p class="metrica__valor">
+              {{ porcentaje(agregadoDaGlobal().da, agregadoDaGlobal().tot) | number: '1.0-1' }} %
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ agregadoDaGlobal().da | number: '1.0-0' }} de
+              {{ agregadoDaGlobal().tot | number: '1.0-0' }} h semanales
+            </p>
+          </article>
+
+          @for (f of agregadoDaPorDedicacion(); track f.dedicacion) {
+            <article class="metrica">
+              <p class="metrica__etiqueta">
+                <span class="ded" [class]="'ded--' + f.dedicacion.toLowerCase()">{{ f.dedicacion }}</span>
+                {{ ETIQUETAS_DEDICACION[f.dedicacion] }}
+              </p>
+              <p class="metrica__valor">
+                {{ porcentaje(f.agregado.da, f.agregado.tot) | number: '1.0-1' }} %
+              </p>
+              <p class="metrica__pie texto-xs texto-tenue">
+                Da prom. {{ razon(f.agregado.da, f.agregado.docentes) | number: '1.0-1' }} h ·
+                <span class="pill" [class]="'pill--' + pill3De(razon(f.agregado.da, f.agregado.topeDaTotal))">
+                  {{ porcentaje(f.agregado.da, f.agregado.topeDaTotal) | number: '1.0-1' }} % del tope
+                </span>
+                · {{ f.agregado.docentes }} docentes
+              </p>
+            </article>
+          }
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docencia directa por facultad</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            % Da = horas de clase ÷ horas totales asignadas en esa facultad. «% tope» compara la
+            suma de Da contra la suma del tope de cada docente (TC titular 20 h, TC no titular
+            22 h, MT 12 h, TP 11 h).
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">Docentes</th>
+                  <th scope="col" class="der">% Da</th>
+                  <th scope="col" class="der">Da prom.</th>
+                  <th scope="col" class="der">% tope</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of daPorFacultad(); track f.codigo) {
+                  <tr>
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.agregado.docentes | number }}</td>
+                    <td class="der mono">{{ porcentaje(f.agregado.da, f.agregado.tot) | number: '1.0-1' }} %</td>
+                    <td class="der mono">{{ razon(f.agregado.da, f.agregado.docentes) | number: '1.0-1' }}</td>
+                    <td class="der">
+                      <span class="pill" [class]="'pill--' + pill3De(razon(f.agregado.da, f.agregado.topeDaTotal))">
+                        {{ porcentaje(f.agregado.da, f.agregado.topeDaTotal) | number: '1.0-1' }} %
+                      </span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docencia directa por carrera</h2>
+          </div>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Carrera</th>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">Docentes</th>
+                  <th scope="col" class="der">% Da</th>
+                  <th scope="col" class="der">Da prom.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of daPorCarrera(); track c.facultad + c.carrera) {
+                  <tr>
+                    <th scope="row">{{ c.carrera }}</th>
+                    <td class="texto-tenue">{{ c.facultad }}</td>
+                    <td class="der mono">{{ c.agregado.docentes | number }}</td>
+                    <td class="der mono">{{ porcentaje(c.agregado.da, c.agregado.tot) | number: '1.0-1' }} %</td>
+                    <td class="der mono">{{ razon(c.agregado.da, c.agregado.docentes) | number: '1.0-1' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="texto-tenue">Sin carreras con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <!-- ======================================================= gestion -->
+      @case ('gestion') {
+        <section class="rejilla rejilla--3 seccion" aria-label="Indicadores de gestión">
+          <article class="metrica">
+            <p class="metrica__etiqueta">Horas en gestión (G)</p>
+            <p class="metrica__valor">
+              <span class="pill" [class]="'pill--' + gpillDe(razon(agregadoGGlobal().g, agregadoGGlobal().tot))">
+                {{ porcentaje(agregadoGGlobal().g, agregadoGGlobal().tot) | number: '1.0-1' }} %
+              </span>
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ agregadoGGlobal().g | number: '1.0-0' }} de {{ agregadoGGlobal().tot | number: '1.0-0' }}
+              h · referencia máx. 25 %
+            </p>
+          </article>
+
+          <article class="metrica">
+            <p class="metrica__etiqueta">Docentes con gestión</p>
+            <p class="metrica__valor">{{ docentesConGestion() | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              de {{ agregadoGGlobal().docentes | number }} docentes
+            </p>
+          </article>
+
+          <article class="metrica">
+            <p class="metrica__etiqueta">Gestión promedio</p>
+            <p class="metrica__valor">{{ gestionPromedio() | number: '1.0-1' }} h</p>
+            <p class="metrica__pie texto-xs texto-tenue">Por docente que tiene gestión</p>
+          </article>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Gestión por facultad</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            % G = horas de gestión ÷ horas totales asignadas. Máximo 25 %.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">% G</th>
+                  <th scope="col" class="der">Horas G</th>
+                  <th scope="col" class="der">Con G</th>
+                  <th scope="col" class="der">G prom.</th>
+                  <th scope="col">Composición de carga</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of gPorFacultad(); track f.codigo) {
+                  <tr>
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der">
+                      <span class="pill" [class]="'pill--' + gpillDe(razon(f.agregado.g, f.agregado.tot))">
+                        {{ porcentaje(f.agregado.g, f.agregado.tot) | number: '1.0-1' }} %
+                      </span>
+                    </td>
+                    <td class="der mono">{{ f.agregado.g | number: '1.0-0' }}</td>
+                    <td class="der mono">{{ f.conG | number }}</td>
+                    <td class="der mono">{{ razon(f.agregado.g, f.conG) | number: '1.0-1' }}</td>
+                    <td>
+                      <div class="stack">
+                        <i class="stack__d" [style.width.%]="porcentaje(f.agregado.d, f.agregado.tot)"></i>
+                        <i class="stack__i" [style.width.%]="porcentaje(f.agregado.i, f.agregado.tot)"></i>
+                        <i class="stack__v" [style.width.%]="porcentaje(f.agregado.v, f.agregado.tot)"></i>
+                        <i class="stack__g" [style.width.%]="porcentaje(f.agregado.g, f.agregado.tot)"></i>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="leyenda-stack texto-xs texto-tenue">
+            <span><i class="stack__d"></i> Docencia</span>
+            <span><i class="stack__i"></i> Investigación</span>
+            <span><i class="stack__v"></i> Vinculación</span>
+            <span><i class="stack__g"></i> Gestión</span>
+          </div>
+        </section>
+      }
+
+      <!-- =========================================================== top -->
+      @case ('top') {
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docentes con más horas asignadas</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Ordene por cualquier función con clic en el encabezado. Se resalta a quien supera el
+            tope de su dedicación. El dominio todavía no distingue cargos directivos (ver el
+            reporte de esta implementación); esta lista no los excluye.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Docente</th>
+                  <th scope="col">Facultad</th>
+                  <th scope="col">Ded.</th>
+                  <th scope="col">Categoría</th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('tot')">
+                    Total h {{ ordenTop() === 'tot' ? '▾' : '' }}
+                  </th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('da')">
+                    Da {{ ordenTop() === 'da' ? '▾' : '' }}
+                  </th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('d')">
+                    D {{ ordenTop() === 'd' ? '▾' : '' }}
+                  </th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('i')">
+                    I {{ ordenTop() === 'i' ? '▾' : '' }}
+                  </th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('v')">
+                    V {{ ordenTop() === 'v' ? '▾' : '' }}
+                  </th>
+                  <th scope="col" class="der" role="button" (click)="ordenarTopPor('g')">
+                    G {{ ordenTop() === 'g' ? '▾' : '' }}
+                  </th>
+                  <th scope="col">Alertas</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of masHoras().slice(0, 150); track d.docenteId; let i = $index) {
+                  <tr [class.tabla__fila--excede]="excedeTope(d)">
+                    <td class="mono texto-tenue">{{ i + 1 }}</td>
+                    <td>
+                      <button type="button" class="nombre-docente" (click)="abrirDocente(d)">
+                        {{ d.nombreCompleto }}
+                      </button>
+                    </td>
+                    <td class="texto-tenue">{{ d.facultadNombre }}</td>
+                    <td>
+                      <span class="ded" [class]="'ded--' + claveDedicacionDe(d).toLowerCase()">
+                        {{ claveDedicacionDe(d) }}
+                      </span>
+                    </td>
+                    <td class="texto-tenue">{{ d.categoria }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'tot'">{{ d.tot | number: '1.0-1' }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'da'">{{ d.da | number: '1.0-1' }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'd'">{{ d.d | number: '1.0-1' }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'i'">{{ d.i | number: '1.0-1' }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'v'">{{ d.v | number: '1.0-1' }}</td>
+                    <td class="der mono" [class.fuerte]="ordenTop() === 'g'">{{ d.g | number: '1.0-1' }}</td>
+                    <td>
+                      @for (a of alertasDe(d); track a.texto) {
+                        <span class="pill" [class]="'pill--' + a.nivel">{{ a.texto }}</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="12" class="texto-tenue">Sin docentes con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (masHoras().length > 150) {
+            <p class="nota texto-xs texto-tenue">
+              Se muestran los primeros 150 de {{ masHoras().length }}.
+            </p>
+          }
+        </section>
+      }
+
+      <!-- ============================================================ tp -->
+      @case ('tp') {
+        <section class="rejilla rejilla--4 seccion" aria-label="Indicadores de tiempos parciales">
+          <article class="metrica">
+            <p class="metrica__etiqueta">Docentes TP</p>
+            <p class="metrica__valor">{{ docentesTP().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              Da promedio {{ tpPromedioDa() | number: '1.0-1' }} h · mediana
+              {{ tpMedianaDa() | number: '1.0-1' }} h (tope 11 h)
+            </p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Da sobre 11 h</p>
+            <p class="metrica__valor">{{ tpSobreTope().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">Superan el tope del art. 246</p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Sin horas de clase</p>
+            <p class="metrica__valor">{{ tpSinClases().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">Da = 0</p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">TP con 20 h o más</p>
+            <p class="metrica__valor">{{ tp20oMas().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ tpBajoMinimo().length }} con menos de 2 h de clase
+            </p>
+          </article>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Horas de clase (Da) de los TP, por facultad</h2>
+          </div>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">TP</th>
+                  <th scope="col" class="der">Da prom.</th>
+                  <th scope="col" class="der">Mediana</th>
+                  @for (b of BINS_TP; track b.etiqueta) {
+                    <th scope="col" class="der">{{ b.etiqueta }}</th>
+                  }
+                  <th scope="col">Distribución</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of tpPorFacultad(); track f.codigo) {
+                  <tr [class.tabla__fila--tenue]="f.codigo === '__total'">
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.cantidad | number }}</td>
+                    <td class="der mono">{{ f.promedio | number: '1.0-1' }}</td>
+                    <td class="der mono">{{ f.mediana | number: '1.0-1' }}</td>
+                    @for (v of f.bins; track $index) {
+                      <td class="der mono">{{ v || '—' }}</td>
+                    }
+                    <td>
+                      <div class="stack stack--bins">
+                        @for (v of f.bins; track $index) {
+                          <i [class]="'stack--bins__b' + $index" [style.width.%]="razon(v, f.cantidad) * 100"></i>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td [attr.colspan]="5 + BINS_TP.length" class="texto-tenue">
+                      Sin docentes TP con los filtros elegidos
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="leyenda-stack texto-xs texto-tenue">
+            @for (b of BINS_TP; track b.etiqueta; let i = $index) {
+              <span><i [class]="'stack--bins__b' + i"></i> {{ b.etiqueta }}</span>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- =================================================== estudiantes -->
+      @case ('estudiantes') {
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Estudiantes por carrera</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Menos de 15 posible exceso de docentes · 15 a 30 rango de trabajo · más de 30 posible
+            sobrecarga. Umbrales de trabajo, no normativos. Los estudiantes se cuentan por
+            carrera, no por sede: una carrera con varias sedes repite aquí el mismo total.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col">Carrera</th>
+                  <th scope="col">Sede</th>
+                  <th scope="col" class="der">Estudiantes</th>
+                  <th scope="col" class="der">ETC docentes</th>
+                  <th scope="col" class="der">Ratio est./ETC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of estudiantesPorCarrera(); track c.facultad + c.carrera + c.sede) {
+                  <tr>
+                    <th scope="row">{{ c.facultad }}</th>
+                    <td>{{ c.carrera }}</td>
+                    <td class="texto-tenue">{{ c.sede }}</td>
+                    <td class="der mono texto-tenue">{{ c.estudiantes || '—' }}</td>
+                    <td class="der mono">{{ c.etc | number: '1.0-1' }}</td>
+                    <td class="der">
+                      @if (c.estudiantes > 0) {
+                        <span class="pill" [class]="'pill--' + ratioPillDe(c.ratio)">
+                          {{ c.ratio | number: '1.0-1' }}
+                        </span>
+                      } @else {
+                        <span class="texto-tenue">—</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="texto-tenue">Sin carreras con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <!-- =================================================== organizacion -->
+      @case ('organizacion') {
+        <section class="rejilla rejilla--4 seccion" aria-label="Indicadores de organización">
+          <article class="metrica">
+            <p class="metrica__etiqueta">TC que no completan 40 h</p>
+            <p class="metrica__valor">{{ tcIncompletos() | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">de {{ tcDocentes().length }} TC</p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">TC con menos de 3 h de clase</p>
+            <p class="metrica__valor">{{ tcPocaClase() | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ tcSinClase() }} sin ninguna clase · mínimo 3 h (art. 244)
+            </p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Docentes en las 4 funciones</p>
+            <p class="metrica__valor">{{ docentesCuatroFunciones() | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              {{ docentesTresFunciones() }} más en 3 funciones · no recomendado
+            </p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Horas de investigación</p>
+            <p class="metrica__valor">
+              <span class="pill" [class]="'pill--' + ipillDe(porcentajeInvestigacion())">
+                {{ porcentajeInvestigacion() * 100 | number: '1.0-1' }} %
+              </span>
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">Mínimo de referencia 6 %</p>
+          </article>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Planta a tiempo completo</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Art. 109 LOES: al menos 50 % a tiempo completo (óptimo 60 %). ETC: TC = 1, MT = 0,5,
+            TP = horas ÷ 40. Clic en una facultad para ver sus carreras.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">Docentes</th>
+                  <th scope="col" class="der">TC</th>
+                  <th scope="col" class="der">MT</th>
+                  <th scope="col" class="der">TP</th>
+                  <th scope="col" class="der">% TC</th>
+                  <th scope="col" class="der">ETC</th>
+                  <th scope="col" class="der">% ETC de TC</th>
+                  <th scope="col" class="der">TC para 50 %</th>
+                  <th scope="col" class="der">TC para 60 %</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of plantaPorFacultad().filas; track f.codigo) {
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="facultad() === f.codigo"
+                    (click)="facultad.set(facultad() === f.codigo ? '' : f.codigo)"
+                  >
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.planta.docentes | number }}</td>
+                    <td class="der mono">{{ f.planta.tc | number }}</td>
+                    <td class="der mono">{{ f.planta.mt | number }}</td>
+                    <td class="der mono">{{ f.planta.tp | number }}</td>
+                    <td class="der">
+                      <span class="pill" [class]="'pill--' + tcPillDe(razon(f.planta.tc, f.planta.docentes))">
+                        {{ porcentaje(f.planta.tc, f.planta.docentes) | number: '1.0-1' }} %
+                      </span>
+                    </td>
+                    <td class="der mono">{{ f.planta.etc | number: '1.0-1' }}</td>
+                    <td class="der mono">{{ porcentaje(f.planta.tc, f.planta.etc) | number: '1.0-1' }} %</td>
+                    <td class="der mono">
+                      @if (faltanPara(0.5, f.planta.docentes, f.planta.tc) === 0) {
+                        <span class="positivo">Cumple</span>
+                      } @else {
+                        {{ faltanPara(0.5, f.planta.docentes, f.planta.tc) }}
+                      }
+                    </td>
+                    <td class="der mono">
+                      @if (faltanPara(0.6, f.planta.docentes, f.planta.tc) === 0) {
+                        <span class="positivo">Cumple</span>
+                      } @else {
+                        {{ faltanPara(0.6, f.planta.docentes, f.planta.tc) }}
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="10" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="der mono fuerte">{{ plantaPorFacultad().total.docentes | number }}</td>
+                  <td class="der mono fuerte">{{ plantaPorFacultad().total.tc | number }}</td>
+                  <td class="der mono fuerte">{{ plantaPorFacultad().total.mt | number }}</td>
+                  <td class="der mono fuerte">{{ plantaPorFacultad().total.tp | number }}</td>
+                  <td class="der">
+                    <span
+                      class="pill"
+                      [class]="'pill--' + tcPillDe(razon(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes))"
+                    >
+                      {{ porcentaje(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes) | number: '1.0-1' }} %
+                    </span>
+                  </td>
+                  <td class="der mono fuerte">{{ plantaPorFacultad().total.etc | number: '1.0-1' }}</td>
+                  <td class="der mono fuerte">
+                    {{ porcentaje(plantaPorFacultad().total.tc, plantaPorFacultad().total.etc) | number: '1.0-1' }} %
+                  </td>
+                  <td class="der mono fuerte">
+                    {{ faltanPara(0.5, plantaPorFacultad().total.docentes, plantaPorFacultad().total.tc) || 'Cumple' }}
+                  </td>
+                  <td class="der mono fuerte">
+                    {{ faltanPara(0.6, plantaPorFacultad().total.docentes, plantaPorFacultad().total.tc) || 'Cumple' }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      }
+    }
+
+    <p class="texto-xs texto-tenue">
+      Calculado el {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}
+    </p>
+  }
+}
+
+<!-- ------------------------------------------------------- ficha de detalle -->
+<dialog #dlg class="ficha-docente" (close)="cerrarDocente()">
+  @if (docenteAbierto(); as doc) {
+    <div class="ficha-docente__cabecera">
+      <div>
+        <h2 class="ficha-docente__titulo">{{ doc.nombreCompleto }}</h2>
+        <p class="texto-sm texto-tenue">{{ doc.identificacion }} · {{ doc.facultadNombre }}</p>
+      </div>
+      <button type="button" class="btn btn--fantasma btn--sm" (click)="cerrarDocente()">Cerrar</button>
+    </div>
+
+    @if (alertasDe(doc).length > 0) {
+      <div class="alertas">
+        @for (a of alertasDe(doc); track a.texto) {
+          <span class="pill" [class]="'pill--' + a.nivel">{{ a.texto }}</span>
+        }
+      </div>
+    }
+
+    <div class="ficha-docente__datos">
+      <div>
+        <b>Dedicación</b>
+        <span>
+          <span class="ded" [class]="'ded--' + claveDedicacionDe(doc).toLowerCase()">
+            {{ claveDedicacionDe(doc) }}
+          </span>
+          {{ ETIQUETAS_DEDICACION[claveDedicacionDe(doc)] }}
+        </span>
+      </div>
+      <div><b>Categoría</b><span>{{ doc.categoria || '—' }}</span></div>
+      <div><b>Titularidad</b><span>{{ doc.titularidad || '—' }}</span></div>
+      <div><b>Relación laboral</b><span>{{ doc.relacionLaboral || '—' }}</span></div>
+      @if (doc.esDirectivo) {
+        <div><b>Cargo directivo</b><span>{{ doc.cargoDirectivo || '—' }}</span></div>
+      }
+      <div><b>Sede</b><span>{{ doc.sedes || '—' }}</span></div>
+      <div><b>Nivel</b><span>{{ doc.niveles.join(', ') || '—' }}</span></div>
+      <div class="ficha-docente__ancho"><b>Carreras</b><span>{{ doc.carreras || '—' }}</span></div>
+      <div><b>Total semanal</b><span class="fuerte">{{ doc.tot | number: '1.0-1' }} h</span></div>
+      <div><b>Clases (Da)</b><span class="fuerte">{{ doc.da | number: '1.0-1' }} h</span></div>
+      <div><b>Validación</b><span>{{ doc.estadoValidacion || 'Sin estado' }}</span></div>
+    </div>
+
+    <div class="ficha-docente__horas">
+      <div class="lbl texto-xs texto-tenue">Distribución de horas semanales</div>
+      @for (h of barrasHoras(doc); track h.etiqueta) {
+        <div class="hbar">
+          <span>{{ h.etiqueta }}</span>
+          <span class="hbar__pista"><i [style.width.%]="anchoBarra(h.valor, doc.tot)"></i></span>
+          <span class="mono">{{ h.valor | number: '1.0-1' }} h</span>
+        </div>
+      }
+    </div>
+
+    @if (docenteAnteriorAbierto(); as anterior) {
+      <div class="ficha-docente__comparacion">
+        <div class="lbl texto-xs texto-tenue">Periodo de comparación</div>
+        <p class="texto-sm">
+          {{ anterior.tot | number: '1.0-1' }} h totales · {{ anterior.da | number: '1.0-1' }} h de
+          clase · {{ anterior.facultadNombre }}
+        </p>
+      </div>
+    } @else {
+      <p class="texto-sm texto-tenue">No figura en el periodo de comparación.</p>
+    }
+  }
+</dialog>

@@ -38,6 +38,7 @@ class EntradaCrearFila:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
     asignaturas_ids: list[UUID] = field(default_factory=list)
     horas: dict[str, float] = field(default_factory=dict)
     medida: str | None = None
@@ -55,6 +56,7 @@ class EntradaActualizarFila:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
     asignaturas_ids: list[UUID] | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None
@@ -78,6 +80,7 @@ _REFERENCIAS_OPCIONALES: tuple[tuple[str, TipoCatalogo], ...] = (
     ("dedicacion_id", TipoCatalogo.DEDICACION),
     ("categoria_id", TipoCatalogo.CATEGORIA),
     ("tipo_titulo_id", TipoCatalogo.TIPO_TITULO),
+    ("cargo_directivo_id", TipoCatalogo.CARGO_DIRECTIVO),
 )
 
 
@@ -250,6 +253,7 @@ class CrearFilaDistributivo(CasoDeUso[EntradaCrearFila, FilaDistributivo]):
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
+                cargo_directivo_id=entrada.cargo_directivo_id,
                 asignaturas_ids=list(entrada.asignaturas_ids),
                 horas=horas,
                 medida=entrada.medida,
@@ -314,6 +318,7 @@ class ActualizarFilaDistributivo(CasoDeUso[EntradaActualizarFila, FilaDistributi
                 dedicacion_id=entrada.dedicacion_id,
                 categoria_id=entrada.categoria_id,
                 tipo_titulo_id=entrada.tipo_titulo_id,
+                cargo_directivo_id=entrada.cargo_directivo_id,
                 asignaturas_ids=entrada.asignaturas_ids,
                 horas=horas,
                 medida=entrada.medida,

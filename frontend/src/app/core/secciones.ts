@@ -24,10 +24,10 @@ export interface Seccion {
 }
 
 /**
- * Las seis pantallas del distributivo.
+ * Las pantallas del distributivo.
  *
- * Se agrupan en un desplegable y no en seis entradas sueltas: en horizontal
- * no caben, y sueltas no se lee que todas trabajan sobre el mismo dato.
+ * Se agrupan en un desplegable y no en entradas sueltas: en horizontal no
+ * caben, y sueltas no se lee que todas trabajan sobre el mismo dato.
  */
 const DISTRIBUTIVO: readonly Seccion[] = [
   {
@@ -45,10 +45,23 @@ const DISTRIBUTIVO: readonly Seccion[] = [
     permisos: [Permiso.DISTRIBUTIVO_LEER],
   },
   {
+    // Mismo permiso que «Indicadores»: el rol de consulta tambien debe verlo.
+    ruta: '/distributivo/tablero-docente',
+    etiqueta: 'Tablero docente',
+    icono: '◎',
+    permisos: [Permiso.DISTRIBUTIVO_LEER],
+  },
+  {
     ruta: '/distributivo/importar',
     etiqueta: 'Cargar PAO',
     icono: '⤒',
     permisos: [Permiso.DISTRIBUTIVO_IMPORTAR],
+  },
+  {
+    ruta: '/distributivo/estudiantes/importar',
+    etiqueta: 'Cargar estudiantes',
+    icono: '⇧',
+    permisos: [Permiso.ESTUDIANTES_IMPORTAR],
   },
   {
     ruta: '/distributivo/reporte',

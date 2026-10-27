@@ -19,6 +19,7 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 
 import { PROVEEDORES_DATOS } from '@data/repositorios';
 import { PROVEEDORES_DISTRIBUTIVO } from '@data/repositorios-distributivo';
+import { PROVEEDORES_ESTUDIANTES } from '@data/repositorios-estudiantes';
 
 import { rutas } from './app.routes';
 import { INTERCEPTORES } from './core/interceptores';
@@ -58,5 +59,6 @@ export const configuracionApp: ApplicationConfig = {
 
     ...PROVEEDORES_DATOS,
     ...PROVEEDORES_DISTRIBUTIVO,
+    ...PROVEEDORES_ESTUDIANTES,
   ],
 };

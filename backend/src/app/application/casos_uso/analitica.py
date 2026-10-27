@@ -10,6 +10,8 @@ from app.application.base import CasoDeUso, ContextoEjecucion
 from app.domain.enums import Permiso, TipoFlujoContrato
 from app.domain.ports.analitica import (
     EstadoLotePorFacultad,
+    EstudiantesPorCarrera,
+    FilaSplitCarrera,
     PeriodoDisponible,
     RepositorioAnalitica,
     RepositorioAnaliticaDistributivo,
@@ -17,7 +19,9 @@ from app.domain.ports.analitica import (
     ResumenDeHoras,
     TableroCompleto,
     TableroDistributivo,
+    TableroDocente,
 )
+from app.domain.ports.estudiantes import RepositorioEstudiantes
 from app.domain.ports.reloj import Reloj
 
 
@@ -121,6 +125,101 @@ class ObtenerTableroDistributivo(CasoDeUso[EntradaTableroDistributivo, TableroDi
             por_dedicacion=await self._analitica.distribucion_de_grupo(actual, campo="dedicacion"),
             generado_en=self._reloj.ahora().isoformat(),
         )
+
+
+# ---------------------------------------------------------------------------
+# Tablero Docente: docentes y su carga por carrera, en dos grupos de periodos
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class EntradaTableroDocente:
+    """Los dos grupos de periodos que se comparan.
+
+    Mismo criterio que `EntradaTableroDistributivo`: un grupo y no periodos
+    sueltos, porque un semestre son varios —tecnologia, grado y posgrado, mas
+    sus interciclos—.
+    """
+
+    grupo_a: tuple[UUID, ...] = ()
+    grupo_b: tuple[UUID, ...] = ()
+
+
+class ObtenerTableroDocente(CasoDeUso[EntradaTableroDocente, TableroDocente]):
+    """Docentes y su carga por carrera, en dos grupos de periodos.
+
+    Devuelve los datos por docente y por carrera sin resumirlos mas: las
+    formulas del tablero —topes, alertas, ETC, semaforos— y sus filtros
+    globales —facultad, nivel, dedicacion, titularidad, tecnicos docentes— se
+    aplican en el cliente sobre esta misma respuesta, para que cambiar un
+    filtro no dispare una peticion nueva.
+    """
+
+    nombre = "analitica.tablero_docente"
+    descripcion = "Docentes y su carga por carrera, en dos grupos de periodos"
+    permiso_requerido = Permiso.DISTRIBUTIVO_LEER
+
+    def __init__(
+        self,
+        analitica: RepositorioAnaliticaDistributivo,
+        estudiantes: RepositorioEstudiantes,
+        reloj: Reloj,
+    ) -> None:
+        self._analitica = analitica
+        self._estudiantes = estudiantes
+        self._reloj = reloj
+
+    async def _ejecutar(
+        self, entrada: EntradaTableroDocente, contexto: ContextoEjecucion
+    ) -> TableroDocente:
+        periodos = await self._analitica.periodos_con_filas()
+        ahora = self._reloj.ahora().isoformat()
+        if not periodos:
+            return TableroDocente(generado_en=ahora)
+
+        # Mismos dos ultimos semestres completos por defecto que el resto de
+        # la analitica del distributivo — ver `_grupos`.
+        anterior, actual = _grupos(
+            periodos, EntradaResumenComparativo(grupo_a=entrada.grupo_a, grupo_b=entrada.grupo_b)
+        )
+
+        por_id = {p.id: p.codigo for p in periodos}
+        codigos_actual = tuple(por_id[i] for i in actual if i in por_id)
+        split = await self._analitica.split_por_carrera(actual)
+
+        return TableroDocente(
+            periodos=periodos,
+            docentes=await self._analitica.docentes_resumen(actual),
+            docentes_anterior=await self._analitica.docentes_resumen(anterior),
+            split=split,
+            estudiantes_por_carrera=await self._estudiantes_del_grupo(codigos_actual, split),
+            codigos_actual=codigos_actual,
+            codigos_anterior=tuple(por_id[i] for i in anterior if i in por_id),
+            generado_en=ahora,
+        )
+
+    async def _estudiantes_del_grupo(
+        self, codigos: tuple[str, ...], split: list[FilaSplitCarrera]
+    ) -> list[EstudiantesPorCarrera]:
+        """Estudiantes matriculados en las carreras del grupo que se examina.
+
+        Se acota por semestre -el prefijo de tres caracteres de cada codigo
+        de PAO, ver `RepositorioEstudiantes.conteo_por_carrera_en_semestres`-
+        y por las carreras que de verdad aparecen en `split`, para no traer
+        del padron estudiantil mas de lo que esta pantalla va a mostrar.
+        """
+        prefijos = {codigo[:3] for codigo in codigos}
+        carreras_ids = {fila.carrera_id for fila in split}
+        if not prefijos or not carreras_ids:
+            return []
+
+        conteos = await self._estudiantes.conteo_por_carrera_en_semestres(
+            tuple(prefijos), tuple(carreras_ids)
+        )
+        return [
+            EstudiantesPorCarrera(carrera_id=c.carrera_id, total_estudiantes=c.total_estudiantes)
+            for c in conteos
+        ]
 
 
 # ---------------------------------------------------------------------------

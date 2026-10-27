@@ -12,6 +12,7 @@ from app.domain.ports.distributivo import (
     RepositorioDistributivo,
     RepositorioDocentes,
 )
+from app.domain.ports.estudiantes import RepositorioEstudiantes
 from app.domain.ports.repositorios import (
     RepositorioJobs,
     RepositorioLogsConsulta,
@@ -32,6 +33,7 @@ from app.infrastructure.db.repositorios.distributivo import (
     RepositorioDistributivoSQL,
     RepositorioDocentesSQL,
 )
+from app.infrastructure.db.repositorios.estudiantes import RepositorioEstudiantesSQL
 from app.infrastructure.db.repositorios.nucleo import (
     RepositorioJobsSQL,
     RepositorioLogsSQL,
@@ -66,6 +68,7 @@ class UnidadDeTrabajoSQL:
     catalogos: RepositorioCatalogos
     docentes: RepositorioDocentes
     distributivo: RepositorioDistributivo
+    estudiantes: RepositorioEstudiantes
     tickets: RepositorioTickets
 
     def __init__(self, fabrica: async_sessionmaker[AsyncSession]) -> None:
@@ -111,6 +114,7 @@ class UnidadDeTrabajoSQL:
         self.catalogos = RepositorioCatalogosSQL(sesion)
         self.docentes = RepositorioDocentesSQL(sesion)
         self.distributivo = RepositorioDistributivoSQL(sesion)
+        self.estudiantes = RepositorioEstudiantesSQL(sesion)
         self.tickets = RepositorioTicketsSQL(sesion)
 
     @property

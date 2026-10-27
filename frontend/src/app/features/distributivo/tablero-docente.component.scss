@@ -1,0 +1,254 @@
+.encabezado { margin-bottom: 1.25rem; }
+.seccion { margin-bottom: 1.25rem; }
+
+h1 { margin: 0 0 0.2rem; }
+.acento { color: var(--azul-ute); }
+
+.der { text-align: right; }
+.fuerte { font-weight: 600; }
+.positivo { color: var(--exito); }
+.negativo { color: var(--error); }
+
+.descripcion-tabla { margin: 0; padding: 0 1.15rem 0.75rem; }
+
+.nota { margin: 0; padding: 0.75rem 1.15rem 1rem; }
+
+/* ------------------------------------------------------------- leyenda --- */
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.leyenda__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.leyenda__chip b { font-weight: 700; }
+.leyenda__chip--tc { color: var(--azul-800); background: var(--azul-100); border-color: var(--azul-600); }
+.leyenda__chip--mt { color: var(--exito); background: var(--exito-suave); border-color: var(--exito); }
+.leyenda__chip--tp { color: var(--aviso); background: var(--aviso-suave); border-color: var(--aviso); }
+
+/* --------------------------------------------------------------- filtros --- */
+.filtros { align-items: flex-end; }
+.filtros__campo { margin-bottom: 0; min-width: 11rem; }
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ tabs --- */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--borde);
+}
+.tabs__boton {
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.tabs__boton:hover { color: var(--texto); }
+.tabs__boton--activo {
+  color: var(--azul-800);
+  font-weight: 600;
+  border-bottom-color: var(--azul-700);
+}
+
+/* --------------------------------------------------------------- metrica --- */
+.metrica {
+  padding: 1rem 1.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-1);
+}
+.metrica__etiqueta {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.metrica__valor {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.metrica__pie { margin: 0.3rem 0 0; }
+
+/* ----------------------------------------------------------------- pill --- */
+.pill {
+  display: inline-block;
+  padding: 0.12rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill--ok { color: var(--exito); background: var(--exito-suave); }
+.pill--warn { color: var(--aviso); background: var(--aviso-suave); }
+.pill--bad { color: var(--error); background: var(--error-suave); }
+
+/* ------------------------------------------------------------------ ded --- */
+.ded {
+  display: inline-block;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: var(--radio-sm);
+  font-style: normal;
+}
+.ded--tc { color: var(--azul-800); background: var(--azul-100); }
+.ded--mt { color: var(--exito); background: var(--exito-suave); }
+.ded--tp { color: var(--aviso); background: var(--aviso-suave); }
+.ded--na { color: var(--texto-tenue); background: var(--superficie-2); }
+
+/* ----------------------------------------------------------------- tabla --- */
+.tabla__fila--tenue th, .tabla__fila--tenue td { color: var(--texto-suave); }
+.tabla__fila--excede td, .tabla__fila--excede th { background: var(--error-suave); }
+.tabla__fila--activa td, .tabla__fila--activa th { background: var(--azul-50); }
+.tabla--clicable { cursor: pointer; }
+
+/* --------------------------------------------------- composicion de carga --- */
+.stack {
+  display: flex;
+  width: 100%;
+  min-width: 7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--superficie-2);
+}
+.stack__d { background: var(--azul-ute); }
+.stack__i { background: var(--rojo-ute); }
+.stack__v { background: var(--verde-ute); }
+.stack__g { background: var(--aviso); }
+
+.leyenda-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  padding: 0.75rem 1.15rem 1rem;
+}
+.leyenda-stack span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.leyenda-stack i { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 2px; }
+
+/* Histograma de Da de los TP: seis bins, del mas preocupante al tope. */
+.stack--bins__b0 { background: var(--error); }
+.stack--bins__b1 { background: var(--aviso); }
+.stack--bins__b2 { background: var(--azul-600); }
+.stack--bins__b3 { background: var(--azul-ute); }
+.stack--bins__b4 { background: var(--exito); }
+.stack--bins__b5 { background: var(--error); }
+
+/* ---------------------------------------------------------- nombre clicable --- */
+.nombre-docente {
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: var(--azul-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.nombre-docente:hover { text-decoration: underline; }
+
+/* -------------------------------------------------------- ficha de detalle --- */
+.ficha-docente {
+  width: min(640px, 92vw);
+  max-height: 85vh;
+  padding: 0;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-3);
+}
+.ficha-docente::backdrop { background: rgb(16 24 40 / 45%); }
+
+.ficha-docente__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--borde);
+  position: sticky;
+  top: 0;
+  background: var(--superficie);
+}
+.ficha-docente__titulo { margin: 0 0 0.2rem; font-size: 1.05rem; }
+
+.alertas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.9rem 1.25rem 0;
+}
+
+.ficha-docente__datos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem 1.25rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+}
+.ficha-docente__datos > div { display: flex; flex-direction: column; gap: 0.15rem; }
+.ficha-docente__datos b { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-tenue); }
+.ficha-docente__ancho { grid-column: 1 / -1; }
+
+.ficha-docente__horas, .ficha-docente__comparacion {
+  padding: 0 1.25rem 1.1rem;
+}
+.lbl { font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.5rem; }
+
+.hbar {
+  display: grid;
+  grid-template-columns: 9rem 1fr 4.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+.hbar__pista {
+  display: block;
+  height: 0.55rem;
+  background: var(--superficie-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.hbar__pista i { display: block; height: 100%; background: var(--azul-ute); border-radius: 999px; }
+
+.ficha-docente__comparacion {
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}

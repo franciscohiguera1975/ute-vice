@@ -7,6 +7,7 @@ from app.api.v1.routers import (
     catalogos,
     consultas,
     distributivo,
+    estudiantes,
     personas,
     reportes,
     tablero,
@@ -25,6 +26,7 @@ router_v1.include_router(tablero.router)
 router_v1.include_router(reportes.router)
 router_v1.include_router(catalogos.router)
 router_v1.include_router(distributivo.router)
+router_v1.include_router(estudiantes.router)
 router_v1.include_router(usuarios.router)
 router_v1.include_router(tickets.router)
 

@@ -145,6 +145,7 @@ class FilaDistributivo:
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
 
     #: Asignatura que imparte. **No viene del consolidado**: el distributivo
     #: reparte horas por tipo de actividad, no por materia. Se captura a mano
@@ -283,6 +284,7 @@ class FilaDistributivo:
         dedicacion_id: UUID | None = None,
         categoria_id: UUID | None = None,
         tipo_titulo_id: UUID | None = None,
+        cargo_directivo_id: UUID | None = None,
         asignaturas_ids: Iterable[UUID] | None = None,
         horas: DistribucionHoras | None = None,
         medida: str | None = None,
@@ -309,6 +311,8 @@ class FilaDistributivo:
             self.categoria_id = categoria_id
         if tipo_titulo_id is not None:
             self.tipo_titulo_id = tipo_titulo_id
+        if cargo_directivo_id is not None:
+            self.cargo_directivo_id = cargo_directivo_id
         if asignaturas_ids is not None:
             self.definir_asignaturas(asignaturas_ids)
         if horas is not None:

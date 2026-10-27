@@ -381,6 +381,15 @@
                 }
               </select>
             </div>
+            <div class="campo">
+              <label class="campo__etiqueta" for="ed-cargodirectivo">Cargo directivo</label>
+              <select id="ed-cargodirectivo" [ngModel]="selecciones()['cargoDirectivoId']" (ngModelChange)="fijarSeleccion('cargoDirectivoId', $event)">
+                <option value="">(sin cargo directivo)</option>
+                @for (o of catalogos.de(TipoCatalogo.CARGO_DIRECTIVO); track o.id) {
+                  <option [value]="o.id">{{ o.nombre }}</option>
+                }
+              </select>
+            </div>
           </div>
         </fieldset>
 

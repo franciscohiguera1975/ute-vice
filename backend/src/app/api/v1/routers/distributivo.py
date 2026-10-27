@@ -38,15 +38,18 @@ from app.api.esquemas.distributivo import (
     TableroDistributivoSalida,
     VistaPreviaReporteSalida,
 )
+from app.api.esquemas.tablero_docente import TableroDocenteSalida
 from app.application.casos_uso.analitica import (
     EntradaEstadoLotePorFacultad,
     EntradaHorasPorDedicacion,
     EntradaResumenComparativo,
     EntradaTableroDistributivo,
+    EntradaTableroDocente,
     ObtenerEstadoLotePorFacultad,
     ObtenerHorasPorDedicacion,
     ObtenerResumenComparativo,
     ObtenerTableroDistributivo,
+    ObtenerTableroDocente,
 )
 from app.application.casos_uso.distributivo import (
     ActualizarFilaDistributivo,
@@ -256,6 +259,7 @@ def _filtro(
     dedicacion_id: UUID | None = None,
     categoria_id: UUID | None = None,
     tipo_titulo_id: UUID | None = None,
+    cargo_directivo_id: UUID | None = None,
     sin_asignatura: bool | None = None,
     con_carga: bool | None = None,
 ) -> FiltroDistributivo:
@@ -273,6 +277,7 @@ def _filtro(
         dedicacion_id=dedicacion_id,
         categoria_id=categoria_id,
         tipo_titulo_id=tipo_titulo_id,
+        cargo_directivo_id=cargo_directivo_id,
         sin_asignatura=sin_asignatura,
         con_carga=con_carga,
     )
@@ -341,6 +346,7 @@ async def crear(
             dedicacion_id=datos.dedicacion_id,
             categoria_id=datos.categoria_id,
             tipo_titulo_id=datos.tipo_titulo_id,
+            cargo_directivo_id=datos.cargo_directivo_id,
             asignaturas_ids=datos.asignaturas_ids,
             horas=datos.horas,
             medida=datos.medida,
@@ -419,6 +425,44 @@ async def tablero_distributivo(
             contexto,
         )
     return TableroDistributivoSalida.desde(resultado)
+
+
+@router.get(
+    "/distributivo/tablero-docente",
+    response_model=TableroDocenteSalida,
+    summary="Docentes y su carga por carrera, en dos grupos de periodos",
+    dependencies=[requiere(Permiso.DISTRIBUTIVO_LEER)],
+)
+async def tablero_docente(
+    contenedor: ContenedorDep,
+    contexto: ContextoDep,
+    grupo_a: Annotated[
+        list[UUID] | None,
+        Query(description="Periodo(s) de comparacion. Repetir el parametro para varios."),
+    ] = None,
+    grupo_b: Annotated[list[UUID] | None, Query(description="Periodo(s) que se examinan.")] = None,
+) -> TableroDocenteSalida:
+    """Datos por docente y por carrera para el Tablero Docente.
+
+    Devuelve los datos crudos y no los indicadores ya calculados: los topes,
+    alertas, ETC y semaforos del tablero, igual que sus filtros globales
+    —facultad, nivel, dedicacion, titularidad, tecnicos docentes—, se aplican
+    en el cliente sobre esta misma respuesta. Cambiar un filtro no dispara
+    entonces una peticion nueva, y las formulas quedan en un solo lugar,
+    donde se pueden probar sueltas.
+
+    Sin grupos, se comparan los dos ultimos semestres enteros — mismo criterio
+    que `/distributivo/tablero`.
+    """
+    uow = contenedor.unidad_de_trabajo()
+    async with uow:
+        analitica = contenedor.analitica_distributivo(uow.sesion)  # type: ignore[attr-defined]
+        caso = ObtenerTableroDocente(analitica, uow.estudiantes, contenedor.reloj)
+        resultado = await caso(
+            EntradaTableroDocente(grupo_a=tuple(grupo_a or ()), grupo_b=tuple(grupo_b or ())),
+            contexto,
+        )
+    return TableroDocenteSalida.desde(resultado)
 
 
 @router.get(
@@ -793,6 +837,7 @@ async def actualizar(
             dedicacion_id=datos.dedicacion_id,
             categoria_id=datos.categoria_id,
             tipo_titulo_id=datos.tipo_titulo_id,
+            cargo_directivo_id=datos.cargo_directivo_id,
             asignaturas_ids=datos.asignaturas_ids,
             horas=datos.horas,
             medida=datos.medida,

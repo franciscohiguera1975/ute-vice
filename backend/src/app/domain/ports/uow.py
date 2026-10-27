@@ -16,6 +16,7 @@ from app.domain.ports.distributivo import (
     RepositorioDistributivo,
     RepositorioDocentes,
 )
+from app.domain.ports.estudiantes import RepositorioEstudiantes
 from app.domain.ports.repositorios import (
     RepositorioJobs,
     RepositorioLogsConsulta,
@@ -53,6 +54,9 @@ class UnidadDeTrabajo(Protocol):
     catalogos: RepositorioCatalogos
     docentes: RepositorioDocentes
     distributivo: RepositorioDistributivo
+
+    # --- Matricula estudiantil ---
+    estudiantes: RepositorioEstudiantes
 
     # --- Tickets de soporte tecnico ---
     tickets: RepositorioTickets

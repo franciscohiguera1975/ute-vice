@@ -16,6 +16,7 @@ from app.domain.entities.distributivo import Docente, FilaDistributivo
 from app.domain.ports.distributivo import (
     FilaDistributivoResuelta,
     FilaReporteDocencia,
+    FilaReporteIndicadoresDocentes,
     FiltroCatalogo,
     FiltroDistributivo,
     FiltroDocentes,
@@ -27,6 +28,7 @@ from app.infrastructure.db import mapeadores_distributivo as m
 from app.infrastructure.db.modelos_distributivo import (
     MODELOS_CATALOGO,
     AsignaturaModel,
+    CargoDirectivoModel,
     CarreraModel,
     CategoriaModel,
     DedicacionModel,
@@ -470,6 +472,7 @@ class RepositorioDistributivoSQL:
                 CategoriaModel.nombre,
                 TipoTituloModel.nombre,
                 GeneroModel.nombre,
+                CargoDirectivoModel.nombre,
                 _asignaturas_de_la_fila(),
                 _ids_de_asignaturas(),
                 _titulos_del_docente(),
@@ -487,6 +490,10 @@ class RepositorioDistributivoSQL:
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
             .outerjoin(GeneroModel, GeneroModel.id == DocenteModel.genero_id)
+            .outerjoin(
+                CargoDirectivoModel,
+                CargoDirectivoModel.id == FilaDistributivoModel.cargo_directivo_id,
+            )
         )
 
     def _filtrar(self, consulta: Select[Any], filtro: FiltroDistributivo) -> Select[Any]:
@@ -522,6 +529,8 @@ class RepositorioDistributivoSQL:
             consulta = consulta.where(f.categoria_id == filtro.categoria_id)
         if filtro.tipo_titulo_id:
             consulta = consulta.where(f.tipo_titulo_id == filtro.tipo_titulo_id)
+        if filtro.cargo_directivo_id:
+            consulta = consulta.where(f.cargo_directivo_id == filtro.cargo_directivo_id)
         if filtro.sin_asignatura:
             # Filas que dictan clase pero nadie registro que asignatura: es lo
             # que queda en blanco en el reporte institucional.
@@ -553,12 +562,12 @@ class RepositorioDistributivoSQL:
     def _a_resuelta(fila: Any, *, con_codigos: bool = False) -> FilaDistributivoResuelta:
         entidad = m.fila_a_dominio(fila[0])
         # La entidad no las trae del modelo: viven en la tabla de union.
-        entidad.asignaturas_ids = list(fila[15] or ())
+        entidad.asignaturas_ids = list(fila[16] or ())
         codigos: dict[str, Any] = {}
         if con_codigos:
             # Las anaden `add_columns` en `filas_resueltas`, despues de las
-            # diecisiete de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
-            codigos = {nombre: fila[17 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
+            # dieciocho de la consulta base y en el orden de `_CODIGOS_ORIGEN`.
+            codigos = {nombre: fila[18 + i] for i, nombre in enumerate(_NOMBRES_CODIGOS_ORIGEN)}
         return FilaDistributivoResuelta(
             fila=entidad,
             docente_identificacion=fila[1],
@@ -574,8 +583,9 @@ class RepositorioDistributivoSQL:
             categoria=fila[11],
             tipo_titulo=fila[12],
             genero=fila[13],
-            asignaturas=tuple(fila[14] or ()),
-            titulos=tuple(fila[16] or ()),
+            cargo_directivo=fila[14],
+            asignaturas=tuple(fila[15] or ()),
+            titulos=tuple(fila[17] or ()),
             **codigos,
         )
 
@@ -1047,11 +1057,14 @@ class RepositorioDistributivoSQL:
         filas = (await self._s.execute(consulta)).all()
         return [self._a_resuelta(f, con_codigos=True) for f in filas]
 
-    async def filas_para_reporte(self, filtro: FiltroDistributivo) -> list[FilaReporteDocencia]:
-        """Arma el reporte institucional de docentes por carrera.
+    def _consulta_base_reporte_docencia(self) -> Select[Any]:
+        """Consulta comun a los reportes de docente: el de docencia por carrera
+        y el de indicadores docentes.
 
-        Dos datos se derivan aqui porque la base los resuelve mejor que un
-        recorrido en memoria:
+        Los dos reportes comparten el docente, el titulo, el grado academico, la
+        asignatura, el anio de inicio en la carrera y la condicion contractual;
+        se arman una sola vez aqui para no repetir ochenta lineas de SQL
+        identicas. Cada reporte selecciona ademas lo que le hace falta:
 
         * **Titulo profesional**: el primero de los titulos del docente. El
           consolidado los concatena en una sola celda y el primero suele ser el
@@ -1109,7 +1122,7 @@ class RepositorioDistributivoSQL:
             .scalar_subquery()
         )
 
-        consulta = (
+        return (
             select(
                 DocenteModel.nombre_completo,
                 DocenteModel.identificacion,
@@ -1147,6 +1160,11 @@ class RepositorioDistributivoSQL:
                 CarreraModel.nombre.label("carrera"),
                 FilaDistributivoModel.total_horas,
                 FilaDistributivoModel.total_docencia,
+                FilaDistributivoModel.horas_docencia,
+                FilaDistributivoModel.total_investigacion,
+                FilaDistributivoModel.total_vinculacion,
+                FilaDistributivoModel.total_gestion,
+                GeneroModel.nombre.label("genero"),
             )
             .join(DocenteModel, DocenteModel.id == FilaDistributivoModel.docente_id)
             .join(PaoModel, PaoModel.id == FilaDistributivoModel.pao_id)
@@ -1159,8 +1177,12 @@ class RepositorioDistributivoSQL:
             .outerjoin(DedicacionModel, DedicacionModel.id == FilaDistributivoModel.dedicacion_id)
             .outerjoin(CategoriaModel, CategoriaModel.id == FilaDistributivoModel.categoria_id)
             .outerjoin(TipoTituloModel, TipoTituloModel.id == FilaDistributivoModel.tipo_titulo_id)
+            .outerjoin(GeneroModel, GeneroModel.id == DocenteModel.genero_id)
         )
-        consulta = self._filtrar(consulta, filtro).order_by(
+
+    async def filas_para_reporte(self, filtro: FiltroDistributivo) -> list[FilaReporteDocencia]:
+        """Arma el reporte institucional de docentes por carrera."""
+        consulta = self._filtrar(self._consulta_base_reporte_docencia(), filtro).order_by(
             CarreraModel.nombre, DocenteModel.nombre_completo
         )
 
@@ -1183,6 +1205,42 @@ class RepositorioDistributivoSQL:
                 carrera=f.carrera or "",
                 total_horas=float(f.total_horas or 0.0),
                 total_docencia=float(f.total_docencia or 0.0),
+            )
+            for i, f in enumerate(filas, start=1)
+        ]
+
+    async def filas_para_reporte_indicadores(
+        self, filtro: FiltroDistributivo
+    ) -> list[FilaReporteIndicadoresDocentes]:
+        """Arma el reporte de indicadores docentes (`Reporte_Docentes.xlsx`)."""
+        consulta = self._filtrar(self._consulta_base_reporte_docencia(), filtro).order_by(
+            CarreraModel.nombre, DocenteModel.nombre_completo
+        )
+
+        filas = (await self._s.execute(consulta)).all()
+        return [
+            FilaReporteIndicadoresDocentes(
+                numero=i,
+                identificacion=f.identificacion,
+                nombre=f.nombre_completo,
+                titulo_profesional=f.titulo_profesional or "",
+                grado_academico=f.grado or "",
+                asignatura=f.asignatura or "",
+                anio_inicio_carrera=int(f.anio_inicio) if f.anio_inicio else None,
+                jerarquia_docente=f.categoria or "",
+                dedicacion_horaria=f.dedicacion or "",
+                tipo_contrato=f.titularidad or "",
+                unidad=f.facultad or "",
+                comuna=f.sede or "",
+                anio_actual=int(f.anio_actual or 0),
+                total_horas=float(f.total_horas or 0.0),
+                total_da=float((f.horas_docencia or {}).get("Da", 0.0)),
+                total_d=float(f.total_docencia or 0.0),
+                total_i=float(f.total_investigacion or 0.0),
+                total_v=float(f.total_vinculacion or 0.0),
+                total_g=float(f.total_gestion or 0.0),
+                medida="Horas",
+                genero=f.genero or "",
             )
             for i, f in enumerate(filas, start=1)
         ]

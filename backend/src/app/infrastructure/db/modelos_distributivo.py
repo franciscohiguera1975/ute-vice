@@ -1,6 +1,6 @@
 """Modelos ORM del distributivo docente.
 
-Trece tablas de catalogo con el prefijo `cat_`, mas `docentes`, `distributivo` y
+Catorce tablas de catalogo con el prefijo `cat_`, mas `docentes`, `distributivo` y
 la relacion `docente_titulos`.
 
 El prefijo no es decorativo: hace visible en el esquema que son catalogos, y
@@ -188,8 +188,22 @@ class CategoriaTicketModel(Base, MixinCatalogo):
     __table_args__ = _indices_catalogo("cat_categorias_ticket")
 
 
+class CargoDirectivoModel(Base, MixinCatalogo):
+    """Cargos directivos del profesorado (Decano, Director de Carrera, ...).
+
+    Catalogo administrable como los demas: la institucion define sus propios
+    cargos desde la pantalla de catalogos, sin tocar codigo. Una fila del
+    distributivo apunta a lo sumo a uno —`distributivo.cargo_directivo_id`—,
+    porque el unico uso de hoy es un filtro booleano («¿tiene cargo directivo o
+    no?») en el Tablero Docente.
+    """
+
+    __tablename__ = "cat_cargos_directivos"
+    __table_args__ = _indices_catalogo("cat_cargos_directivos")
+
+
 #: Traduccion entre el tipo de catalogo del dominio y su tabla. Es lo que hace
-#: posible que un solo repositorio sirva a los doce.
+#: posible que un solo repositorio sirva a los catorce.
 MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.PAO: PaoModel,
     TipoCatalogo.FACULTAD: FacultadModel,
@@ -204,6 +218,7 @@ MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.GENERO: GeneroModel,
     TipoCatalogo.ASIGNATURA: AsignaturaModel,
     TipoCatalogo.CATEGORIA_TICKET: CategoriaTicketModel,
+    TipoCatalogo.CARGO_DIRECTIVO: CargoDirectivoModel,
 }
 
 
@@ -402,6 +417,11 @@ class FilaDistributivoModel(Base, MixinAuditoria):
     )
     tipo_titulo_id: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("cat_tipos_titulo.id", ondelete="SET NULL")
+    )
+    cargo_directivo_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("cat_cargos_directivos.id", ondelete="SET NULL"),
+        index=True,
     )
 
     #: Detalle de horas por subactividad, en cuatro bloques. Va en JSONB y no en

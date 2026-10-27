@@ -8,7 +8,7 @@ import type { Conteo } from './entidades';
 // ---------------------------------------------------------------------------
 
 /**
- * Los trece catalogos. El valor es el segmento de URL de su API, igual que en
+ * Los catorce catalogos. El valor es el segmento de URL de su API, igual que en
  * el backend: `/api/v1/catalogos/carreras`.
  */
 export const TipoCatalogo = {
@@ -25,6 +25,7 @@ export const TipoCatalogo = {
   GENERO: 'generos',
   ASIGNATURA: 'asignaturas',
   CATEGORIA_TICKET: 'categorias-ticket',
+  CARGO_DIRECTIVO: 'cargos-directivos',
 } as const;
 export type TipoCatalogo = (typeof TipoCatalogo)[keyof typeof TipoCatalogo];
 
@@ -181,6 +182,8 @@ export interface FilaDistributivo {
   readonly categoria: string | null;
   readonly tipoTituloId: string | null;
   readonly tipoTitulo: string | null;
+  readonly cargoDirectivoId: string | null;
+  readonly cargoDirectivo: string | null;
 
   readonly asignaturasIds: readonly string[];
   /** Nombres de las materias, en el orden en que se escribieron. */
@@ -210,6 +213,7 @@ export interface FiltroDistributivo {
   readonly dedicacionId?: string;
   readonly categoriaId?: string;
   readonly tipoTituloId?: string;
+  readonly cargoDirectivoId?: string;
   readonly sinAsignatura?: boolean;
   readonly conCarga?: boolean;
 }
@@ -225,6 +229,7 @@ export interface DatosFilaDistributivo {
   readonly dedicacionId?: string | null;
   readonly categoriaId?: string | null;
   readonly tipoTituloId?: string | null;
+  readonly cargoDirectivoId?: string | null;
   readonly asignaturasIds?: readonly string[];
   readonly horas?: Record<string, number>;
   readonly medida?: string | null;
@@ -396,6 +401,115 @@ export const ETIQUETAS_ESTADO_VALIDACION: Readonly<Record<string, string>> = {
   ERROR: 'Con error',
   SIN_ESTADO: 'Sin estado registrado',
 };
+
+// ---------------------------------------------------------------------------
+// Tablero Docente
+// ---------------------------------------------------------------------------
+
+/**
+ * Un docente, con sus horas sumadas entre todas sus filas de un grupo de
+ * periodos.
+ *
+ * Es la fuente de las pestanas del Tablero Docente que miran al docente como
+ * unidad entera: alertas, ETC, mas horas, tiempos parciales, organizacion. El
+ * desglose por facultad y carrera no sale de aqui, viene de `split`.
+ *
+ * `facultadCodigo`/`facultadNombre`, `titularidad`, `categoria`, `dedicacion`
+ * y `relacionLaboral` son los de su fila con mas horas en el grupo. Un
+ * docente que dicta en dos facultades cuenta con la de mas carga.
+ *
+ * Las formulas del tablero —topes, alertas, ETC, semaforos— no viven aqui:
+ * son funciones puras de `tablero-docente.calculos.ts`, sobre estos campos.
+ */
+export interface DocenteResumen {
+  readonly docenteId: string;
+  readonly identificacion: string;
+  readonly nombreCompleto: string;
+  readonly facultadCodigo: string;
+  readonly facultadNombre: string;
+  /** Nombres de carrera distintos, unidos por coma. Solo para mostrar. */
+  readonly carreras: string;
+  /** Igual que `carreras`, pero de sede. Vacio si ninguna fila trae sede. */
+  readonly sedes: string;
+  readonly niveles: readonly string[];
+  readonly titularidad: string;
+  readonly categoria: string;
+  /** Texto del catalogo (`TIEMPO COMPLETO`...). Normalizar con `claveDedicacion`. */
+  readonly dedicacion: string;
+  readonly relacionLaboral: string;
+  /** Nombres de cargo directivo distintos, unidos por coma. Igual que `carreras`/`sedes`. */
+  readonly cargoDirectivo: string;
+  readonly da: number;
+  readonly d: number;
+  readonly i: number;
+  readonly v: number;
+  readonly g: number;
+  readonly tot: number;
+  readonly esTecnicoDocente: boolean;
+  /** `true` si alguna de sus filas del grupo tiene un cargo directivo asignado. */
+  readonly esDirectivo: boolean;
+  /** `true` si su mejor estado de validacion es `OK` u `OK_EXCEPCION`. */
+  readonly esValido: boolean;
+  readonly estadoValidacion: string | null;
+}
+
+/**
+ * Una fila docente x carrera x nivel x dedicacion, ya repartida.
+ *
+ * En el distributivo real cada fila ya es por carrera: a diferencia de un
+ * consolidado en una sola hoja, no hace falta prorratear nada.
+ */
+export interface FilaSplitCarrera {
+  readonly docenteId: string;
+  readonly facultadCodigo: string;
+  readonly facultadNombre: string;
+  readonly carrera: string;
+  readonly carreraId: string;
+  readonly sede: string;
+  readonly nivel: string;
+  readonly dedicacion: string;
+  readonly titularidad: string;
+  readonly categoria: string;
+  readonly da: number;
+  readonly d: number;
+  readonly i: number;
+  readonly v: number;
+  readonly g: number;
+  readonly tot: number;
+  readonly esTecnicoDocente: boolean;
+}
+
+/**
+ * Todo lo que pinta el Tablero Docente, en una sola respuesta.
+ *
+ * `docentes` es el grupo que se examina y `docentesAnterior` el de
+ * comparacion; `split` solo trae el grupo que se examina. `codigosActual` y
+ * `codigosAnterior` son los codigos de PAO de cada grupo —elegidos, o los dos
+ * ultimos semestres completos por defecto—: sirven para reflejar en el
+ * selector que grupos se estan mostrando, igual que `TableroDistributivo`.
+ */
+export interface TableroDocente {
+  readonly periodos: readonly PeriodoConFilas[];
+  readonly docentes: readonly DocenteResumen[];
+  readonly docentesAnterior: readonly DocenteResumen[];
+  readonly split: readonly FilaSplitCarrera[];
+  readonly estudiantesPorCarrera: readonly EstudiantesPorCarrera[];
+  readonly codigosActual: readonly string[];
+  readonly codigosAnterior: readonly string[];
+  readonly generadoEn: string;
+}
+
+/**
+ * Estudiantes matriculados en una carrera, en el semestre que se examina.
+ *
+ * Cuenta por `carreraId`, no por sede: la sede de la matricula estudiantil es
+ * texto libre de Banner, sin catalogo propio, asi que una carrera con varias
+ * sedes reporta aqui su total conjunto.
+ */
+export interface EstudiantesPorCarrera {
+  readonly carreraId: string;
+  readonly totalEstudiantes: number;
+}
 
 // ---------------------------------------------------------------------------
 // Carga de un PAO

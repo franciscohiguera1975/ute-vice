@@ -1,0 +1,142 @@
+<header class="fila entre envolver hueco encabezado">
+  <div>
+    <h1>Cargar matricula estudiantil</h1>
+    <p class="texto-sm texto-suave">
+      Reporte de Banner (<span class="mono">RptEstBannerMatriculas</span>), en formato
+      <span class="mono">.xlsx</span>
+    </p>
+  </div>
+
+  <a class="btn btn--secundario btn--sm" routerLink="/distributivo">Ir al distributivo</a>
+</header>
+
+<section class="tarjeta seccion">
+  <div class="tarjeta__cabecera">
+    <h2 class="tarjeta__titulo">Archivo</h2>
+  </div>
+
+  <div class="tarjeta__cuerpo">
+    <label class="campo">
+      <span class="campo__etiqueta">Archivo</span>
+      <input
+        type="file"
+        class="campo__control"
+        [accept]="EXTENSIONES.join(',')"
+        (change)="elegir($event)"
+      />
+      @if (errorArchivo()) {
+        <span class="campo__error">{{ errorArchivo() }}</span>
+      } @else if (archivo(); as elegido) {
+        <span class="campo__ayuda">{{ elegido.name }} · {{ tamano(elegido) }}</span>
+      } @else {
+        <span class="campo__ayuda">Hasta {{ TOPE_MB }} MB</span>
+      }
+    </label>
+
+    <p class="aviso-formato texto-sm texto-tenue">
+      El archivo trae el padron completo vigente, con el periodo como una columna mas de cada
+      fila: no hace falta indicarlo aparte, a diferencia de la carga de un PAO. Las carreras que
+      no coincidan exactamente con el catalogo del distributivo quedan sin resolver -no se
+      rechazan ni se crea una carrera nueva- y se informan al terminar.
+    </p>
+
+    <div class="fila hueco-sm">
+      <button
+        type="button"
+        class="btn btn--primario"
+        [disabled]="!puedeSubir()"
+        (click)="subir()"
+      >
+        {{ subiendo() ? 'Cargando…' : 'Cargar el archivo' }}
+      </button>
+      <button type="button" class="btn btn--fantasma" [disabled]="subiendo()" (click)="limpiar()">
+        Limpiar
+      </button>
+    </div>
+  </div>
+</section>
+
+@if (resultado(); as r) {
+  <section class="tarjeta seccion">
+    <div class="tarjeta__cabecera">
+      <h2 class="tarjeta__titulo">Resultado de la carga</h2>
+    </div>
+
+    <div class="tarjeta__cuerpo">
+      <div class="rejilla rejilla--4 seccion">
+        <article class="metrica">
+          <p class="metrica__etiqueta">Filas leidas</p>
+          <p class="metrica__valor">{{ r.totalFilasLeidas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Matriculas creadas</p>
+          <p class="metrica__valor">{{ r.matriculasCreadas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Matriculas actualizadas</p>
+          <p class="metrica__valor">{{ r.matriculasActualizadas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Estudiantes nuevos</p>
+          <p class="metrica__valor">{{ r.estudiantesCreados | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            {{ r.estudiantesExistentes | number }} ya registrados
+          </p>
+        </article>
+      </div>
+
+      <div class="rejilla rejilla--3 seccion">
+        <article class="metrica">
+          <p class="metrica__etiqueta">Becas registradas</p>
+          <p class="metrica__valor">{{ r.becasCreadas | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Generos nuevos</p>
+          <p class="metrica__valor">{{ r.generosCreados | number }}</p>
+        </article>
+        <article class="metrica">
+          <p class="metrica__etiqueta">Sin carrera reconocida</p>
+          <p class="metrica__valor">{{ r.sinCarreraReconocida | number }}</p>
+          <p class="metrica__pie texto-xs texto-tenue">
+            No se rechazan: quedan sin carrera_id
+          </p>
+        </article>
+      </div>
+
+      @if (r.rechazadas.length > 0) {
+        <h3 class="subtitulo texto-error">
+          Rechazadas por la validacion ({{ r.rechazadas.length | number }})
+        </h3>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col" class="der">Fila</th>
+                <th scope="col">Cedula</th>
+                <th scope="col">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of r.rechazadas.slice(0, TOPE_LISTA); track $index) {
+                <tr>
+                  <td class="der mono">{{ f.numeroFila }}</td>
+                  <td class="mono">{{ f.cedula }}</td>
+                  <td>{{ f.motivo }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (r.rechazadas.length > TOPE_LISTA) {
+          <p class="texto-xs texto-tenue">… y {{ r.rechazadas.length - TOPE_LISTA }} mas.</p>
+        }
+      }
+
+      <p class="fila hueco-sm">
+        <a class="btn btn--secundario btn--sm" routerLink="/distributivo">
+          Ir al distributivo
+        </a>
+      </p>
+    </div>
+  </section>
+}

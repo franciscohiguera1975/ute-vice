@@ -103,6 +103,7 @@ ignore = [
 "src/app/infrastructure/db/modelos.py" = ["N811"]
 "src/app/infrastructure/db/modelos_distributivo.py" = ["N811"]
 "src/app/infrastructure/db/modelos_tickets.py" = ["N811"]
+"src/app/infrastructure/db/modelos_estudiantes.py" = ["N811"]
 
 # ---------------------------------------------------------------------
 [tool.mypy]

@@ -248,6 +248,8 @@ class FilaDistributivoSalida(EsquemaBase):
     categoria: str | None
     tipo_titulo_id: UUID | None
     tipo_titulo: str | None
+    cargo_directivo_id: UUID | None
+    cargo_directivo: str | None
 
     asignaturas_ids: list[UUID]
     asignaturas: list[str]
@@ -284,6 +286,8 @@ class FilaDistributivoSalida(EsquemaBase):
             categoria=r.categoria,
             tipo_titulo_id=f.tipo_titulo_id,
             tipo_titulo=r.tipo_titulo,
+            cargo_directivo_id=f.cargo_directivo_id,
+            cargo_directivo=r.cargo_directivo,
             asignaturas_ids=list(f.asignaturas_ids),
             asignaturas=list(r.asignaturas),
             requiere_asignatura=f.requiere_asignatura,
@@ -306,6 +310,7 @@ class FilaDistributivoCrear(EsquemaBase):
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
     asignaturas_ids: list[UUID] = Field(default_factory=list)
     horas: dict[str, float] = Field(
         default_factory=dict,
@@ -324,6 +329,7 @@ class FilaDistributivoActualizar(EsquemaBase):
     dedicacion_id: UUID | None = None
     categoria_id: UUID | None = None
     tipo_titulo_id: UUID | None = None
+    cargo_directivo_id: UUID | None = None
     asignaturas_ids: list[UUID] | None = None
     horas: dict[str, float] | None = None
     medida: str | None = None

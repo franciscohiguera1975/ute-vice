@@ -10,6 +10,7 @@ from __future__ import annotations
 from app.application.plantillas.base import PlantillaDistributivo
 from app.application.plantillas.consolidado import PlantillaConsolidadoOrigen
 from app.application.plantillas.docencia import PlantillaDocenciaPorCarrera
+from app.application.plantillas.indicadores_docentes import PlantillaIndicadoresDocentes
 from app.application.plantillas.pao import PlantillaPaoOrigen
 from app.domain.errors import ErrorValidacion
 
@@ -19,6 +20,7 @@ _PLANTILLAS: tuple[PlantillaDistributivo, ...] = (
     PlantillaDocenciaPorCarrera(),
     PlantillaConsolidadoOrigen(),
     PlantillaPaoOrigen(),
+    PlantillaIndicadoresDocentes(),
 )
 
 PLANTILLA_POR_DEFECTO = _PLANTILLAS[0].codigo

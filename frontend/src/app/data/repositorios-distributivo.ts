@@ -38,6 +38,7 @@ import type {
   ResumenDeHoras,
   ResumenDistributivo,
   TableroDistributivo,
+  TableroDocente,
   TipoCatalogo,
   VistaPreviaReporte,
 } from '@domain/modelos';
@@ -195,6 +196,16 @@ export class DistributivoHttp extends RepositorioDistributivo {
     grupoB: readonly string[],
   ): Observable<TableroDistributivo> {
     return this.api.get<TableroDistributivo>('/distributivo/tablero', {
+      grupoA,
+      grupoB,
+    });
+  }
+
+  tableroDocente(
+    grupoA: readonly string[],
+    grupoB: readonly string[],
+  ): Observable<TableroDocente> {
+    return this.api.get<TableroDocente>('/distributivo/tablero-docente', {
       grupoA,
       grupoB,
     });

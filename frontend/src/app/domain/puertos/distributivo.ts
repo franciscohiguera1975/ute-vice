@@ -36,6 +36,7 @@ import type {
   ResumenDeHoras,
   ResumenDistributivo,
   TableroDistributivo,
+  TableroDocente,
   TipoCatalogo,
   TipoFlujoContrato,
   VistaPreviaReporte,
@@ -143,6 +144,20 @@ export abstract class RepositorioDistributivo {
     grupoA: readonly string[],
     grupoB: readonly string[],
   ): Observable<TableroDistributivo>;
+
+  /**
+   * Docentes y su carga por carrera, en dos grupos de periodos, para el
+   * Tablero Docente.
+   *
+   * Devuelve los datos crudos: las formulas —topes, alertas, ETC, semaforos—
+   * y los filtros globales de la pantalla se calculan en el cliente sobre
+   * esta misma respuesta, para que cambiar un filtro no dispare una peticion
+   * nueva. Sin grupos, el backend compara los dos ultimos semestres enteros.
+   */
+  abstract tableroDocente(
+    grupoA: readonly string[],
+    grupoB: readonly string[],
+  ): Observable<TableroDocente>;
 
   /** Sube un distributivo exportado por el sistema academico. */
   abstract cargarPao(peticion: PeticionCargaPao): Observable<ResultadoCargaPao>;

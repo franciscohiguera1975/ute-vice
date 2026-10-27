@@ -18,6 +18,13 @@ export const rutas: Routes = [
     title: 'Tablero del distributivo — UTE Vice',
   },
   {
+    // Mismo criterio que `tablero`: pide `distributivo:leer`, no `dashboard:ver`.
+    path: 'tablero-docente',
+    loadComponent: () =>
+      import('./tablero-docente.component').then((m) => m.TableroDocenteComponent),
+    title: 'Tablero docente — UTE Vice',
+  },
+  {
     path: 'resumenes',
     loadComponent: () =>
       import('./resumenes.component').then((m) => m.ResumenesDistributivoComponent),
@@ -36,6 +43,13 @@ export const rutas: Routes = [
     canActivate: [guardaPermiso(Permiso.DISTRIBUTIVO_IMPORTAR)],
     loadComponent: () => import('./importar.component').then((m) => m.ImportarPaoComponent),
     title: 'Cargar un PAO — UTE Vice',
+  },
+  {
+    path: 'estudiantes/importar',
+    canActivate: [guardaPermiso(Permiso.ESTUDIANTES_IMPORTAR)],
+    loadComponent: () =>
+      import('./importar-estudiantes.component').then((m) => m.ImportarEstudiantesComponent),
+    title: 'Cargar matricula estudiantil — UTE Vice',
   },
   {
     path: 'asignaturas',

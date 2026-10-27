@@ -185,6 +185,12 @@ class Permiso(StrEnum):
     DISTRIBUTIVO_ELIMINAR = "distributivo:eliminar"
     DISTRIBUTIVO_IMPORTAR = "distributivo:importar"
 
+    # Matricula estudiantil. Otorgados a los mismos roles que ya tienen
+    # DISTRIBUTIVO_LEER/DISTRIBUTIVO_IMPORTAR: es el mismo publico -quien
+    # consulta o carga la carga academica- aplicado al padron de estudiantes.
+    ESTUDIANTES_LEER = "estudiantes:leer"
+    ESTUDIANTES_IMPORTAR = "estudiantes:importar"
+
     # Catalogos del distributivo (PAO, facultad, carrera, sede, ...)
     CATALOGOS_LEER = "catalogos:leer"
     CATALOGOS_ESCRIBIR = "catalogos:escribir"
@@ -223,6 +229,8 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
             Permiso.DISTRIBUTIVO_ESCRIBIR,
             Permiso.DISTRIBUTIVO_ELIMINAR,
             Permiso.DISTRIBUTIVO_IMPORTAR,
+            Permiso.ESTUDIANTES_LEER,
+            Permiso.ESTUDIANTES_IMPORTAR,
             Permiso.CATALOGOS_LEER,
             Permiso.CATALOGOS_ESCRIBIR,
             Permiso.REPORTES_GENERAR,
@@ -242,6 +250,7 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
             Permiso.CONSULTAS_RESOLVER,
             Permiso.DISTRIBUTIVO_LEER,
             Permiso.DISTRIBUTIVO_ESCRIBIR,
+            Permiso.ESTUDIANTES_LEER,
             Permiso.CATALOGOS_LEER,
             Permiso.REPORTES_GENERAR,
             Permiso.DASHBOARD_VER,
@@ -255,6 +264,7 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
     RolCodigo.CONSULTA_DISTRIBUTIVO: frozenset(
         {
             Permiso.DISTRIBUTIVO_LEER,
+            Permiso.ESTUDIANTES_LEER,
             Permiso.CATALOGOS_LEER,
             Permiso.REPORTES_GENERAR,
         }
@@ -266,6 +276,7 @@ PERMISOS_POR_ROL: dict[RolCodigo, frozenset[Permiso]] = {
             Permiso.CONSULTAS_LEER,
             Permiso.DASHBOARD_VER,
             Permiso.DISTRIBUTIVO_LEER,
+            Permiso.ESTUDIANTES_LEER,
             Permiso.CATALOGOS_LEER,
         }
     ),

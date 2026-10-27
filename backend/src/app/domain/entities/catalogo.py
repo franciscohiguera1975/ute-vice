@@ -27,7 +27,7 @@ from app.domain.value_objects_distributivo import PeriodoAcademico
 
 
 class TipoCatalogo(StrEnum):
-    """Los doce catalogos. El valor es el segmento de URL de su API.
+    """Los catorce catalogos. El valor es el segmento de URL de su API.
 
     No hay catalogo de «programa»: el consolidado traia `CARRERA` y
     `CARRERA/PROGRAMA` con la misma informacion —el segundo era el primero
@@ -49,6 +49,7 @@ class TipoCatalogo(StrEnum):
     GENERO = "generos"
     ASIGNATURA = "asignaturas"
     CATEGORIA_TICKET = "categorias-ticket"
+    CARGO_DIRECTIVO = "cargos-directivos"
 
     @property
     def etiqueta(self) -> str:
@@ -73,6 +74,7 @@ _ETIQUETAS: dict[TipoCatalogo, str] = {
     TipoCatalogo.GENERO: "Generos",
     TipoCatalogo.ASIGNATURA: "Asignaturas",
     TipoCatalogo.CATEGORIA_TICKET: "Categorias de ticket",
+    TipoCatalogo.CARGO_DIRECTIVO: "Cargos directivos",
 }
 
 _SINGULARES: dict[TipoCatalogo, str] = {
@@ -89,6 +91,7 @@ _SINGULARES: dict[TipoCatalogo, str] = {
     TipoCatalogo.GENERO: "genero",
     TipoCatalogo.ASIGNATURA: "asignatura",
     TipoCatalogo.CATEGORIA_TICKET: "categoria de ticket",
+    TipoCatalogo.CARGO_DIRECTIVO: "cargo directivo",
 }
 
 

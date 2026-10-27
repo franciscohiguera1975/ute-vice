@@ -19,10 +19,12 @@ from app.domain.ports.analitica import (
     AvanceDeFacultad,
     ConteoEtiquetado,
     DocenteConPocasHoras,
+    DocenteResumen,
     EstadoLotePorFacultad,
     EstadosDeFacultad,
     FacultadPorEstadoLote,
     FilaComparativa,
+    FilaSplitCarrera,
     GrupoDePeriodos,
     HorasPorCarrera,
     HorasPorFacultad,
@@ -31,6 +33,7 @@ from app.domain.ports.analitica import (
     ValidacionDeGrupo,
 )
 from app.infrastructure.db.modelos_distributivo import (
+    CargoDirectivoModel,
     CarreraModel,
     CategoriaModel,
     DedicacionModel,
@@ -46,6 +49,22 @@ from app.infrastructure.db.modelos_distributivo import (
 #: Estados que cuentan como carga valida. `OK_EXCEPCION` entra: dice que la
 #: fila es valida por una excepcion concedida, no que este mal.
 _APROBADOS = (EstadoValidacion.OK.value, EstadoValidacion.OK_EXCEPCION.value)
+
+#: Como escribe el sistema academico la categoria de tecnico docente. No es un
+#: campo propio —ver `FilaDistributivoModel`—, es un valor mas del catalogo de
+#: categorias (confirmado en la migracion `a2f6b8e0c134`, que la deja intacta
+#: al unificar las demas). Se compara sin acentos y en mayusculas porque el
+#: origen no siempre la escribe igual.
+_TECNICO_DOCENTE = "TECNICO DOCENTE"
+
+#: `_rango_estado` -> `EstadoValidacion`. El 5 (nada de lo anterior, o ninguna
+#: fila trae estado) no tiene equivalente: se traduce a `None`.
+_ESTADO_POR_RANGO: dict[int, str] = {
+    1: EstadoValidacion.OK.value,
+    2: EstadoValidacion.OK_EXCEPCION.value,
+    3: EstadoValidacion.PENDIENTE.value,
+    4: EstadoValidacion.ERROR.value,
+}
 
 #: Catalogos por los que el tablero sabe desglosar un periodo. La clave es lo
 #: que llega por la API; evita construir el `join` desde texto libre.
@@ -675,6 +694,232 @@ class RepositorioAnaliticaDistributivoSQL:
             ],
         )
 
+    # --------------------------------------------------------- Tablero Docente
+    async def docentes_resumen(self, paos: Sequence[UUID]) -> list[DocenteResumen]:
+        """Un docente por fila, con sus horas sumadas entre toda su carga.
+
+        El tablero hace el resto de las cuentas —topes, alertas, ETC,
+        semaforos— en el cliente sobre esta lista; aqui solo se suma lo que de
+        verdad exige SQL: una carga que se exploto en varias filas por venir
+        combinada (ver `_suma_sin_duplicar`) no debe sumarse dos veces.
+        """
+        if not paos:
+            return []
+
+        f = FilaDistributivoModel
+        clave = func.coalesce(f.grupo_combinado_id, f.id)
+        dedup = func.row_number().over(partition_by=clave, order_by=f.id).label("dedup")
+
+        filas = (
+            select(
+                f.id.label("fila_id"),
+                f.docente_id.label("docente_id"),
+                FacultadModel.codigo.label("facultad_codigo"),
+                FacultadModel.nombre.label("facultad_nombre"),
+                CarreraModel.nombre.label("carrera"),
+                func.coalesce(SedeModel.nombre, "").label("sede"),
+                func.coalesce(NivelModel.nombre, "").label("nivel"),
+                func.coalesce(TitularidadModel.nombre, "").label("titularidad"),
+                func.coalesce(CategoriaModel.nombre, "").label("categoria"),
+                func.coalesce(DedicacionModel.nombre, "").label("dedicacion"),
+                func.coalesce(f.relacion_laboral, "").label("relacion_laboral"),
+                func.coalesce(CargoDirectivoModel.nombre, "").label("cargo_directivo"),
+                f.estado_validacion.label("estado_validacion"),
+                func.coalesce(_horas_da(), 0.0).label("da"),
+                f.total_docencia.label("d"),
+                f.total_investigacion.label("i"),
+                f.total_vinculacion.label("v"),
+                f.total_gestion.label("g"),
+                f.total_horas.label("tot"),
+                _es_tecnico_docente(CategoriaModel.nombre).label("es_tecnico"),
+                dedup,
+            )
+            .select_from(f)
+            .join(FacultadModel, FacultadModel.id == f.facultad_id)
+            .join(CarreraModel, CarreraModel.id == f.carrera_id)
+            .outerjoin(SedeModel, SedeModel.id == f.sede_id)
+            .outerjoin(NivelModel, NivelModel.id == f.nivel_id)
+            .outerjoin(TitularidadModel, TitularidadModel.id == f.titularidad_id)
+            .outerjoin(CategoriaModel, CategoriaModel.id == f.categoria_id)
+            .outerjoin(DedicacionModel, DedicacionModel.id == f.dedicacion_id)
+            .outerjoin(CargoDirectivoModel, CargoDirectivoModel.id == f.cargo_directivo_id)
+            .where(f.pao_id.in_(list(paos)))
+            .where(FacultadModel.es_direccion.is_(False))
+            .subquery("filas")
+        )
+        deduped = select(filas).where(filas.c.dedup == 1).subquery("deduped")
+
+        rango = _rango_estado(deduped.c.estado_validacion)
+        agregado = (
+            select(
+                deduped.c.docente_id,
+                func.sum(deduped.c.da).label("da"),
+                func.sum(deduped.c.d).label("d"),
+                func.sum(deduped.c.i).label("i"),
+                func.sum(deduped.c.v).label("v"),
+                func.sum(deduped.c.g).label("g"),
+                func.sum(deduped.c.tot).label("tot"),
+                func.min(rango).label("mejor_rango"),
+                func.bool_or(deduped.c.es_tecnico).label("es_tecnico"),
+                func.bool_or(deduped.c.cargo_directivo != "").label("es_directivo"),
+                func.array_agg(func.distinct(deduped.c.carrera)).label("carreras"),
+                func.array_agg(func.distinct(deduped.c.sede))
+                .filter(deduped.c.sede != "")
+                .label("sedes"),
+                func.array_agg(func.distinct(deduped.c.nivel))
+                .filter(deduped.c.nivel != "")
+                .label("niveles"),
+                func.array_agg(func.distinct(deduped.c.cargo_directivo))
+                .filter(deduped.c.cargo_directivo != "")
+                .label("cargos_directivos"),
+            )
+            .group_by(deduped.c.docente_id)
+            .subquery("agregado")
+        )
+
+        # La fila «principal» de cada docente: la de mas horas totales. De ahi
+        # salen su facultad, titularidad, categoria, dedicacion y relacion
+        # laboral — igual que `avance_por_facultad` usa la facultad de mas
+        # carga para quien dicta en varias.
+        con_orden = select(
+            deduped,
+            func.row_number()
+            .over(
+                partition_by=deduped.c.docente_id,
+                order_by=(deduped.c.tot.desc(), deduped.c.fila_id),
+            )
+            .label("principal"),
+        ).subquery("con_orden")
+        principal = select(con_orden).where(con_orden.c.principal == 1).subquery("principal")
+
+        consulta = (
+            select(
+                DocenteModel.id.label("docente_id"),
+                DocenteModel.identificacion.label("identificacion"),
+                DocenteModel.nombre_completo.label("nombre_completo"),
+                principal.c.facultad_codigo,
+                principal.c.facultad_nombre,
+                principal.c.titularidad,
+                principal.c.categoria,
+                principal.c.dedicacion,
+                principal.c.relacion_laboral,
+                agregado.c.da,
+                agregado.c.d,
+                agregado.c.i,
+                agregado.c.v,
+                agregado.c.g,
+                agregado.c.tot,
+                agregado.c.es_tecnico,
+                agregado.c.es_directivo,
+                agregado.c.carreras,
+                agregado.c.sedes,
+                agregado.c.niveles,
+                agregado.c.cargos_directivos,
+                agregado.c.mejor_rango,
+            )
+            .select_from(agregado)
+            .join(principal, principal.c.docente_id == agregado.c.docente_id)
+            .join(DocenteModel, DocenteModel.id == agregado.c.docente_id)
+        )
+
+        def unidos(valores: Sequence[str] | None) -> str:
+            return ", ".join(v for v in (valores or []) if v)
+
+        return [
+            DocenteResumen(
+                docente_id=r.docente_id,
+                identificacion=r.identificacion,
+                nombre_completo=r.nombre_completo,
+                facultad_codigo=r.facultad_codigo,
+                facultad_nombre=r.facultad_nombre,
+                carreras=unidos(r.carreras),
+                sedes=unidos(r.sedes),
+                niveles=tuple(n for n in (r.niveles or []) if n),
+                titularidad=r.titularidad or "",
+                categoria=r.categoria or "",
+                dedicacion=r.dedicacion or "",
+                relacion_laboral=r.relacion_laboral or "",
+                cargo_directivo=unidos(r.cargos_directivos),
+                da=round(float(r.da or 0.0), 2),
+                d=round(float(r.d or 0.0), 2),
+                i=round(float(r.i or 0.0), 2),
+                v=round(float(r.v or 0.0), 2),
+                g=round(float(r.g or 0.0), 2),
+                tot=round(float(r.tot or 0.0), 2),
+                es_tecnico_docente=bool(r.es_tecnico),
+                es_directivo=bool(r.es_directivo),
+                es_valido=r.mejor_rango in (1, 2),
+                estado_validacion=_ESTADO_POR_RANGO.get(r.mejor_rango),
+            )
+            for r in (await self._s.execute(consulta)).all()
+        ]
+
+    async def split_por_carrera(self, paos: Sequence[UUID]) -> list[FilaSplitCarrera]:
+        """Una fila por docente x carrera x nivel x dedicacion.
+
+        Cada fila de `FilaDistributivoModel` ya es por carrera: a diferencia
+        de `docentes_resumen`, aqui no se suma nada, se devuelve la fila
+        directa con sus catalogos resueltos a texto.
+        """
+        if not paos:
+            return []
+
+        f = FilaDistributivoModel
+        consulta = (
+            select(
+                f.docente_id.label("docente_id"),
+                FacultadModel.codigo.label("facultad_codigo"),
+                FacultadModel.nombre.label("facultad_nombre"),
+                CarreraModel.nombre.label("carrera"),
+                CarreraModel.id.label("carrera_id"),
+                func.coalesce(SedeModel.nombre, "").label("sede"),
+                func.coalesce(NivelModel.nombre, "").label("nivel"),
+                func.coalesce(DedicacionModel.nombre, "").label("dedicacion"),
+                func.coalesce(TitularidadModel.nombre, "").label("titularidad"),
+                func.coalesce(CategoriaModel.nombre, "").label("categoria"),
+                func.coalesce(_horas_da(), 0.0).label("da"),
+                f.total_docencia.label("d"),
+                f.total_investigacion.label("i"),
+                f.total_vinculacion.label("v"),
+                f.total_gestion.label("g"),
+                f.total_horas.label("tot"),
+                _es_tecnico_docente(CategoriaModel.nombre).label("es_tecnico"),
+            )
+            .select_from(f)
+            .join(FacultadModel, FacultadModel.id == f.facultad_id)
+            .join(CarreraModel, CarreraModel.id == f.carrera_id)
+            .outerjoin(SedeModel, SedeModel.id == f.sede_id)
+            .outerjoin(NivelModel, NivelModel.id == f.nivel_id)
+            .outerjoin(DedicacionModel, DedicacionModel.id == f.dedicacion_id)
+            .outerjoin(TitularidadModel, TitularidadModel.id == f.titularidad_id)
+            .outerjoin(CategoriaModel, CategoriaModel.id == f.categoria_id)
+            .where(f.pao_id.in_(list(paos)))
+            .where(FacultadModel.es_direccion.is_(False))
+        )
+
+        return [
+            FilaSplitCarrera(
+                docente_id=r.docente_id,
+                facultad_codigo=r.facultad_codigo,
+                facultad_nombre=r.facultad_nombre,
+                carrera=r.carrera,
+                carrera_id=r.carrera_id,
+                sede=r.sede,
+                nivel=r.nivel,
+                dedicacion=r.dedicacion,
+                titularidad=r.titularidad,
+                categoria=r.categoria,
+                da=round(float(r.da or 0.0), 2),
+                d=round(float(r.d or 0.0), 2),
+                i=round(float(r.i or 0.0), 2),
+                v=round(float(r.v or 0.0), 2),
+                g=round(float(r.g or 0.0), 2),
+                tot=round(float(r.tot or 0.0), 2),
+                es_tecnico_docente=bool(r.es_tecnico),
+            )
+            for r in (await self._s.execute(consulta)).all()
+        ]
+
 
 def _horas_da() -> Any:
     """Horas de la subactividad `Da`, la primera del bloque de docencia.
@@ -683,6 +928,16 @@ def _horas_da() -> Any:
     detalle de ese bloque que esta pantalla necesita agregar.
     """
     return cast(FilaDistributivoModel.horas_docencia["Da"].astext, Float)
+
+
+def _es_tecnico_docente(categoria_nombre: Any) -> Any:
+    """`True` si la categoria de esa fila es «Tecnico docente».
+
+    No es una columna propia: es un valor mas del catalogo de categorias (ver
+    `_TECNICO_DOCENTE`). Se compara sin acentos y en mayusculas, igual que
+    `_condicion_flujo` compara `medida`.
+    """
+    return func.upper(func.unaccent(func.coalesce(categoria_nombre, ""))) == _TECNICO_DOCENTE
 
 
 def _condicion_dedicacion(paos: Sequence[UUID], dedicacion_id: UUID | None) -> Any:

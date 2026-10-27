@@ -252,6 +252,7 @@ export class ListaDistributivoComponent {
       dedicacionId: fila.dedicacionId ?? '',
       categoriaId: fila.categoriaId ?? '',
       tipoTituloId: fila.tipoTituloId ?? '',
+      cargoDirectivoId: fila.cargoDirectivoId ?? '',
     });
   }
 
@@ -301,6 +302,7 @@ export class ListaDistributivoComponent {
         dedicacionId: opcional('dedicacionId'),
         categoriaId: opcional('categoriaId'),
         tipoTituloId: opcional('tipoTituloId'),
+        cargoDirectivoId: opcional('cargoDirectivoId'),
         asignaturasIds: this.asignaturasEditadas(),
         observaciones: this.observaciones().trim() || null,
         horas: this.horas(),
