@@ -111,7 +111,7 @@
         </div>
 
         @if (tipo() === 'facultades') {
-          <div class="campo">
+          <div class="campo campo--ancho">
             <label class="casilla">
               <input
                 type="checkbox"
@@ -126,6 +126,83 @@
                 </span>
               </span>
             </label>
+          </div>
+
+          <div class="campo campo--ancho">
+            <h3 class="campo__etiqueta">Contactos</h3>
+            <p class="campo__ayuda">Personas de referencia de la facultad, para soporte.</p>
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto1-nombre">
+              Nombre del contacto 1
+            </label>
+            <input
+              id="cat-contacto1-nombre"
+              type="text"
+              [ngModel]="contacto1Nombre()"
+              (ngModelChange)="contacto1Nombre.set($event)"
+            />
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto1-telefono">
+              Teléfono del contacto 1
+            </label>
+            <input
+              id="cat-contacto1-telefono"
+              type="tel"
+              [ngModel]="contacto1Telefono()"
+              (ngModelChange)="contacto1Telefono.set($event)"
+            />
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto1-correo">
+              Correo del contacto 1
+            </label>
+            <input
+              id="cat-contacto1-correo"
+              type="email"
+              [ngModel]="contacto1Correo()"
+              (ngModelChange)="contacto1Correo.set($event)"
+            />
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto2-nombre">
+              Nombre del contacto 2
+            </label>
+            <input
+              id="cat-contacto2-nombre"
+              type="text"
+              [ngModel]="contacto2Nombre()"
+              (ngModelChange)="contacto2Nombre.set($event)"
+            />
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto2-telefono">
+              Teléfono del contacto 2
+            </label>
+            <input
+              id="cat-contacto2-telefono"
+              type="tel"
+              [ngModel]="contacto2Telefono()"
+              (ngModelChange)="contacto2Telefono.set($event)"
+            />
+          </div>
+
+          <div class="campo">
+            <label class="campo__etiqueta" for="cat-contacto2-correo">
+              Correo del contacto 2
+            </label>
+            <input
+              id="cat-contacto2-correo"
+              type="email"
+              [ngModel]="contacto2Correo()"
+              (ngModelChange)="contacto2Correo.set($event)"
+            />
           </div>
         }
 

@@ -94,6 +94,13 @@ export class CatalogoComponent {
   protected readonly codigoErp = signal('');
   /** Solo aplica al catalogo de facultades: ver `abrirEdicion`/`guardar`. */
   protected readonly esDireccion = signal(false);
+  /** Contactos de la facultad: ver `abrirEdicion`/`guardar`. */
+  protected readonly contacto1Nombre = signal('');
+  protected readonly contacto1Telefono = signal('');
+  protected readonly contacto1Correo = signal('');
+  protected readonly contacto2Nombre = signal('');
+  protected readonly contacto2Telefono = signal('');
+  protected readonly contacto2Correo = signal('');
   protected readonly guardando = signal(false);
 
   protected readonly aEliminar = signal<ElementoCatalogo | null>(null);
@@ -198,6 +205,12 @@ export class CatalogoComponent {
     this.orden.set(this.datos().total);
     this.codigoErp.set('');
     this.esDireccion.set(false);
+    this.contacto1Nombre.set('');
+    this.contacto1Telefono.set('');
+    this.contacto1Correo.set('');
+    this.contacto2Nombre.set('');
+    this.contacto2Telefono.set('');
+    this.contacto2Correo.set('');
   }
 
   protected abrirEdicion(elemento: ElementoCatalogo): void {
@@ -210,6 +223,12 @@ export class CatalogoComponent {
     this.orden.set(elemento.orden);
     this.codigoErp.set(elemento.codigoErp ?? '');
     this.esDireccion.set(Boolean(elemento.atributos?.['esDireccion']));
+    this.contacto1Nombre.set(String(elemento.atributos?.['contacto1Nombre'] ?? ''));
+    this.contacto1Telefono.set(String(elemento.atributos?.['contacto1Telefono'] ?? ''));
+    this.contacto1Correo.set(String(elemento.atributos?.['contacto1Correo'] ?? ''));
+    this.contacto2Nombre.set(String(elemento.atributos?.['contacto2Nombre'] ?? ''));
+    this.contacto2Telefono.set(String(elemento.atributos?.['contacto2Telefono'] ?? ''));
+    this.contacto2Correo.set(String(elemento.atributos?.['contacto2Correo'] ?? ''));
   }
 
   protected cerrarFormulario(): void {
@@ -240,10 +259,20 @@ export class CatalogoComponent {
       },
     };
 
-    // Solo el catalogo de facultades usa este atributo: en el resto no se
-    // envia, para no dejar una llave vacia en `atributos`.
+    // Solo el catalogo de facultades usa estos atributos: en el resto no se
+    // envian, para no dejar llaves vacias en `atributos`.
     const atributos =
-      this.tipo() === TipoCatalogo.FACULTAD ? { esDireccion: this.esDireccion() } : undefined;
+      this.tipo() === TipoCatalogo.FACULTAD
+        ? {
+            esDireccion: this.esDireccion(),
+            contacto1Nombre: this.contacto1Nombre().trim(),
+            contacto1Telefono: this.contacto1Telefono().trim(),
+            contacto1Correo: this.contacto1Correo().trim(),
+            contacto2Nombre: this.contacto2Nombre().trim(),
+            contacto2Telefono: this.contacto2Telefono().trim(),
+            contacto2Correo: this.contacto2Correo().trim(),
+          }
+        : undefined;
 
     const enEdicion = this.editando();
     if (enEdicion) {
