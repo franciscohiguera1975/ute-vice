@@ -193,9 +193,9 @@ def _tabla_de_avance(
             "docentes_b", f"Docentes {rotulo_b}", 18, "numero", "derecha", _PASTEL_VERDE
         ),
         ColumnaReporte(
-            "aprobadas_b", f"Aprobadas {rotulo_b}", 19, "numero", "derecha", _PASTEL_VERDE_CLARO
+            "aprobadas_b", f"Validadas {rotulo_b}", 19, "numero", "derecha", _PASTEL_VERDE_CLARO
         ),
-        ColumnaReporte("aprobado", "% Aprobado", 12, "porcentaje", "derecha", _PASTEL_AMBAR),
+        ColumnaReporte("aprobado", "% Validado", 12, "porcentaje", "derecha", _PASTEL_AMBAR),
     ]
 
     filas: list[dict[str, Any]] = [
@@ -222,8 +222,8 @@ def _tabla_de_avance(
         f"Suma de la columna, {rotulo_b}": sum(a.docentes_b for a in datos.avance),
         f"Docentes distintos, {rotulo_a}": distintos_a,
         f"Docentes distintos, {rotulo_b}": distintos_b,
-        f"Aprobadas {rotulo_b}": aprobadas,
-        "% Aprobado": round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0,
+        f"Validadas {rotulo_b}": aprobadas,
+        "% Validado": round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0,
     }
 
     return TablaReporte(
@@ -254,7 +254,7 @@ def _tabla_de_estados(
         ColumnaReporte("error", "Con error", 11, "numero", "derecha", _PASTEL_SALMON),
         ColumnaReporte("sin_estado", "Sin estado", 12, "numero", "derecha", _PASTEL_GRIS),
         ColumnaReporte("total", "Total", 10, "numero", "derecha", _PASTEL_AZUL),
-        ColumnaReporte("aprobado", "% Aprobado", 12, "porcentaje", "derecha", _PASTEL_AZUL),
+        ColumnaReporte("aprobado", "% Validado", 12, "porcentaje", "derecha", _PASTEL_AZUL),
     ]
 
     filas: list[dict[str, Any]] = [
@@ -281,7 +281,7 @@ def _tabla_de_estados(
         "Con error": sum(e.con_error for e in filas_origen),
         "Sin estado registrado": sum(e.sin_estado for e in filas_origen),
         "Total de filas": sum(e.total for e in filas_origen),
-        "% Aprobado sobre las evaluadas": (
+        "% Validado sobre las evaluadas": (
             round(aprobadas / evaluadas * 100, 1) if evaluadas else 0.0
         ),
     }
@@ -317,11 +317,11 @@ def _tabla_de_aprobacion(
         ColumnaReporte("facultad", "Facultad", 46, "texto", "izquierda", _AZUL_OSCURO),
         ColumnaReporte("filas_b", f"Filas {rotulo_b}", 16, "numero", "derecha", _PASTEL_VERDE),
         ColumnaReporte(
-            "aprobado_b", f"% Aprobado {rotulo_b}", 20, "porcentaje", "derecha", _PASTEL_VERDE_CLARO
+            "aprobado_b", f"% Validado {rotulo_b}", 20, "porcentaje", "derecha", _PASTEL_VERDE_CLARO
         ),
         ColumnaReporte("filas_a", f"Filas {rotulo_a}", 16, "numero", "derecha", _PASTEL_AZUL),
         ColumnaReporte(
-            "aprobado_a", f"% Aprobado {rotulo_a}", 20, "porcentaje", "derecha", _PASTEL_AZUL
+            "aprobado_a", f"% Validado {rotulo_a}", 20, "porcentaje", "derecha", _PASTEL_AZUL
         ),
         ColumnaReporte(
             "variacion", "Variacion (puntos)", 18, "porcentaje", "derecha", _PASTEL_AMBAR
@@ -348,13 +348,13 @@ def _tabla_de_aprobacion(
         f"Filas {rotulo_a}": anterior.total if anterior else 0,
         f"Docentes distintos, {rotulo_b}": actual.docentes if actual else 0,
         f"Docentes distintos, {rotulo_a}": anterior.docentes if anterior else 0,
-        f"% Aprobado {rotulo_b}": (
+        f"% Validado {rotulo_b}": (
             actual.porcentaje_aprobado if actual and actual.evaluadas else 0.0
         ),
     }
 
     return TablaReporte(
-        titulo="Aprobacion del distributivo por facultad",
+        titulo="Validacion del distributivo por facultad",
         subtitulo=f"{rotulo_a}: {uno}   ·   {rotulo_b}: {dos}",
         columnas=columnas,
         filas=filas,

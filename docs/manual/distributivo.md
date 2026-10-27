@@ -315,20 +315,20 @@ Por eso el denominador son las filas **con estado**, no el total, y un periodo
 sin ninguna muestra un guion —«—»— y no un cero. Contar las filas sin estado
 como reprobadas pintaria todo el historico en rojo.
 
-`OK` y `OK, excepcion` cuentan las dos como aprobadas: la segunda solo anade que
+`OK` y `OK, excepcion` cuentan las dos como validadas: la segunda solo anade que
 la carga es valida por una excepcion concedida.
 
 ### Que hay en la pantalla
 
 * Cuatro cifras del grupo 2: filas —con la diferencia frente al grupo 1—,
-  porcentaje aprobado, pendientes y filas sin estado.
-* **Aprobación de los dos grupos**: una fila por grupo, con filas, filas con
+  porcentaje validado, pendientes y filas sin estado.
+* **Validación de los dos grupos**: una fila por grupo, con filas, filas con
   estado, aprobadas, porcentaje, docentes y horas.
 * **Desglose por estado**: los cinco estados con su conteo y su peso, en las dos
   columnas de periodo. Se muestran siempre los cinco, incluidos los que valen
   cero: que «Con error» valga cero es justamente lo que se quiere leer.
 * **Facultades, los dos grupos**, con la variación en puntos porcentuales.
-* Cuatro graficos: estados, aprobacion por facultad, filas por sede y filas por
+* Cuatro graficos: estados, validacion por facultad, filas por sede y filas por
   dedicacion.
 
 > **La diferencia de filas entre los dos grupos es lo primero que hay que
@@ -366,8 +366,8 @@ Una fila por facultad:
 | Columna | Que dice |
 |---|---|
 | **Docentes `2026-1` / `2026-2`** | Docentes **distintos** con carga en cada grupo |
-| **Aprobadas `2026-2`** | Filas con estado `OK` u `OK, excepcion` |
-| **% Aprobado** | Sobre las filas con estado, no sobre el total |
+| **Validadas `2026-2`** | Filas con estado `OK` u `OK, excepcion` |
+| **% Validado** | Sobre las filas con estado, no sobre el total |
 
 Las dos columnas de grupo llevan el **semestre** de los periodos elegidos, y el
 rotulo **se puede escribir**: basta pulsar sobre el y teclear. Hace falta porque
@@ -395,7 +395,7 @@ cabecera es lo que llevara el archivo descargado.
 ### Resumen 2 · Estados del distributivo
 
 Las filas de cada facultad repartidas por estado de validacion —validado, con
-excepcion, pendiente, con error y sin estado— con su porcentaje de aprobacion.
+excepcion, pendiente, con error y sin estado— con su porcentaje de validacion.
 Un conmutador elige cual de los dos grupos se desglosa.
 
 «Sin estado» no es «sin validar»: el dato no existia antes de 2026-2.

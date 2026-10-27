@@ -55,7 +55,7 @@
         </article>
 
         <article class="metrica">
-          <p class="metrica__etiqueta">Aprobado</p>
+          <p class="metrica__etiqueta">Validado</p>
           <p class="metrica__valor">{{ porcentaje(actual) }}</p>
           <div class="barra metrica__barra">
             <div
@@ -88,7 +88,7 @@
       <!-- ------------------------------------------- tabla: aprobacion -->
       <section class="tarjeta seccion">
         <div class="tarjeta__cabecera">
-          <h2 class="tarjeta__titulo">Aprobacion de los dos periodos</h2>
+          <h2 class="tarjeta__titulo">Validacion de los dos periodos</h2>
         </div>
         <div class="tabla-envoltura">
           <table class="tabla">
@@ -97,8 +97,8 @@
                 <th scope="col">Periodo</th>
                 <th scope="col" class="der">Filas</th>
                 <th scope="col" class="der">Con estado</th>
-                <th scope="col" class="der">Aprobadas</th>
-                <th scope="col" class="der">% aprobado</th>
+                <th scope="col" class="der">Validadas</th>
+                <th scope="col" class="der">% validado</th>
                 <th scope="col" class="der">Docentes</th>
                 <th scope="col" class="der">Horas</th>
               </tr>
@@ -340,10 +340,10 @@
 
         <article class="tarjeta">
           <div class="tarjeta__cabecera">
-            <h2 class="tarjeta__titulo">Aprobacion por facultad (%)</h2>
+            <h2 class="tarjeta__titulo">Validacion por facultad (%)</h2>
           </div>
           <div class="tarjeta__cuerpo">
-            <ute-grafico-barras [datos]="avancePorFacultad()" titulo="Aprobacion por facultad" />
+            <ute-grafico-barras [datos]="avancePorFacultad()" titulo="Validacion por facultad" />
           </div>
         </article>
 
@@ -390,10 +390,10 @@
               <tr>
                 <th scope="col">Facultad</th>
                 <th scope="col" class="der">Filas grupo 2</th>
-                <th scope="col" class="der">% aprobado</th>
+                <th scope="col" class="der">% validado</th>
                 @if (d.anterior; as anterior) {
                   <th scope="col" class="der">Filas grupo 1</th>
-                  <th scope="col" class="der">% aprobado</th>
+                  <th scope="col" class="der">% validado</th>
                   <th scope="col" class="der">Variacion</th>
                 }
               </tr>

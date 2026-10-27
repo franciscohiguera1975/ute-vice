@@ -100,8 +100,8 @@ export class ResumenesDistributivoComponent {
       valor: TipoResumen.AVANCE,
       etiqueta: 'Avance entre dos grupos de periodos',
       descripcion:
-        'Cuantos de los docentes del primer grupo vuelven a tener carga en el segundo, ' +
-        'por facultad, con lo validado del segundo.',
+        'Docentes con carga en cada grupo, por facultad, y que parte del segundo ' +
+        'esta validada.',
     },
     {
       valor: TipoResumen.ESTADOS,
