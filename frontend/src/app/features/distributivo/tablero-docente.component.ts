@@ -421,7 +421,14 @@ export class TableroDocenteComponent {
    */
   protected ingresanYSalenDe(codigoFacultad: string): {
     readonly ingresan: readonly DocenteResumen[];
-    readonly salen: ReadonlyArray<{ readonly docente: DocenteResumen; readonly situacion: string }>;
+    readonly salen: ReadonlyArray<{
+      readonly docente: DocenteResumen;
+      /** El mismo docente en el periodo actual, si sigue existiendo —de ser
+       * asi, su nombre es clicable y abre SU ficha, la del periodo actual,
+       * no la del anterior—. */
+      readonly sigue: DocenteResumen | null;
+      readonly situacion: string;
+    }>;
   } {
     const actualDeFacultad = this.docentesFiltrados().filter((d) => d.facultadCodigo === codigoFacultad);
     const anteriorDeFacultad = this.docentesAnteriorFiltrados().filter(
@@ -438,10 +445,13 @@ export class TableroDocenteComponent {
     const salen = [...anteriorDeFacultad]
       .filter((d) => !idsActual.has(d.docenteId))
       .map((docente) => {
-        const sigue = porIdActualCompleto.get(docente.docenteId);
+        const sigue = porIdActualCompleto.get(docente.docenteId) ?? null;
         return {
           docente,
-          situacion: sigue ? `Sigue en ${sigue.facultadNombre}` : 'No está en el periodo actual',
+          sigue,
+          situacion: sigue
+            ? `Sigue en ${sigue.facultadNombre || sigue.facultadCodigo}`
+            : 'No está en el periodo actual',
         };
       })
       .sort((a, b) => a.docente.nombreCompleto.localeCompare(b.docente.nombreCompleto));
@@ -460,13 +470,10 @@ export class TableroDocenteComponent {
   protected readonly agregadoDaPorDedicacion = computed(() => {
     const porId = this.docentesPorId();
     const filas = this.splitFiltrado();
-    return DEDICACIONES_FILTRABLES.map((ded) => ({
-      dedicacion: ded,
-      agregado: agregarSplit(
-        filas.filter((s) => claveDedicacion(s.dedicacion) === ded),
-        porId,
-      ),
-    }));
+    return DEDICACIONES_FILTRABLES.map((ded) => {
+      const filasDed = filas.filter((s) => claveDedicacion(s.dedicacion) === ded);
+      return { dedicacion: ded, filas: filasDed, agregado: agregarSplit(filasDed, porId) };
+    });
   });
 
   /**
@@ -647,17 +654,42 @@ export class TableroDocenteComponent {
   // Pestana 4: Mas horas
   // =====================================================================
 
-  /** Hereda la exclusion de directivos de `docentesFiltrados`: un docente con
-   * cargo directivo no compite por "quien tiene mas horas" como el resto. */
+  /**
+   * Excluye a los directivos siempre, sin importar si «Excluir directivos»
+   * esta marcado —igual que el original, que arma esta lista con
+   * `base.filter(d=>!d.dir.length)` sin que ninguna casilla lo condicione—:
+   * un docente con cargo directivo no compite por «quien tiene mas horas»
+   * como el resto. En el resto de las pestañas la exclusion si es opcional,
+   * porque el catalogo de cargos directivos es dinamico y no siempre esta
+   * cargado; aqui se mantiene fija porque asi la define el prototipo.
+   */
   protected readonly masHoras = computed(() => {
     const columna = this.ordenTop();
-    return [...this.docentesFiltrados()].sort((a, b) => b[columna] - a[columna] || b.tot - a.tot);
+    return [...this.docentesFiltrados()]
+      .filter((d) => !d.esDirectivo)
+      .sort((a, b) => b[columna] - a[columna] || b.tot - a.tot);
   });
 
   protected excedeTope(d: DocenteResumen): boolean {
     const ded = claveDedicacion(d.dedicacion);
     return ded !== 'NA' && d.tot > topeH(ded) + 0.01;
   }
+
+  /**
+   * Cuantos directivos quedan fuera de `masHoras()` con los filtros actuales
+   * (facultad/nivel/dedicacion/titularidad/tecnicos) — para la nota del KPI
+   * «Docentes sin cargo directivo». Se cuenta con `excluirDirectivos: false`
+   * para no restar dos veces si esa casilla tambien esta marcada.
+   */
+  protected readonly directivosEnFiltroTop = computed(() => {
+    const f: FiltrosTablero = { ...this.filtros(), excluirDirectivos: false };
+    return (this.datos()?.docentes ?? []).filter((d) => cumpleFiltroDocente(d, f) && d.esDirectivo).length;
+  });
+
+  /** Cuantos de `masHoras()` superan el tope de horas de su dedicacion. */
+  protected readonly masHorasSuperanTope = computed(
+    () => this.masHoras().filter((d) => this.excedeTope(d)).length,
+  );
 
   // =====================================================================
   // Pestana 5: Tiempos parciales (TP)
@@ -865,6 +897,20 @@ export class TableroDocenteComponent {
       .sort((a, b) => b.tc - a.tc);
   });
 
+  /** La fila «Total» de `tcPorFacultad`, sumando todas las facultades —igual
+   * que el original agrega una fila `__T` al final de cada tabla «por
+   * facultad»—. */
+  protected readonly tcPorFacultadTotal = computed(() => {
+    const items = this.tcDocentes();
+    const incompletos = items.filter((d) => d.tot < 40 - 0.01);
+    const pocaClase = items.filter((d) => d.da < 3);
+    const sinClase = items.filter((d) => d.da === 0);
+    const horasFaltantes = incompletos.reduce((suma, d) => suma + (40 - d.tot), 0);
+    const idsBajos = new Set([...incompletos, ...pocaClase].map((d) => d.docenteId));
+    const directivos = items.filter((d) => idsBajos.has(d.docenteId) && d.esDirectivo).length;
+    return { tc: items.length, incompletos, pocaClase, sinClase, horasFaltantes, directivos };
+  });
+
   /** «Docentes con horas en las cuatro funciones», por facultad. */
   protected readonly funcionesPorFacultad = computed(() => {
     const grupos = agruparPorFacultad(this.docentesFiltrados());
@@ -876,6 +922,15 @@ export class TableroDocenteComponent {
         return { codigo, nombre, docentes: items.length, cuatro, tres, tcCuatro };
       })
       .sort((a, b) => b.cuatro.length - a.cuatro.length);
+  });
+
+  /** La fila «Total» de `funcionesPorFacultad`. */
+  protected readonly funcionesPorFacultadTotal = computed(() => {
+    const items = this.docentesFiltrados();
+    const cuatro = items.filter((d) => cantidadDeFunciones(d) === 4);
+    const tres = items.filter((d) => cantidadDeFunciones(d) === 3);
+    const tcCuatro = cuatro.filter((d) => claveDedicacion(d.dedicacion) === 'TC').length;
+    return { docentes: items.length, cuatro, tres, tcCuatro };
   });
 
   /**
@@ -909,6 +964,18 @@ export class TableroDocenteComponent {
         };
       })
       .sort((a, b) => b.agregado.i / (b.agregado.tot || 1) - a.agregado.i / (a.agregado.tot || 1));
+  });
+
+  /** La fila «Total» de `investigacionPorFacultad`, sobre todo `splitFiltrado()`. */
+  protected readonly investigacionTotal = computed(() => {
+    const porId = this.docentesPorId();
+    const agregado = this.agregadoDaGlobal();
+    const conI = [...agregado.porDocente.entries()].filter(([, p]) => p.i > 0);
+    const tcConI = conI.filter(
+      ([id]) => claveDedicacion(porId.get(id)?.dedicacion ?? '') === 'TC',
+    ).length;
+    const gap = Math.max(0, agregado.tot * 0.06 - agregado.i);
+    return { agregado, conI: conI.length, iProm: conI.length ? agregado.i / conI.length : 0, tcConI, gap };
   });
 
   /** Las carreras de una facultad con investigacion, ordenadas de mayor a

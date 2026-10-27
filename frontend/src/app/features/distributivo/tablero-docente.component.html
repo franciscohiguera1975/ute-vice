@@ -147,13 +147,18 @@
           <article class="metrica">
             <p class="metrica__etiqueta">% tiempo completo</p>
             <p class="metrica__valor">
-              <span class="pill" [class]="'pill--' + tcPillDe(porcentajeTCActual())">
-                {{ porcentajeTCActual() * 100 | number: '1.0-1' }} %
-              </span>
+              @if (docentesFiltrados().length > 0) {
+                <span class="pill" [class]="'pill--' + tcPillDe(porcentajeTCActual())">
+                  {{ porcentajeTCActual() * 100 | number: '1.0-1' }} %
+                </span>
+              } @else {
+                <span class="texto-tenue">—</span>
+              }
             </p>
             <p class="metrica__pie texto-xs texto-tenue">
-              Comparación: {{ porcentajeTCAnterior() * 100 | number: '1.0-1' }} % · mínimo 50 %,
-              óptimo 60 % — Art. 109 LOES
+              Comparación:
+              {{ docentesAnteriorFiltrados().length > 0 ? (porcentajeTCAnterior() * 100 | number: '1.0-1') + ' %' : '—' }}
+              · mínimo 50 %, óptimo 60 % — Art. 109 LOES
             </p>
           </article>
 
@@ -296,7 +301,15 @@
                               <tbody>
                                 @for (x of movimientoFac.salen; track x.docente.docenteId) {
                                   <tr>
-                                    <td>{{ x.docente.nombreCompleto }}</td>
+                                    <td>
+                                      @if (x.sigue) {
+                                        <button type="button" class="nombre-docente" (click)="abrirDocente(x.sigue)">
+                                          {{ x.docente.nombreCompleto }}
+                                        </button>
+                                      } @else {
+                                        {{ x.docente.nombreCompleto }}
+                                      }
+                                    </td>
                                     <td>
                                       <span class="ded" [class]="'ded--' + claveDedicacionDe(x.docente).toLowerCase()">
                                         {{ claveDedicacionDe(x.docente) }}
@@ -501,6 +514,58 @@
                   </tr>
                 }
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  @for (f of agregadoDaPorDedicacion(); track f.dedicacion) {
+                    @let claveCeldaTotal = 'da-celda:__total|' + f.dedicacion;
+                    <td class="der">
+                      @if (f.agregado.docentes > 0) {
+                        <button
+                          type="button"
+                          class="celda-da"
+                          [class.celda-da--activa]="segmentoAbierto() === claveCeldaTotal"
+                          (click)="alternarSegmento(claveCeldaTotal)"
+                        >
+                          <span class="mono fuerte">{{ porcentaje(f.agregado.da, f.agregado.tot) | number: '1.0-1' }} %</span>
+                          <span class="mini-barra"><i [style.width.%]="porcentaje(f.agregado.da, f.agregado.tot)"></i></span>
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">—</span>
+                      }
+                    </td>
+                    <td class="der mono fuerte">
+                      {{ f.agregado.docentes ? (razon(f.agregado.da, f.agregado.docentes) | number: '1.0-1') : '—' }}
+                    </td>
+                    <td class="der">
+                      @if (f.agregado.docentes > 0) {
+                        <span class="pill" [class]="'pill--' + pill3De(razon(f.agregado.da, f.agregado.topeDaTotal))">
+                          {{ porcentaje(f.agregado.da, f.agregado.topeDaTotal) | number: '1.0-1' }} %
+                        </span>
+                      } @else {
+                        <span class="texto-tenue">—</span>
+                      }
+                    </td>
+                  }
+                  <td class="der mono fuerte">{{ porcentaje(agregadoDaGlobal().da, agregadoDaGlobal().tot) | number: '1.0-1' }} %</td>
+                  <td class="der mono fuerte">{{ agregadoDaGlobal().docentes | number }}</td>
+                </tr>
+                @for (f of agregadoDaPorDedicacion(); track f.dedicacion) {
+                  @let claveCeldaTotal = 'da-celda:__total|' + f.dedicacion;
+                  @if (segmentoAbierto() === claveCeldaTotal) {
+                    <tr class="fila-detalle">
+                      <td [attr.colspan]="3 * DEDICACIONES_FILTRABLES.length + 3">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">
+                          Todas las facultades · {{ ETIQUETAS_DEDICACION[f.dedicacion] }}
+                        </p>
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesDelSegmento(f.filas) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tfoot>
             </table>
           </div>
         </section>
@@ -775,14 +840,39 @@
 
       <!-- =========================================================== top -->
       @case ('top') {
+        <section class="rejilla rejilla--3 seccion" aria-label="Indicadores de más horas">
+          <article class="metrica">
+            <p class="metrica__etiqueta">Docentes sin cargo directivo</p>
+            <p class="metrica__valor">{{ masHoras().length | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              Se excluyen {{ directivosEnFiltroTop() }} directivos con los filtros actuales
+            </p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Superan su dedicación</p>
+            <p class="metrica__valor">{{ masHorasSuperanTope() | number }}</p>
+            <p class="metrica__pie texto-xs texto-tenue">
+              TC sobre 40 h, MT sobre 20 h, TP con 20 h o más
+            </p>
+          </article>
+          <article class="metrica">
+            <p class="metrica__etiqueta">Mayor carga</p>
+            <p class="metrica__valor">
+              {{ masHoras()[0] ? (masHoras()[0].tot | number: '1.0-1') + ' h' : '—' }}
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">{{ masHoras()[0]?.nombreCompleto }}</p>
+          </article>
+        </section>
+
         <section class="tarjeta seccion">
           <div class="tarjeta__cabecera">
             <h2 class="tarjeta__titulo">Docentes con más horas asignadas</h2>
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
             Ordene por cualquier función con clic en el encabezado. Se resalta a quien supera el
-            tope de su dedicación. El filtro «Excluir directivos» de arriba también aplica a esta
-            lista.
+            tope de su dedicación. Esta lista excluye siempre a quien tiene cargo directivo,
+            compita o no con el resto de la planta — no depende del filtro «Excluir directivos» de
+            arriba, que sí es opcional en las demás pestañas.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
@@ -815,7 +905,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (d of masHoras().slice(0, 150); track d.docenteId; let i = $index) {
+                @for (d of masHoras().slice(0, 100); track d.docenteId; let i = $index) {
                   <tr [class.tabla__fila--excede]="excedeTope(d)">
                     <td class="mono texto-tenue">{{ i + 1 }}</td>
                     <td>
@@ -850,9 +940,9 @@
               </tbody>
             </table>
           </div>
-          @if (masHoras().length > 150) {
+          @if (masHoras().length > 100) {
             <p class="nota texto-xs texto-tenue">
-              Se muestran los primeros 150 de {{ masHoras().length }}.
+              Se muestran los primeros 100 de {{ masHoras().length }}.
             </p>
           }
         </section>
@@ -1243,12 +1333,16 @@
                   <td class="der mono fuerte">{{ plantaPorFacultad().total.mt | number }}</td>
                   <td class="der mono fuerte">{{ plantaPorFacultad().total.tp | number }}</td>
                   <td class="der">
-                    <span
-                      class="pill"
-                      [class]="'pill--' + tcPillDe(razon(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes))"
-                    >
-                      {{ porcentaje(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes) | number: '1.0-1' }} %
-                    </span>
+                    @if (plantaPorFacultad().total.docentes > 0) {
+                      <span
+                        class="pill"
+                        [class]="'pill--' + tcPillDe(razon(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes))"
+                      >
+                        {{ porcentaje(plantaPorFacultad().total.tc, plantaPorFacultad().total.docentes) | number: '1.0-1' }} %
+                      </span>
+                    } @else {
+                      <span class="texto-tenue">—</span>
+                    }
                   </td>
                   <td class="der mono fuerte">{{ plantaPorFacultad().total.etc | number: '1.0-1' }}</td>
                   <td class="der mono fuerte">
@@ -1361,6 +1455,17 @@
                   </tr>
                 }
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().tc | number }}</td>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().incompletos.length | number }}</td>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().horasFaltantes | number: '1.0-1' }}</td>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().pocaClase.length | number }}</td>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().sinClase.length | number }}</td>
+                  <td class="der mono fuerte">{{ tcPorFacultadTotal().directivos | number }}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>
@@ -1445,6 +1550,30 @@
                   </tr>
                 }
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="der mono fuerte">{{ funcionesPorFacultadTotal().docentes | number }}</td>
+                  <td class="der mono fuerte">{{ funcionesPorFacultadTotal().cuatro.length | number }}</td>
+                  <td class="der mono fuerte">
+                    {{ porcentaje(funcionesPorFacultadTotal().cuatro.length, funcionesPorFacultadTotal().docentes) | number: '1.0-1' }} %
+                  </td>
+                  <td class="der mono fuerte">{{ funcionesPorFacultadTotal().tres.length | number }}</td>
+                  <td class="der mono fuerte">{{ funcionesPorFacultadTotal().tcCuatro | number }}</td>
+                  <td>
+                    <div class="stack">
+                      <i
+                        class="stack__f4"
+                        [style.width.%]="porcentaje(funcionesPorFacultadTotal().cuatro.length, funcionesPorFacultadTotal().docentes)"
+                      ></i>
+                      <i
+                        class="stack__f3"
+                        [style.width.%]="porcentaje(funcionesPorFacultadTotal().tres.length, funcionesPorFacultadTotal().docentes)"
+                      ></i>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
           <div class="leyenda-stack texto-xs texto-tenue">
@@ -1568,6 +1697,30 @@
                   </tr>
                 }
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="der">
+                    <span
+                      class="pill"
+                      [class]="'pill--' + ipillDe(razon(investigacionTotal().agregado.i, investigacionTotal().agregado.tot))"
+                    >
+                      {{ porcentaje(investigacionTotal().agregado.i, investigacionTotal().agregado.tot) | number: '1.0-1' }} %
+                    </span>
+                  </td>
+                  <td class="der mono fuerte">{{ investigacionTotal().agregado.i | number: '1.0-1' }}</td>
+                  <td class="der mono fuerte">{{ investigacionTotal().conI | number }}</td>
+                  <td class="der mono fuerte">{{ investigacionTotal().iProm | number: '1.0-1' }}</td>
+                  <td class="der mono fuerte">{{ investigacionTotal().tcConI | number }}</td>
+                  <td class="der mono fuerte">
+                    @if (investigacionTotal().gap === 0) {
+                      <span class="positivo">Cumple</span>
+                    } @else {
+                      {{ investigacionTotal().gap | number: '1.0-1' }}
+                    }
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>
