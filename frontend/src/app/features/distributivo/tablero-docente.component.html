@@ -169,34 +169,207 @@
 
         <section class="tarjeta seccion">
           <div class="tarjeta__cabecera">
-            <h2 class="tarjeta__titulo">Movimiento por facultad</h2>
+            <h2 class="tarjeta__titulo">Docentes por facultad y dedicación</h2>
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
-            Cada docente cuenta una vez, en su facultad principal —aquella donde tiene más horas—.
+            Cada docente cuenta una vez, en su facultad principal —en el periodo anterior, la
+            facultad donde tiene más horas—. Clic en una fila para ver quiénes ingresan y quiénes
+            salen.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
               <thead>
                 <tr>
-                  <th scope="col">Facultad</th>
-                  <th scope="col" class="der">Comparación</th>
-                  <th scope="col" class="der">Actual</th>
-                  <th scope="col" class="der">Ingresan</th>
-                  <th scope="col" class="der">Salen</th>
+                  <th scope="col" rowspan="2">Facultad</th>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" colspan="3">{{ ded }}</th>
+                  }
+                  <th scope="col" colspan="3">Total</th>
+                  <th scope="col" rowspan="2">Anterior vs. actual</th>
+                </tr>
+                <tr>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" class="der">Ant.</th>
+                    <th scope="col" class="der">Act.</th>
+                    <th scope="col" class="der">Var.</th>
+                  }
+                  <th scope="col" class="der">Ant.</th>
+                  <th scope="col" class="der">Act.</th>
+                  <th scope="col" class="der">Var.</th>
                 </tr>
               </thead>
               <tbody>
-                @for (f of movimientoFacultades(); track f.codigo) {
-                  <tr>
+                @for (f of variacionFacultades(); track f.codigo) {
+                  @let claveVarFac = 'variacion-facultad:' + f.codigo;
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveVarFac"
+                    (click)="alternarSegmento(claveVarFac)"
+                    (keydown.enter)="alternarSegmento(claveVarFac)"
+                  >
                     <th scope="row">{{ f.nombre }}</th>
-                    <td class="der mono">{{ f.anterior | number }}</td>
-                    <td class="der mono fuerte">{{ f.actual | number }}</td>
-                    <td class="der mono positivo">+{{ f.entran | number }}</td>
-                    <td class="der mono negativo">−{{ f.salen | number }}</td>
+                    @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                      <td class="der mono">{{ f.anterior[ded] | number }}</td>
+                      <td class="der mono">{{ f.actual[ded] | number }}</td>
+                      <td class="der mono">
+                        <span
+                          [class.positivo]="delta(f.anterior[ded], f.actual[ded]) > 0"
+                          [class.negativo]="delta(f.anterior[ded], f.actual[ded]) < 0"
+                        >
+                          {{ signoDelta(delta(f.anterior[ded], f.actual[ded])) }}{{ delta(f.anterior[ded], f.actual[ded]) }}
+                        </span>
+                      </td>
+                    }
+                    <td class="der mono">{{ f.totalAnterior | number }}</td>
+                    <td class="der mono fuerte">{{ f.totalActual | number }}</td>
+                    <td class="der mono">
+                      <span
+                        [class.positivo]="delta(f.totalAnterior, f.totalActual) > 0"
+                        [class.negativo]="delta(f.totalAnterior, f.totalActual) < 0"
+                      >
+                        {{ signoDelta(delta(f.totalAnterior, f.totalActual)) }}{{ delta(f.totalAnterior, f.totalActual) }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="comparativa">
+                        <i class="comparativa__anterior" [style.width.%]="porcentaje(f.totalAnterior, maxVariacionFacultad())"></i>
+                        <i class="comparativa__actual" [style.width.%]="porcentaje(f.totalActual, maxVariacionFacultad())"></i>
+                      </div>
+                    </td>
+                  </tr>
+                  @if (segmentoAbierto() === claveVarFac) {
+                    @let movimientoFac = ingresanYSalenDe(f.codigo);
+                    <tr class="fila-detalle">
+                      <td [attr.colspan]="3 * DEDICACIONES_FILTRABLES.length + 4">
+                        <p class="texto-sm fuerte detalle-segmento__titulo">
+                          <span class="positivo">{{ movimientoFac.ingresan.length }} ingresan</span>
+                          ·
+                          <span class="negativo">{{ movimientoFac.salen.length }} salen</span>
+                        </p>
+                        <div class="rejilla rejilla--2">
+                          <div class="tabla-envoltura tabla-detalle">
+                            <table class="tabla tabla--anidada">
+                              <thead>
+                                <tr>
+                                  <th scope="col">Ingresan en el periodo actual</th>
+                                  <th scope="col">Ded.</th>
+                                  <th scope="col">Categoría</th>
+                                  <th scope="col" class="der">h/sem</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (d of movimientoFac.ingresan; track d.docenteId) {
+                                  <tr>
+                                    <td>
+                                      <button type="button" class="nombre-docente" (click)="abrirDocente(d)">
+                                        {{ d.nombreCompleto }}
+                                      </button>
+                                    </td>
+                                    <td>
+                                      <span class="ded" [class]="'ded--' + claveDedicacionDe(d).toLowerCase()">
+                                        {{ claveDedicacionDe(d) }}
+                                      </span>
+                                    </td>
+                                    <td>{{ d.categoria || '—' }}</td>
+                                    <td class="der mono">{{ d.tot | number: '1.0-1' }}</td>
+                                  </tr>
+                                } @empty {
+                                  <tr>
+                                    <td colspan="4" class="texto-tenue">Nadie</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="tabla-envoltura tabla-detalle">
+                            <table class="tabla tabla--anidada">
+                              <thead>
+                                <tr>
+                                  <th scope="col">Salen (estaban en el periodo anterior)</th>
+                                  <th scope="col">Ded.</th>
+                                  <th scope="col">Categoría</th>
+                                  <th scope="col" class="der">h/sem anterior</th>
+                                  <th scope="col">Situación</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (x of movimientoFac.salen; track x.docente.docenteId) {
+                                  <tr>
+                                    <td>{{ x.docente.nombreCompleto }}</td>
+                                    <td>
+                                      <span class="ded" [class]="'ded--' + claveDedicacionDe(x.docente).toLowerCase()">
+                                        {{ claveDedicacionDe(x.docente) }}
+                                      </span>
+                                    </td>
+                                    <td>{{ x.docente.categoria || '—' }}</td>
+                                    <td class="der mono">{{ x.docente.tot | number: '1.0-1' }}</td>
+                                    <td class="texto-tenue">{{ x.situacion }}</td>
+                                  </tr>
+                                } @empty {
+                                  <tr>
+                                    <td colspan="5" class="texto-tenue">Nadie</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                } @empty {
+                  <tr>
+                    <td [attr.colspan]="3 * DEDICACIONES_FILTRABLES.length + 4" class="texto-tenue">
+                      Sin facultades con los filtros elegidos
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docentes por nivel</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Un docente que dicta en más de un nivel cuenta en cada uno de ellos.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Nivel</th>
+                  <th scope="col" class="der">Anterior</th>
+                  <th scope="col" class="der">Actual</th>
+                  <th scope="col" class="der">Var.</th>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" class="der">{{ ded }} actual</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of variacionNiveles(); track n.nivel) {
+                  <tr>
+                    <th scope="row">{{ n.nivel }}</th>
+                    <td class="der mono">{{ n.anterior | number }}</td>
+                    <td class="der mono fuerte">{{ n.actual | number }}</td>
+                    <td class="der mono">
+                      <span [class.positivo]="delta(n.anterior, n.actual) > 0" [class.negativo]="delta(n.anterior, n.actual) < 0">
+                        {{ signoDelta(delta(n.anterior, n.actual)) }}{{ delta(n.anterior, n.actual) }}
+                      </span>
+                    </td>
+                    @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                      <td class="der mono">{{ n.porDedicacion[ded] | number }}</td>
+                    }
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                    <td [attr.colspan]="4 + DEDICACIONES_FILTRABLES.length" class="texto-tenue">
+                      Sin niveles con los filtros elegidos
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -244,37 +417,138 @@
             <h2 class="tarjeta__titulo">Docencia directa por facultad</h2>
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
-            % Da = horas de clase ÷ horas totales asignadas en esa facultad. «% tope» compara la
-            suma de Da contra la suma del tope de cada docente (TC titular 20 h, TC no titular
-            22 h, MT 12 h, TP 11 h).
+            % Da = horas de clase ÷ horas totales asignadas en esa facultad y dedicación. «% tope»
+            compara la suma de Da contra la suma del tope de cada docente (TC titular 20 h, TC no
+            titular 22 h, MT 12 h, TP 11 h). Clic en una celda de dedicación para ver sus docentes.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
               <thead>
                 <tr>
-                  <th scope="col">Facultad</th>
-                  <th scope="col" class="der">Docentes</th>
+                  <th scope="col" rowspan="2">Facultad</th>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" colspan="3">{{ ded }}: {{ ETIQUETAS_DEDICACION[ded] }}</th>
+                  }
+                  <th scope="col" colspan="2">Todas</th>
+                </tr>
+                <tr>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" class="der">% Da</th>
+                    <th scope="col" class="der">Da prom.</th>
+                    <th scope="col" class="der">% tope</th>
+                  }
                   <th scope="col" class="der">% Da</th>
-                  <th scope="col" class="der">Da prom.</th>
-                  <th scope="col" class="der">% tope</th>
+                  <th scope="col" class="der">Docentes</th>
                 </tr>
               </thead>
               <tbody>
-                @for (f of daPorFacultad(); track f.codigo) {
+                @for (f of daPorFacultadYDedicacion(); track f.codigo) {
                   <tr>
                     <th scope="row">{{ f.nombre }}</th>
-                    <td class="der mono">{{ f.agregado.docentes | number }}</td>
-                    <td class="der mono">{{ porcentaje(f.agregado.da, f.agregado.tot) | number: '1.0-1' }} %</td>
-                    <td class="der mono">{{ razon(f.agregado.da, f.agregado.docentes) | number: '1.0-1' }}</td>
-                    <td class="der">
-                      <span class="pill" [class]="'pill--' + pill3De(razon(f.agregado.da, f.agregado.topeDaTotal))">
-                        {{ porcentaje(f.agregado.da, f.agregado.topeDaTotal) | number: '1.0-1' }} %
-                      </span>
+                    @for (c of f.porDedicacion; track c.dedicacion) {
+                      @let claveCelda = 'da-celda:' + f.codigo + '|' + c.dedicacion;
+                      <td class="der">
+                        @if (c.agregado.docentes > 0) {
+                          <button
+                            type="button"
+                            class="celda-da"
+                            [class.celda-da--activa]="segmentoAbierto() === claveCelda"
+                            (click)="alternarSegmento(claveCelda)"
+                          >
+                            <span class="mono">{{ porcentaje(c.agregado.da, c.agregado.tot) | number: '1.0-1' }} %</span>
+                            <span class="mini-barra"><i [style.width.%]="porcentaje(c.agregado.da, c.agregado.tot)"></i></span>
+                          </button>
+                        } @else {
+                          <span class="texto-tenue">—</span>
+                        }
+                      </td>
+                      <td class="der mono">
+                        {{ c.agregado.docentes ? (razon(c.agregado.da, c.agregado.docentes) | number: '1.0-1') : '—' }}
+                      </td>
+                      <td class="der">
+                        @if (c.agregado.docentes > 0) {
+                          <span class="pill" [class]="'pill--' + pill3De(razon(c.agregado.da, c.agregado.topeDaTotal))">
+                            {{ porcentaje(c.agregado.da, c.agregado.topeDaTotal) | number: '1.0-1' }} %
+                          </span>
+                        } @else {
+                          <span class="texto-tenue">—</span>
+                        }
+                      </td>
+                    }
+                    <td class="der mono">{{ porcentaje(f.total.da, f.total.tot) | number: '1.0-1' }} %</td>
+                    <td class="der mono fuerte">{{ f.total.docentes | number }}</td>
+                  </tr>
+                  @for (c of f.porDedicacion; track c.dedicacion) {
+                    @let claveCelda = 'da-celda:' + f.codigo + '|' + c.dedicacion;
+                    @if (segmentoAbierto() === claveCelda) {
+                      <tr class="fila-detalle">
+                        <td [attr.colspan]="3 * DEDICACIONES_FILTRABLES.length + 3">
+                          <p class="texto-xs texto-tenue detalle-segmento__titulo">
+                            {{ f.nombre }} · {{ ETIQUETAS_DEDICACION[c.dedicacion] }}
+                          </p>
+                          <ng-container
+                            *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesDelSegmento(c.filas) }"
+                          ></ng-container>
+                        </td>
+                      </tr>
+                    }
+                  }
+                } @empty {
+                  <tr>
+                    <td [attr.colspan]="3 * DEDICACIONES_FILTRABLES.length + 3" class="texto-tenue">
+                      Sin facultades con los filtros elegidos
                     </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docencia directa por nivel</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Mismo indicador separado por nivel —grado, posgrado, tecnologías y especialidades,
+            según el catálogo de niveles de la institución—.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col" rowspan="2">Nivel</th>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" colspan="2">{{ ded }}</th>
+                  }
+                  <th scope="col" rowspan="2">Docentes</th>
+                </tr>
+                <tr>
+                  @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                    <th scope="col" class="der">% Da</th>
+                    <th scope="col" class="der">Da prom.</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of daPorNivel(); track n.nivel) {
+                  <tr>
+                    <th scope="row">{{ n.nivel }}</th>
+                    @for (c of n.porDedicacion; track c.dedicacion) {
+                      <td class="der mono">
+                        {{ c.agregado.docentes ? (porcentaje(c.agregado.da, c.agregado.tot) | number: '1.0-1') + ' %' : '—' }}
+                      </td>
+                      <td class="der mono">
+                        {{ c.agregado.docentes ? (razon(c.agregado.da, c.agregado.docentes) | number: '1.0-1') : '—' }}
+                      </td>
+                    }
+                    <td class="der mono fuerte">{{ n.total.docentes | number }}</td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                    <td [attr.colspan]="2 + 2 * DEDICACIONES_FILTRABLES.length" class="texto-tenue">
+                      Sin niveles con los filtros elegidos
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -286,6 +560,9 @@
           <div class="tarjeta__cabecera">
             <h2 class="tarjeta__titulo">Docencia directa por carrera</h2>
           </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Clic en una carrera para comparar horas por docente.
+          </p>
           <div class="tabla-envoltura">
             <table class="tabla">
               <thead>
@@ -299,13 +576,29 @@
               </thead>
               <tbody>
                 @for (c of daPorCarrera(); track c.facultad + c.carrera) {
-                  <tr>
+                  @let claveC = 'da-carrera:' + c.facultad + '|' + c.carrera;
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveC"
+                    (click)="alternarSegmento(claveC)"
+                    (keydown.enter)="alternarSegmento(claveC)"
+                  >
                     <th scope="row">{{ c.carrera }}</th>
                     <td class="texto-tenue">{{ c.facultad }}</td>
                     <td class="der mono">{{ c.agregado.docentes | number }}</td>
                     <td class="der mono">{{ porcentaje(c.agregado.da, c.agregado.tot) | number: '1.0-1' }} %</td>
                     <td class="der mono">{{ razon(c.agregado.da, c.agregado.docentes) | number: '1.0-1' }}</td>
                   </tr>
+                  @if (segmentoAbierto() === claveC) {
+                    <tr class="fila-detalle">
+                      <td colspan="5">
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesDelSegmento(c.filas) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
                     <td colspan="5" class="texto-tenue">Sin carreras con los filtros elegidos</td>
@@ -353,7 +646,8 @@
             <h2 class="tarjeta__titulo">Gestión por facultad</h2>
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
-            % G = horas de gestión ÷ horas totales asignadas. Máximo 25 %.
+            % G = horas de gestión ÷ horas totales asignadas. Máximo 25 %. Clic en una fila para
+            ver las carreras.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
@@ -364,12 +658,22 @@
                   <th scope="col" class="der">Horas G</th>
                   <th scope="col" class="der">Con G</th>
                   <th scope="col" class="der">G prom.</th>
+                  <th scope="col" class="der">% D</th>
+                  <th scope="col" class="der">% I</th>
+                  <th scope="col" class="der">% V</th>
                   <th scope="col">Composición de carga</th>
                 </tr>
               </thead>
               <tbody>
                 @for (f of gPorFacultad(); track f.codigo) {
-                  <tr>
+                  @let claveG = 'g-facultad:' + f.codigo;
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveG"
+                    (click)="alternarSegmento(claveG)"
+                    (keydown.enter)="alternarSegmento(claveG)"
+                  >
                     <th scope="row">{{ f.nombre }}</th>
                     <td class="der">
                       <span class="pill" [class]="'pill--' + gpillDe(razon(f.agregado.g, f.agregado.tot))">
@@ -379,6 +683,9 @@
                     <td class="der mono">{{ f.agregado.g | number: '1.0-0' }}</td>
                     <td class="der mono">{{ f.conG | number }}</td>
                     <td class="der mono">{{ razon(f.agregado.g, f.conG) | number: '1.0-1' }}</td>
+                    <td class="der mono">{{ porcentaje(f.agregado.d, f.agregado.tot) | number: '1.0-1' }} %</td>
+                    <td class="der mono">{{ porcentaje(f.agregado.i, f.agregado.tot) | number: '1.0-1' }} %</td>
+                    <td class="der mono">{{ porcentaje(f.agregado.v, f.agregado.tot) | number: '1.0-1' }} %</td>
                     <td>
                       <div class="stack">
                         <i class="stack__d" [style.width.%]="porcentaje(f.agregado.d, f.agregado.tot)"></i>
@@ -388,9 +695,70 @@
                       </div>
                     </td>
                   </tr>
+                  @if (segmentoAbierto() === claveG) {
+                    <tr class="fila-detalle">
+                      <td colspan="9">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">
+                          Carreras de {{ f.nombre }} · ordenadas de mayor a menor % de gestión
+                        </p>
+                        <div class="tabla-envoltura tabla-detalle">
+                          <table class="tabla tabla--anidada">
+                            <thead>
+                              <tr>
+                                <th scope="col">Carrera / programa</th>
+                                <th scope="col">Nivel</th>
+                                <th scope="col" class="der">Docentes</th>
+                                <th scope="col" class="der">Horas totales</th>
+                                <th scope="col" class="der">Horas G</th>
+                                <th scope="col" class="der">% G</th>
+                                <th scope="col" class="der">Con G</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (c of carrerasConGestionDe(f.codigo); track c.carrera) {
+                                @let claveGCar = 'g-carrera:' + f.codigo + '|' + c.carrera;
+                                <tr
+                                  class="tabla--clicable"
+                                  tabindex="0"
+                                  [class.tabla__fila--activa]="carreraDrillAbierta() === claveGCar"
+                                  (click)="alternarCarreraDrill(claveGCar)"
+                                  (keydown.enter)="alternarCarreraDrill(claveGCar)"
+                                >
+                                  <th scope="row">{{ c.carrera }}</th>
+                                  <td>{{ c.filas[0]?.nivel || '—' }}</td>
+                                  <td class="der mono">{{ c.agregado.docentes | number }}</td>
+                                  <td class="der mono">{{ c.agregado.tot | number: '1.0-0' }}</td>
+                                  <td class="der mono">{{ c.agregado.g | number: '1.0-1' }}</td>
+                                  <td class="der">
+                                    <span class="pill" [class]="'pill--' + gpillDe(razon(c.agregado.g, c.agregado.tot))">
+                                      {{ porcentaje(c.agregado.g, c.agregado.tot) | number: '1.0-1' }} %
+                                    </span>
+                                  </td>
+                                  <td class="der mono">{{ c.conG | number }}</td>
+                                </tr>
+                                @if (carreraDrillAbierta() === claveGCar) {
+                                  <tr class="fila-detalle">
+                                    <td colspan="7">
+                                      <ng-container
+                                        *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesConGestionDe(c.filas) }"
+                                      ></ng-container>
+                                    </td>
+                                  </tr>
+                                }
+                              } @empty {
+                                <tr>
+                                  <td colspan="7" class="texto-tenue">Sin carreras con gestión en esta facultad</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
-                    <td colspan="6" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                    <td colspan="9" class="texto-tenue">Sin facultades con los filtros elegidos</td>
                   </tr>
                 }
               </tbody>
@@ -413,8 +781,8 @@
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
             Ordene por cualquier función con clic en el encabezado. Se resalta a quien supera el
-            tope de su dedicación. El dominio todavía no distingue cargos directivos (ver el
-            reporte de esta implementación); esta lista no los excluye.
+            tope de su dedicación. El filtro «Excluir directivos» de arriba también aplica a esta
+            lista.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
@@ -503,27 +871,86 @@
           </article>
           <article class="metrica">
             <p class="metrica__etiqueta">Da sobre 11 h</p>
-            <p class="metrica__valor">{{ tpSobreTope().length | number }}</p>
+            <p class="metrica__valor">
+              <button type="button" class="metrica__boton" (click)="alternarSegmento('tp-sobretope')">
+                {{ tpSobreTope().length | number }}
+              </button>
+            </p>
             <p class="metrica__pie texto-xs texto-tenue">Superan el tope del art. 246</p>
           </article>
           <article class="metrica">
             <p class="metrica__etiqueta">Sin horas de clase</p>
-            <p class="metrica__valor">{{ tpSinClases().length | number }}</p>
+            <p class="metrica__valor">
+              <button type="button" class="metrica__boton" (click)="alternarSegmento('tp-sinclases')">
+                {{ tpSinClases().length | number }}
+              </button>
+            </p>
             <p class="metrica__pie texto-xs texto-tenue">Da = 0</p>
           </article>
           <article class="metrica">
             <p class="metrica__etiqueta">TP con 20 h o más</p>
-            <p class="metrica__valor">{{ tp20oMas().length | number }}</p>
+            <p class="metrica__valor">
+              <button type="button" class="metrica__boton" (click)="alternarSegmento('tp-20omas')">
+                {{ tp20oMas().length | number }}
+              </button>
+            </p>
             <p class="metrica__pie texto-xs texto-tenue">
-              {{ tpBajoMinimo().length }} con menos de 2 h de clase
+              <button type="button" class="metrica__boton metrica__boton--inline" (click)="alternarSegmento('tp-bajominimo')">
+                {{ tpBajoMinimo().length }} con menos de 2 h de clase
+              </button>
             </p>
           </article>
         </section>
+
+        @if (
+          segmentoAbierto() === 'tp-sobretope' ||
+          segmentoAbierto() === 'tp-sinclases' ||
+          segmentoAbierto() === 'tp-bajominimo' ||
+          segmentoAbierto() === 'tp-20omas'
+        ) {
+          <section class="tarjeta seccion">
+            <div class="tarjeta__cabecera">
+              <h2 class="tarjeta__titulo">
+                @switch (segmentoAbierto()) {
+                  @case ('tp-sobretope') { Docentes TP con Da sobre 11 h }
+                  @case ('tp-sinclases') { Docentes TP sin horas de clase }
+                  @case ('tp-bajominimo') { Docentes TP con menos de 2 h de clase }
+                  @case ('tp-20omas') { Docentes TP con 20 h o más en total }
+                }
+              </h2>
+            </div>
+            @switch (segmentoAbierto()) {
+              @case ('tp-sobretope') {
+                <ng-container
+                  *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(tpSobreTope()) }"
+                ></ng-container>
+              }
+              @case ('tp-sinclases') {
+                <ng-container
+                  *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(tpSinClases()) }"
+                ></ng-container>
+              }
+              @case ('tp-bajominimo') {
+                <ng-container
+                  *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(tpBajoMinimo()) }"
+                ></ng-container>
+              }
+              @case ('tp-20omas') {
+                <ng-container
+                  *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(tp20oMas()) }"
+                ></ng-container>
+              }
+            }
+          </section>
+        }
 
         <section class="tarjeta seccion">
           <div class="tarjeta__cabecera">
             <h2 class="tarjeta__titulo">Horas de clase (Da) de los TP, por facultad</h2>
           </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Clic en una facultad para comparar horas por docente.
+          </p>
           <div class="tabla-envoltura">
             <table class="tabla">
               <thead>
@@ -540,7 +967,15 @@
               </thead>
               <tbody>
                 @for (f of tpPorFacultad(); track f.codigo) {
-                  <tr [class.tabla__fila--tenue]="f.codigo === '__total'">
+                  @let claveTp = 'tp-facultad:' + f.codigo;
+                  <tr
+                    [class.tabla__fila--tenue]="f.codigo === '__total'"
+                    [class.tabla--clicable]="f.codigo !== '__total'"
+                    [tabindex]="f.codigo === '__total' ? -1 : 0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveTp"
+                    (click)="f.codigo === '__total' || alternarSegmento(claveTp)"
+                    (keydown.enter)="f.codigo === '__total' || alternarSegmento(claveTp)"
+                  >
                     <th scope="row">{{ f.nombre }}</th>
                     <td class="der mono">{{ f.cantidad | number }}</td>
                     <td class="der mono">{{ f.promedio | number: '1.0-1' }}</td>
@@ -556,6 +991,15 @@
                       </div>
                     </td>
                   </tr>
+                  @if (segmentoAbierto() === claveTp) {
+                    <tr class="fila-detalle">
+                      <td [attr.colspan]="5 + BINS_TP.length">
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.docentes) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
                     <td [attr.colspan]="5 + BINS_TP.length" class="texto-tenue">
@@ -583,7 +1027,8 @@
           <p class="texto-sm texto-suave descripcion-tabla">
             Menos de 15 posible exceso de docentes · 15 a 30 rango de trabajo · más de 30 posible
             sobrecarga. Umbrales de trabajo, no normativos. Los estudiantes se cuentan por
-            carrera, no por sede: una carrera con varias sedes repite aquí el mismo total.
+            carrera, no por sede: una carrera con varias sedes repite aquí el mismo total. Clic
+            en una carrera para comparar horas por docente.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
@@ -599,7 +1044,14 @@
               </thead>
               <tbody>
                 @for (c of estudiantesPorCarrera(); track c.facultad + c.carrera + c.sede) {
-                  <tr>
+                  @let claveEst = 'estudiantes:' + c.facultad + '|' + c.carrera + '|' + c.sede;
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveEst"
+                    (click)="alternarSegmento(claveEst)"
+                    (keydown.enter)="alternarSegmento(claveEst)"
+                  >
                     <th scope="row">{{ c.facultad }}</th>
                     <td>{{ c.carrera }}</td>
                     <td class="texto-tenue">{{ c.sede }}</td>
@@ -615,6 +1067,15 @@
                       }
                     </td>
                   </tr>
+                  @if (segmentoAbierto() === claveEst) {
+                    <tr class="fila-detalle">
+                      <td colspan="6">
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesDelSegmento(c.filas) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
                     <td colspan="6" class="texto-tenue">Sin carreras con los filtros elegidos</td>
@@ -665,7 +1126,8 @@
           </div>
           <p class="texto-sm texto-suave descripcion-tabla">
             Art. 109 LOES: al menos 50 % a tiempo completo (óptimo 60 %). ETC: TC = 1, MT = 0,5,
-            TP = horas ÷ 40. Clic en una facultad para ver sus carreras.
+            TP = horas ÷ 40. Clic en una facultad para ver sus carreras; el botón «Filtrar» aparte
+            aplica el filtro global de facultad de arriba a toda la pantalla.
           </p>
           <div class="tabla-envoltura">
             <table class="tabla">
@@ -685,13 +1147,26 @@
               </thead>
               <tbody>
                 @for (f of plantaPorFacultad().filas; track f.codigo) {
+                  @let claveOrg = 'org-facultad:' + f.codigo;
                   <tr
                     class="tabla--clicable"
                     tabindex="0"
-                    [class.tabla__fila--activa]="facultad() === f.codigo"
-                    (click)="facultad.set(facultad() === f.codigo ? '' : f.codigo)"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveOrg"
+                    (click)="alternarSegmento(claveOrg)"
+                    (keydown.enter)="alternarSegmento(claveOrg)"
                   >
-                    <th scope="row">{{ f.nombre }}</th>
+                    <th scope="row">
+                      {{ f.nombre }}
+                      <button
+                        type="button"
+                        class="btn-filtrar"
+                        [class.btn-filtrar--activo]="facultad() === f.codigo"
+                        title="Fijar el filtro global de facultad en toda la pantalla"
+                        (click)="$event.stopPropagation(); facultad.set(facultad() === f.codigo ? '' : f.codigo)"
+                      >
+                        Filtrar
+                      </button>
+                    </th>
                     <td class="der mono">{{ f.planta.docentes | number }}</td>
                     <td class="der mono">{{ f.planta.tc | number }}</td>
                     <td class="der mono">{{ f.planta.mt | number }}</td>
@@ -718,6 +1193,42 @@
                       }
                     </td>
                   </tr>
+                  @if (segmentoAbierto() === claveOrg) {
+                    <tr class="fila-detalle">
+                      <td colspan="10">
+                        <div class="tabla-envoltura tabla-detalle">
+                          <table class="tabla tabla--anidada">
+                            <thead>
+                              <tr>
+                                <th scope="col">Carrera</th>
+                                <th scope="col" class="der">Docentes</th>
+                                <th scope="col" class="der">TC</th>
+                                <th scope="col" class="der">MT</th>
+                                <th scope="col" class="der">TP</th>
+                                <th scope="col" class="der">ETC</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (c of carrerasDe(f.codigo); track c.carrera) {
+                                <tr>
+                                  <th scope="row">{{ c.carrera }}</th>
+                                  <td class="der mono">{{ c.planta.docentes | number }}</td>
+                                  <td class="der mono">{{ c.planta.tc | number }}</td>
+                                  <td class="der mono">{{ c.planta.mt | number }}</td>
+                                  <td class="der mono">{{ c.planta.tp | number }}</td>
+                                  <td class="der mono">{{ c.planta.etc | number: '1.0-1' }}</td>
+                                </tr>
+                              } @empty {
+                                <tr>
+                                  <td colspan="6" class="texto-tenue">Sin carreras en esta facultad</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
                     <td colspan="10" class="texto-tenue">Sin facultades con los filtros elegidos</td>
@@ -751,6 +1262,312 @@
                   </td>
                 </tr>
               </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Tiempos completos: carga incompleta y pocas clases</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Un TC debe cumplir 40 h semanales y dictar al menos 3 h de clase cuando su docencia se
+            reduce por investigación, vinculación o gestión. Clic en un número para ver la lista.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">TC</th>
+                  <th scope="col" class="der">Menos de 40 h</th>
+                  <th scope="col" class="der">Horas faltantes</th>
+                  <th scope="col" class="der">Da &lt; 3 h</th>
+                  <th scope="col" class="der">Sin clases</th>
+                  <th scope="col" class="der">De ellos directivos</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of tcPorFacultad(); track f.codigo) {
+                  @let claveTcInc = 'tc-incompletos:' + f.codigo;
+                  @let claveTcLt3 = 'tc-pocaclase:' + f.codigo;
+                  @let claveTcZ = 'tc-sinclase:' + f.codigo;
+                  <tr>
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.tc | number }}</td>
+                    <td class="der">
+                      @if (f.incompletos.length > 0) {
+                        <button type="button" class="metrica__boton" (click)="alternarSegmento(claveTcInc)">
+                          {{ f.incompletos.length }}
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">0</span>
+                      }
+                    </td>
+                    <td class="der mono">{{ f.horasFaltantes | number: '1.0-1' }}</td>
+                    <td class="der">
+                      @if (f.pocaClase.length > 0) {
+                        <button type="button" class="metrica__boton" (click)="alternarSegmento(claveTcLt3)">
+                          {{ f.pocaClase.length }}
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">0</span>
+                      }
+                    </td>
+                    <td class="der">
+                      @if (f.sinClase.length > 0) {
+                        <button type="button" class="metrica__boton" (click)="alternarSegmento(claveTcZ)">
+                          {{ f.sinClase.length }}
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">0</span>
+                      }
+                    </td>
+                    <td class="der mono">{{ f.directivos | number }}</td>
+                  </tr>
+                  @if (segmentoAbierto() === claveTcInc) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">{{ f.nombre }} · menos de 40 h</p>
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.incompletos) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                  @if (segmentoAbierto() === claveTcLt3) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">{{ f.nombre }} · Da menor a 3 h</p>
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.pocaClase) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                  @if (segmentoAbierto() === claveTcZ) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">{{ f.nombre }} · sin clases</p>
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.sinClase) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="texto-tenue">Sin facultades con TC bajo los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Docentes con horas en las cuatro funciones</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            Las Directrices del distributivo recomiendan que un docente no tenga actividades en
+            docencia, investigación, vinculación y gestión a la vez, porque dispersa su carga.
+            Clic en un número para ver la lista.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">Docentes</th>
+                  <th scope="col" class="der">4 funciones</th>
+                  <th scope="col" class="der">%</th>
+                  <th scope="col" class="der">3 funciones</th>
+                  <th scope="col" class="der">TC con 4 funciones</th>
+                  <th scope="col">Proporción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of funcionesPorFacultad(); track f.codigo) {
+                  @let claveF4 = 'func-cuatro:' + f.codigo;
+                  @let claveF3 = 'func-tres:' + f.codigo;
+                  <tr>
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der mono">{{ f.docentes | number }}</td>
+                    <td class="der">
+                      @if (f.cuatro.length > 0) {
+                        <button type="button" class="metrica__boton" (click)="alternarSegmento(claveF4)">
+                          {{ f.cuatro.length }}
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">0</span>
+                      }
+                    </td>
+                    <td class="der mono">{{ porcentaje(f.cuatro.length, f.docentes) | number: '1.0-1' }} %</td>
+                    <td class="der">
+                      @if (f.tres.length > 0) {
+                        <button type="button" class="metrica__boton" (click)="alternarSegmento(claveF3)">
+                          {{ f.tres.length }}
+                        </button>
+                      } @else {
+                        <span class="texto-tenue">0</span>
+                      }
+                    </td>
+                    <td class="der mono">{{ f.tcCuatro | number }}</td>
+                    <td>
+                      <div class="stack">
+                        <i class="stack__f4" [style.width.%]="porcentaje(f.cuatro.length, f.docentes)"></i>
+                        <i class="stack__f3" [style.width.%]="porcentaje(f.tres.length, f.docentes)"></i>
+                      </div>
+                    </td>
+                  </tr>
+                  @if (segmentoAbierto() === claveF4) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.cuatro) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                  @if (segmentoAbierto() === claveF3) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <ng-container
+                          *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: segmentoDeDocentes(f.tres) }"
+                        ></ng-container>
+                      </td>
+                    </tr>
+                  }
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="leyenda-stack texto-xs texto-tenue">
+            <span><i class="stack__f4"></i> 4 funciones</span>
+            <span><i class="stack__f3"></i> 3 funciones</span>
+          </div>
+        </section>
+
+        <section class="tarjeta seccion">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Investigación frente al mínimo del 6 %</h2>
+          </div>
+          <p class="texto-sm texto-suave descripcion-tabla">
+            % I = horas de investigación ÷ horas totales asignadas. Las Directrices del
+            distributivo piden al menos 6 % por unidad académica. Clic en una fila para ver las
+            carreras.
+          </p>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Facultad</th>
+                  <th scope="col" class="der">% I</th>
+                  <th scope="col" class="der">Horas I</th>
+                  <th scope="col" class="der">Docentes con I</th>
+                  <th scope="col" class="der">I prom.</th>
+                  <th scope="col" class="der">TC con I</th>
+                  <th scope="col" class="der">Brecha al 6 % (h)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of investigacionPorFacultad(); track f.codigo) {
+                  @let claveI = 'i-facultad:' + f.codigo;
+                  <tr
+                    class="tabla--clicable"
+                    tabindex="0"
+                    [class.tabla__fila--activa]="segmentoAbierto() === claveI"
+                    (click)="alternarSegmento(claveI)"
+                    (keydown.enter)="alternarSegmento(claveI)"
+                  >
+                    <th scope="row">{{ f.nombre }}</th>
+                    <td class="der">
+                      <span class="pill" [class]="'pill--' + ipillDe(razon(f.agregado.i, f.agregado.tot))">
+                        {{ porcentaje(f.agregado.i, f.agregado.tot) | number: '1.0-1' }} %
+                      </span>
+                    </td>
+                    <td class="der mono">{{ f.agregado.i | number: '1.0-1' }}</td>
+                    <td class="der mono">{{ f.conI | number }}</td>
+                    <td class="der mono">{{ f.iProm | number: '1.0-1' }}</td>
+                    <td class="der mono">{{ f.tcConI | number }}</td>
+                    <td class="der mono">
+                      @if (f.gap === 0) {
+                        <span class="positivo">Cumple</span>
+                      } @else {
+                        {{ f.gap | number: '1.0-1' }}
+                      }
+                    </td>
+                  </tr>
+                  @if (segmentoAbierto() === claveI) {
+                    <tr class="fila-detalle">
+                      <td colspan="7">
+                        <p class="texto-xs texto-tenue detalle-segmento__titulo">
+                          Carreras de {{ f.nombre }} · ordenadas de mayor a menor % de investigación
+                        </p>
+                        <div class="tabla-envoltura tabla-detalle">
+                          <table class="tabla tabla--anidada">
+                            <thead>
+                              <tr>
+                                <th scope="col">Carrera / programa</th>
+                                <th scope="col" class="der">Docentes</th>
+                                <th scope="col" class="der">Horas totales</th>
+                                <th scope="col" class="der">Horas I</th>
+                                <th scope="col" class="der">% I</th>
+                                <th scope="col" class="der">Con I</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (c of carrerasConInvestigacionDe(f.codigo); track c.carrera) {
+                                @let claveICar = 'i-carrera:' + f.codigo + '|' + c.carrera;
+                                <tr
+                                  class="tabla--clicable"
+                                  tabindex="0"
+                                  [class.tabla__fila--activa]="carreraDrillAbierta() === claveICar"
+                                  (click)="alternarCarreraDrill(claveICar)"
+                                  (keydown.enter)="alternarCarreraDrill(claveICar)"
+                                >
+                                  <th scope="row">{{ c.carrera }}</th>
+                                  <td class="der mono">{{ c.agregado.docentes | number }}</td>
+                                  <td class="der mono">{{ c.agregado.tot | number: '1.0-0' }}</td>
+                                  <td class="der mono">{{ c.agregado.i | number: '1.0-1' }}</td>
+                                  <td class="der">
+                                    <span class="pill" [class]="'pill--' + ipillDe(razon(c.agregado.i, c.agregado.tot))">
+                                      {{ porcentaje(c.agregado.i, c.agregado.tot) | number: '1.0-1' }} %
+                                    </span>
+                                  </td>
+                                  <td class="der mono">{{ c.conI | number }}</td>
+                                </tr>
+                                @if (carreraDrillAbierta() === claveICar) {
+                                  <tr class="fila-detalle">
+                                    <td colspan="6">
+                                      <ng-container
+                                        *ngTemplateOutlet="tablaDocentesSegmento; context: { $implicit: docentesConInvestigacionDe(c.filas) }"
+                                      ></ng-container>
+                                    </td>
+                                  </tr>
+                                }
+                              } @empty {
+                                <tr>
+                                  <td colspan="6" class="texto-tenue">Sin carreras con investigación en esta facultad</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="texto-tenue">Sin facultades con los filtros elegidos</td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
         </section>
@@ -830,3 +1647,57 @@
     }
   }
 </dialog>
+
+<!-- --------------------------------------------- drill-down: docentes de un segmento -->
+<!--
+  Tabla anidada reusada por todos los drill-down «por docente»: facultad y
+  carrera de Da, facultad de Gestión, carrera de Estudiantes, facultad de TP
+  y las cuatro tarjetas KPI de TP. El llamador decide la lista —ya sea con
+  `docentesDelSegmento(filas)` sobre `split`, ya sea con
+  `segmentoDeDocentes(lista)` sobre `DocenteResumen[]`— porque ambas
+  funciones devuelven la misma forma `{docente, da, d, i, v, g, tot}`.
+-->
+<ng-template #tablaDocentesSegmento let-lista>
+  <div class="tabla-envoltura tabla-detalle">
+    <table class="tabla tabla--anidada">
+      <thead>
+        <tr>
+          <th scope="col">Docente</th>
+          <th scope="col">Ded.</th>
+          <th scope="col" class="der">Da</th>
+          <th scope="col" class="der">D</th>
+          <th scope="col" class="der">I</th>
+          <th scope="col" class="der">V</th>
+          <th scope="col" class="der">G</th>
+          <th scope="col" class="der">Tot</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (x of lista; track x.docente.docenteId) {
+          <tr>
+            <td>
+              <button type="button" class="nombre-docente" (click)="abrirDocente(x.docente)">
+                {{ x.docente.nombreCompleto }}
+              </button>
+            </td>
+            <td>
+              <span class="ded" [class]="'ded--' + claveDedicacionDe(x.docente).toLowerCase()">
+                {{ claveDedicacionDe(x.docente) }}
+              </span>
+            </td>
+            <td class="der mono">{{ x.da | number: '1.0-1' }}</td>
+            <td class="der mono">{{ x.d | number: '1.0-1' }}</td>
+            <td class="der mono">{{ x.i | number: '1.0-1' }}</td>
+            <td class="der mono">{{ x.v | number: '1.0-1' }}</td>
+            <td class="der mono">{{ x.g | number: '1.0-1' }}</td>
+            <td class="der mono fuerte">{{ x.tot | number: '1.0-1' }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="texto-tenue">Sin docentes en este segmento</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>

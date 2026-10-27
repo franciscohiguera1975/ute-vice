@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,6 +22,7 @@ import { VacioComponent } from '@shared/componentes/vacio.component';
 
 import { SelectorGruposComponent } from './selector-grupos.component';
 import {
+  type AgregadoCarga,
   type Alerta,
   BINS_TP,
   DEDICACIONES_FILTRABLES,
@@ -41,9 +42,10 @@ import {
   ipill,
   mediana,
   movimientoDePersonas,
-  movimientoPorFacultad,
   pill3,
   plantaDe,
+  plantaDeSplit,
+  type PlantaDocente,
   porcentajeTC,
   promedio,
   ratioPill,
@@ -51,6 +53,8 @@ import {
   tcPill,
   tcQueFaltanPara,
   topeH,
+  variacionPorFacultadYDedicacion,
+  variacionPorNivel,
 } from './tablero-docente.calculos';
 
 type Pestana = 'variacion' | 'da' | 'gestion' | 'top' | 'tp' | 'estudiantes' | 'organizacion';
@@ -86,7 +90,14 @@ const PESTANAS: ReadonlyArray<{ readonly id: Pestana; readonly etiqueta: string 
 @Component({
   selector: 'ute-tablero-docente',
   standalone: true,
-  imports: [DecimalPipe, DatePipe, CargandoComponent, VacioComponent, SelectorGruposComponent],
+  imports: [
+    DecimalPipe,
+    DatePipe,
+    NgTemplateOutlet,
+    CargandoComponent,
+    VacioComponent,
+    SelectorGruposComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tablero-docente.component.html',
   styleUrl: './tablero-docente.component.scss',
@@ -206,6 +217,81 @@ export class TableroDocenteComponent {
     return claveDedicacion(d.dedicacion);
   }
 
+  // ------------------------------------------------------- drill-down ---
+  /** Que fila "clicable" esta desplegada ahora mismo, en toda la pantalla.
+   * Una clave unica por fila (p.ej. `'da-facultad:' + codigo`); null si
+   * ninguna lo esta. Solo una a la vez, igual que un acordeon. */
+  protected readonly segmentoAbierto = signal<string | null>(null);
+
+  protected alternarSegmento(clave: string): void {
+    this.segmentoAbierto.update((actual) => (actual === clave ? null : clave));
+  }
+
+  /**
+   * Segundo nivel del drill-down de tres niveles de Gestión (facultad →
+   * carreras → docentes) e Investigación (mismo patrón). `segmentoAbierto` ya
+   * ocupa el primer nivel —la fila de facultad—, así que una carrera abierta
+   * dentro de esa facultad necesita su propio espacio de claves; la clave
+   * incluye el código de facultad para que cada una tenga el suyo.
+   */
+  protected readonly carreraDrillAbierta = signal<string | null>(null);
+
+  protected alternarCarreraDrill(clave: string): void {
+    this.carreraDrillAbierta.update((actual) => (actual === clave ? null : clave));
+  }
+
+  /**
+   * Los docentes de un conjunto de filas de `split`, con sus horas dentro de
+   * ESE segmento —no su total del periodo completo—: asi el drill-down de
+   * una carrera muestra cuanto dicta cada docente en esa carrera, no en
+   * todas.
+   */
+  protected docentesDelSegmento(filas: readonly FilaSplitCarrera[]): Array<{
+    readonly docente: DocenteResumen;
+    readonly da: number;
+    readonly d: number;
+    readonly i: number;
+    readonly v: number;
+    readonly g: number;
+    readonly tot: number;
+  }> {
+    const porId = this.docentesPorId();
+    const agregado = agregarSplit(filas, porId);
+    return [...agregado.porDocente.entries()]
+      .map(([id, valores]) => ({ docente: porId.get(id)!, ...valores }))
+      .filter((x) => x.docente)
+      .sort((a, b) => b.tot - a.tot);
+  }
+
+  /**
+   * Igual forma que `docentesDelSegmento`, pero para listas que ya son de
+   * `DocenteResumen` completos —los TP por facultad y las cuatro tarjetas
+   * KPI de Tiempos parciales—: aqui no hace falta pasar por `split` porque
+   * el docente ya trae sus horas totales del periodo. Permite reusar la
+   * misma tabla anidada de drill-down para ambos casos.
+   */
+  protected segmentoDeDocentes(lista: readonly DocenteResumen[]): Array<{
+    readonly docente: DocenteResumen;
+    readonly da: number;
+    readonly d: number;
+    readonly i: number;
+    readonly v: number;
+    readonly g: number;
+    readonly tot: number;
+  }> {
+    return [...lista]
+      .map((docente) => ({
+        docente,
+        da: docente.da,
+        d: docente.d,
+        i: docente.i,
+        v: docente.v,
+        g: docente.g,
+        tot: docente.tot,
+      }))
+      .sort((a, b) => b.tot - a.tot);
+  }
+
   // -------------------------------------------------------------- carga
   constructor() {
     this.cargar();
@@ -299,9 +385,69 @@ export class TableroDocenteComponent {
     porcentajeTC(this.docentesAnteriorFiltrados()),
   );
 
-  protected readonly movimientoFacultades = computed(() =>
-    movimientoPorFacultad(this.docentesFiltrados(), this.docentesAnteriorFiltrados()),
+  protected readonly variacionFacultades = computed(() =>
+    variacionPorFacultadYDedicacion(this.docentesFiltrados(), this.docentesAnteriorFiltrados()),
   );
+
+  /** El mayor total (anterior o actual) de todas las facultades, para escalar
+   * la barra comparativa de cada fila —nunca 0, para no dividir por cero. */
+  protected readonly maxVariacionFacultad = computed(() =>
+    Math.max(1, ...this.variacionFacultades().flatMap((f) => [f.totalAnterior, f.totalActual])),
+  );
+
+  protected readonly variacionNiveles = computed(() =>
+    variacionPorNivel(this.nivelesDisponibles(), this.docentesFiltrados(), this.docentesAnteriorFiltrados()),
+  );
+
+  /** `actual − anterior`, para colorear y escribir el signo del cambio. */
+  protected delta(anterior: number, actual: number): number {
+    return actual - anterior;
+  }
+
+  protected signoDelta(valor: number): '+' | '' {
+    return valor > 0 ? '+' : '';
+  }
+
+  /**
+   * Quien ingresa y quien sale de una facultad entre los dos periodos.
+   *
+   * «Ingresan»: docentes del grupo actual de esa facultad que no estaban en
+   * el grupo anterior de esa misma facultad. «Salen»: al reves. Para cada uno
+   * que sale, `situacion` dice si sigue en la institucion —en otra
+   * facultad— o si de verdad se fue: se mira en `docentesPorId()`, que trae
+   * a TODOS los docentes del grupo actual, sin los filtros globales ni el
+   * de facultad, porque la pregunta es si existe en absoluto, no si pasa los
+   * filtros de la pantalla.
+   */
+  protected ingresanYSalenDe(codigoFacultad: string): {
+    readonly ingresan: readonly DocenteResumen[];
+    readonly salen: ReadonlyArray<{ readonly docente: DocenteResumen; readonly situacion: string }>;
+  } {
+    const actualDeFacultad = this.docentesFiltrados().filter((d) => d.facultadCodigo === codigoFacultad);
+    const anteriorDeFacultad = this.docentesAnteriorFiltrados().filter(
+      (d) => d.facultadCodigo === codigoFacultad,
+    );
+    const idsActual = new Set(actualDeFacultad.map((d) => d.docenteId));
+    const idsAnterior = new Set(anteriorDeFacultad.map((d) => d.docenteId));
+    const porIdActualCompleto = this.docentesPorId();
+
+    const ingresan = [...actualDeFacultad]
+      .filter((d) => !idsAnterior.has(d.docenteId))
+      .sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
+
+    const salen = [...anteriorDeFacultad]
+      .filter((d) => !idsActual.has(d.docenteId))
+      .map((docente) => {
+        const sigue = porIdActualCompleto.get(docente.docenteId);
+        return {
+          docente,
+          situacion: sigue ? `Sigue en ${sigue.facultadNombre}` : 'No está en el periodo actual',
+        };
+      })
+      .sort((a, b) => a.docente.nombreCompleto.localeCompare(b.docente.nombreCompleto));
+
+    return { ingresan, salen };
+  }
 
   // =====================================================================
   // Pestana 2: Docencia directa (Da)
@@ -323,16 +469,51 @@ export class TableroDocenteComponent {
     }));
   });
 
-  protected readonly daPorFacultad = computed(() => {
+  /**
+   * «Docencia directa por facultad», desglosada por dedicación (TC/MT/TP) —
+   * más una columna «Todas» con el agregado de la facultad entera, dedicación
+   * incluida NA—. Cada combinación facultad+dedicación trae sus propias
+   * `filas` de `split`, para el drill-down por celda (clic en una celda de
+   * dedicación, no en la fila entera).
+   */
+  protected readonly daPorFacultadYDedicacion = computed(() => {
     const porId = this.docentesPorId();
     const grupos = agruparPorFacultad(this.splitFiltrado());
     return [...grupos.entries()]
       .map(([codigo, { nombre, items }]) => ({
         codigo,
         nombre,
-        agregado: agregarSplit(items, porId),
+        porDedicacion: DEDICACIONES_FILTRABLES.map((ded) => {
+          const filas = items.filter((s) => claveDedicacion(s.dedicacion) === ded);
+          return { dedicacion: ded, filas, agregado: agregarSplit(filas, porId) };
+        }),
+        total: agregarSplit(items, porId),
       }))
-      .sort((a, b) => b.agregado.tot - a.agregado.tot);
+      .sort((a, b) => b.total.tot - a.total.tot);
+  });
+
+  /**
+   * «Por nivel»: mismo indicador de Da desglosado por dedicación, pero por
+   * nivel en vez de por facultad —usa `nivelesDisponibles()`, el catálogo
+   * real, en vez de una lista fija de niveles—.
+   */
+  protected readonly daPorNivel = computed(() => {
+    const porId = this.docentesPorId();
+    const filas = this.splitFiltrado();
+    return this.nivelesDisponibles().map((nivel) => {
+      const filasNivel = filas.filter((s) => s.nivel === nivel);
+      return {
+        nivel,
+        porDedicacion: DEDICACIONES_FILTRABLES.map((ded) => ({
+          dedicacion: ded,
+          agregado: agregarSplit(
+            filasNivel.filter((s) => claveDedicacion(s.dedicacion) === ded),
+            porId,
+          ),
+        })),
+        total: agregarSplit(filasNivel, porId),
+      };
+    });
   });
 
   protected readonly daPorCarrera = computed(() => {
@@ -348,7 +529,12 @@ export class TableroDocenteComponent {
       mapa.set(clave, entrada);
     }
     return [...mapa.values()]
-      .map((v) => ({ facultad: v.facultad, carrera: v.carrera, agregado: agregarSplit(v.filas, porId) }))
+      .map((v) => ({
+        facultad: v.facultad,
+        carrera: v.carrera,
+        filas: v.filas,
+        agregado: agregarSplit(v.filas, porId),
+      }))
       .sort((a, b) => b.agregado.tot - a.agregado.tot);
   });
 
@@ -380,13 +566,81 @@ export class TableroDocenteComponent {
       .map(([codigo, { nombre, items }]) => {
         const agregado = agregarSplit(items, porId);
         const conG = [...agregado.porDocente.values()].filter((p) => p.g > 0).length;
-        return { codigo, nombre, agregado, conG };
+        return { codigo, nombre, filas: items, agregado, conG };
       })
       .sort((a, b) => b.agregado.g / (b.agregado.tot || 1) - a.agregado.g / (a.agregado.tot || 1));
   });
 
   protected gpillDe(r: number): NivelSemaforo {
     return gpill(r);
+  }
+
+  /**
+   * Agrupa `splitFiltrado()` de una facultad por carrera, con el agregado de
+   * cada una y cuantos docentes de esa carrera tienen horas en `campo` —
+   * mismo patron de agrupacion que `daPorCarrera`, pero acotado a una sola
+   * facultad—. Comparte el calculo entre el drill-down de carreras de
+   * Gestion y el de Investigacion (punto 2 y punto 6 del encargo): ambos
+   * agrupan igual, solo cambia que columna de horas miran.
+   */
+  private carrerasConCampoDe(
+    codigoFacultad: string,
+    campo: 'g' | 'i',
+  ): ReadonlyArray<{
+    readonly carrera: string;
+    readonly filas: readonly FilaSplitCarrera[];
+    readonly agregado: AgregadoCarga;
+    readonly conCampo: number;
+  }> {
+    const porId = this.docentesPorId();
+    const mapa = new Map<string, FilaSplitCarrera[]>();
+    for (const s of this.splitFiltrado()) {
+      if (s.facultadCodigo !== codigoFacultad) continue;
+      const filas = mapa.get(s.carrera) ?? [];
+      filas.push(s);
+      mapa.set(s.carrera, filas);
+    }
+    return [...mapa.entries()]
+      .map(([carrera, filas]) => {
+        const agregado = agregarSplit(filas, porId);
+        const conCampo = [...agregado.porDocente.values()].filter((p) => p[campo] > 0).length;
+        return { carrera, filas, agregado, conCampo };
+      })
+      .filter((x) => x.agregado.tot > 0);
+  }
+
+  /** Las carreras de una facultad con gestion, ordenadas de mayor a menor %G
+   * —tercer nivel del drill-down de Gestion: facultad → carreras → docentes—. */
+  protected carrerasConGestionDe(codigoFacultad: string): ReadonlyArray<{
+    readonly carrera: string;
+    readonly filas: readonly FilaSplitCarrera[];
+    readonly agregado: AgregadoCarga;
+    readonly conG: number;
+  }> {
+    return this.carrerasConCampoDe(codigoFacultad, 'g')
+      .map((x) => ({ carrera: x.carrera, filas: x.filas, agregado: x.agregado, conG: x.conCampo }))
+      .sort((a, b) => b.agregado.g / (b.agregado.tot || 1) - a.agregado.g / (a.agregado.tot || 1));
+  }
+
+  /**
+   * Los docentes con gestion de una carrera (o de investigacion, segun
+   * `campo`), ordenados por su horas de `campo` en esa carrera —no por su
+   * total, a diferencia de `docentesDelSegmento`—, igual que el prototipo
+   * original ordena por G o por I, no por horas totales.
+   */
+  private docentesConCampoDe(
+    filas: readonly FilaSplitCarrera[],
+    campo: 'g' | 'i',
+  ): ReturnType<TableroDocenteComponent['docentesDelSegmento']> {
+    return [...this.docentesDelSegmento(filas.filter((s) => s[campo] > 0))].sort(
+      (a, b) => b[campo] - a[campo],
+    );
+  }
+
+  protected docentesConGestionDe(
+    filas: readonly FilaSplitCarrera[],
+  ): ReturnType<TableroDocenteComponent['docentesDelSegmento']> {
+    return this.docentesConCampoDe(filas, 'g');
   }
 
   // =====================================================================
@@ -429,6 +683,7 @@ export class TableroDocenteComponent {
     const filas = [...grupos.entries()].map(([codigo, { nombre, items }]) => ({
       codigo,
       nombre,
+      docentes: items,
       cantidad: items.length,
       promedio: promedio(items.map((d) => d.da)),
       mediana: mediana(items.map((d) => d.da)),
@@ -437,6 +692,7 @@ export class TableroDocenteComponent {
     filas.push({
       codigo: '__total',
       nombre: 'Total',
+      docentes: todos,
       cantidad: todos.length,
       promedio: promedio(todos.map((d) => d.da)),
       mediana: mediana(todos.map((d) => d.da)),
@@ -476,6 +732,7 @@ export class TableroDocenteComponent {
         carreraId: string;
         sede: string;
         ids: Set<string>;
+        filas: FilaSplitCarrera[];
       }
     >();
     for (const s of this.splitFiltrado()) {
@@ -486,8 +743,10 @@ export class TableroDocenteComponent {
         carreraId: s.carreraId,
         sede: s.sede || '—',
         ids: new Set<string>(),
+        filas: [],
       };
       entrada.ids.add(s.docenteId);
+      entrada.filas.push(s);
       mapa.set(clave, entrada);
     }
     return [...mapa.values()]
@@ -498,6 +757,7 @@ export class TableroDocenteComponent {
           facultad: v.facultad,
           carrera: v.carrera,
           sede: v.sede,
+          filas: v.filas,
           etc,
           estudiantes,
           ratio: etc > 0 ? estudiantes / etc : 0,
@@ -558,5 +818,115 @@ export class TableroDocenteComponent {
 
   protected faltanPara(razon: number, n: number, tc: number): number {
     return tcQueFaltanPara(razon, n, tc);
+  }
+
+  /**
+   * Las carreras de una facultad, con su propia planta a tiempo completo —el
+   * drill-down de «Planta a tiempo completo» (facultad → sus carreras). No
+   * hay un `DocenteResumen` por carrera, asi que se agrupa directamente
+   * sobre `splitFiltrado()` y se usa `plantaDeSplit`, igual que ya agrupa
+   * por carrera `daPorCarrera`.
+   */
+  protected carrerasDe(
+    codigoFacultad: string,
+  ): ReadonlyArray<{ readonly carrera: string; readonly planta: PlantaDocente }> {
+    const mapa = new Map<string, FilaSplitCarrera[]>();
+    for (const s of this.splitFiltrado()) {
+      if (s.facultadCodigo !== codigoFacultad) continue;
+      const filas = mapa.get(s.carrera) ?? [];
+      filas.push(s);
+      mapa.set(s.carrera, filas);
+    }
+    return [...mapa.entries()]
+      .map(([carrera, filas]) => ({ carrera, planta: plantaDeSplit(filas) }))
+      .sort((a, b) => b.planta.docentes - a.planta.docentes);
+  }
+
+  /**
+   * «Tiempos completos: carga incompleta y pocas clases», por facultad.
+   *
+   * `directivos` cuenta, de la union de TC con carga incompleta y TC con
+   * pocas clases, cuantos tienen cargo directivo —`DocenteResumen.esDirectivo`
+   * ya trae ese dato, puesto en la ficha de detalle—, asi que no hace falta
+   * ningun calculo nuevo ni dejar la columna en 0.
+   */
+  protected readonly tcPorFacultad = computed(() => {
+    const grupos = agruparPorFacultad(this.tcDocentes());
+    return [...grupos.entries()]
+      .map(([codigo, { nombre, items }]) => {
+        const incompletos = items.filter((d) => d.tot < 40 - 0.01);
+        const pocaClase = items.filter((d) => d.da < 3);
+        const sinClase = items.filter((d) => d.da === 0);
+        const horasFaltantes = incompletos.reduce((suma, d) => suma + (40 - d.tot), 0);
+        const idsBajos = new Set([...incompletos, ...pocaClase].map((d) => d.docenteId));
+        const directivos = items.filter((d) => idsBajos.has(d.docenteId) && d.esDirectivo).length;
+        return { codigo, nombre, tc: items.length, incompletos, pocaClase, sinClase, horasFaltantes, directivos };
+      })
+      .sort((a, b) => b.tc - a.tc);
+  });
+
+  /** «Docentes con horas en las cuatro funciones», por facultad. */
+  protected readonly funcionesPorFacultad = computed(() => {
+    const grupos = agruparPorFacultad(this.docentesFiltrados());
+    return [...grupos.entries()]
+      .map(([codigo, { nombre, items }]) => {
+        const cuatro = items.filter((d) => cantidadDeFunciones(d) === 4);
+        const tres = items.filter((d) => cantidadDeFunciones(d) === 3);
+        const tcCuatro = cuatro.filter((d) => claveDedicacion(d.dedicacion) === 'TC').length;
+        return { codigo, nombre, docentes: items.length, cuatro, tres, tcCuatro };
+      })
+      .sort((a, b) => b.cuatro.length - a.cuatro.length);
+  });
+
+  /**
+   * «Investigación frente al mínimo del 6 %», por facultad.
+   *
+   * `iProm` es las horas totales de investigación de la facultad entre
+   * cuantos docentes tienen alguna —no el promedio de la investigacion
+   * propia de cada quien—, igual que el prototipo original. `gap` es la
+   * brecha en horas para llegar al 6 % de esa facultad, 0 si ya lo cumple.
+   */
+  protected readonly investigacionPorFacultad = computed(() => {
+    const porId = this.docentesPorId();
+    const grupos = agruparPorFacultad(this.splitFiltrado());
+    return [...grupos.entries()]
+      .map(([codigo, { nombre, items }]) => {
+        const agregado = agregarSplit(items, porId);
+        const conI = [...agregado.porDocente.entries()].filter(([, p]) => p.i > 0);
+        const tcConI = conI.filter(
+          ([id]) => claveDedicacion(porId.get(id)?.dedicacion ?? '') === 'TC',
+        ).length;
+        const gap = Math.max(0, agregado.tot * 0.06 - agregado.i);
+        return {
+          codigo,
+          nombre,
+          filas: items,
+          agregado,
+          conI: conI.length,
+          iProm: conI.length ? agregado.i / conI.length : 0,
+          tcConI,
+          gap,
+        };
+      })
+      .sort((a, b) => b.agregado.i / (b.agregado.tot || 1) - a.agregado.i / (a.agregado.tot || 1));
+  });
+
+  /** Las carreras de una facultad con investigacion, ordenadas de mayor a
+   * menor %I —mismo patron que `carrerasConGestionDe`, usando `campo: 'i'`—. */
+  protected carrerasConInvestigacionDe(codigoFacultad: string): ReadonlyArray<{
+    readonly carrera: string;
+    readonly filas: readonly FilaSplitCarrera[];
+    readonly agregado: AgregadoCarga;
+    readonly conI: number;
+  }> {
+    return this.carrerasConCampoDe(codigoFacultad, 'i')
+      .map((x) => ({ carrera: x.carrera, filas: x.filas, agregado: x.agregado, conI: x.conCampo }))
+      .sort((a, b) => b.agregado.i / (b.agregado.tot || 1) - a.agregado.i / (a.agregado.tot || 1));
+  }
+
+  protected docentesConInvestigacionDe(
+    filas: readonly FilaSplitCarrera[],
+  ): ReturnType<TableroDocenteComponent['docentesDelSegmento']> {
+    return this.docentesConCampoDe(filas, 'i');
   }
 }

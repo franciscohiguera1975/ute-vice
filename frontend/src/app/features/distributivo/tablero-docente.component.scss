@@ -137,6 +137,46 @@ h1 { margin: 0 0 0.2rem; }
 .tabla__fila--activa td, .tabla__fila--activa th { background: var(--azul-50); }
 .tabla--clicable { cursor: pointer; }
 
+/* ------------------------------------------------- drill-down por segmento --- */
+/* Fila expandida que despliega una tabla anidada (docentes o carreras de un
+   segmento clicado): fondo distinto al de una fila normal, sin usar un
+   sistema de color aparte. */
+.fila-detalle > td { padding: 0.75rem 1rem; background: var(--superficie-2); }
+.tabla-detalle { margin: 0; }
+.tabla--anidada { font-size: 0.82rem; }
+.tabla--anidada th, .tabla--anidada td { padding: 0.4rem 0.6rem; }
+
+/* Numero de una tarjeta KPI que tambien se puede clicar para desplegar su
+   lista de docentes (pestana Tiempos parciales). */
+.metrica__boton {
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.metrica__boton:hover { text-decoration: underline; }
+.metrica__boton--inline { font-size: inherit; font-weight: inherit; }
+
+/* Botón pequeño, aparte del clic principal de la fila, para fijar el filtro
+   global de facultad (pestaña Organización). */
+.btn-filtrar {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.btn-filtrar:hover { color: var(--texto); }
+.btn-filtrar--activo { color: var(--azul-800); background: var(--azul-100); border-color: var(--azul-600); }
+
 /* --------------------------------------------------- composicion de carga --- */
 .stack {
   display: flex;
@@ -151,6 +191,10 @@ h1 { margin: 0 0 0.2rem; }
 .stack__i { background: var(--rojo-ute); }
 .stack__v { background: var(--verde-ute); }
 .stack__g { background: var(--aviso); }
+
+/* Proporcion de docentes en 4 y 3 funciones (pestaña Organización). */
+.stack__f4 { background: var(--error); }
+.stack__f3 { background: var(--aviso); }
 
 .leyenda-stack {
   display: flex;
@@ -168,6 +212,56 @@ h1 { margin: 0 0 0.2rem; }
 .stack--bins__b3 { background: var(--azul-ute); }
 .stack--bins__b4 { background: var(--exito); }
 .stack--bins__b5 { background: var(--error); }
+
+/* --------------------------------------------- comparativa anterior/actual --- */
+/* Dos barras apiladas verticalmente —anterior, gris, y actual, de acento—,
+   cada una proporcional al maximo de todas las filas (pestaña Variación de
+   periodo, tabla «Docentes por facultad y dedicación»). */
+.comparativa {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  max-width: 9rem;
+}
+.comparativa i { display: block; height: 6px; border-radius: 3px; }
+.comparativa__anterior { background: var(--texto-tenue); }
+.comparativa__actual { background: var(--azul-ute); }
+
+/* Titulo del panel de detalle de un segmento (ingresan/salen, facultad x
+   dedicación de Da...), dentro de una fila-detalle. */
+.detalle-segmento__titulo { margin: 0 0 0.6rem; }
+
+/* ------------------------------------------------ celda de Da clicable --- */
+/* Una celda de la tabla «Docencia directa por facultad» (facultad x
+   dedicación): el clic desglosa docentes de esa combinación exacta, no de
+   toda la fila —por eso el elemento clicable es un boton dentro del <td>,
+   no el <tr> entero—. */
+.celda-da {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+.celda-da:hover .mono { text-decoration: underline; }
+.celda-da--activa .mono { color: var(--azul-700); font-weight: 600; }
+
+.mini-barra {
+  display: block;
+  width: 100%;
+  height: 0.35rem;
+  background: var(--superficie-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mini-barra i { display: block; height: 100%; background: var(--azul-ute); border-radius: 999px; }
 
 /* ---------------------------------------------------------- nombre clicable --- */
 .nombre-docente {

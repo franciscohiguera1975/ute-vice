@@ -268,8 +268,19 @@ export interface AgregadoCarga {
   readonly tot: number;
   /** Suma del tope de Da de cada docente unico presente en el agregado. */
   readonly topeDaTotal: number;
-  /** Da/total/gestion acumulados por docente, para promedios «por persona». */
-  readonly porDocente: ReadonlyMap<string, { readonly da: number; readonly tot: number; readonly g: number }>;
+  /** Da/D/I/V/gestion/total acumulados por docente, para promedios «por
+   * persona» y para el drill-down por docente de cada segmento. */
+  readonly porDocente: ReadonlyMap<
+    string,
+    {
+      readonly da: number;
+      readonly d: number;
+      readonly i: number;
+      readonly v: number;
+      readonly g: number;
+      readonly tot: number;
+    }
+  >;
 }
 
 export const AGREGADO_VACIO: AgregadoCarga = {
@@ -303,7 +314,10 @@ export function agregarSplit(
   let v = 0;
   let g = 0;
   let tot = 0;
-  const porDocente = new Map<string, { da: number; tot: number; g: number }>();
+  const porDocente = new Map<
+    string,
+    { da: number; d: number; i: number; v: number; g: number; tot: number }
+  >();
 
   for (const s of filas) {
     ids.add(s.docenteId);
@@ -313,11 +327,14 @@ export function agregarSplit(
     v += s.v;
     g += s.g;
     tot += s.tot;
-    const previo = porDocente.get(s.docenteId) ?? { da: 0, tot: 0, g: 0 };
+    const previo = porDocente.get(s.docenteId) ?? { da: 0, d: 0, i: 0, v: 0, g: 0, tot: 0 };
     porDocente.set(s.docenteId, {
       da: previo.da + s.da,
-      tot: previo.tot + s.tot,
+      d: previo.d + s.d,
+      i: previo.i + s.i,
+      v: previo.v + s.v,
       g: previo.g + s.g,
+      tot: previo.tot + s.tot,
     });
   }
 
@@ -441,6 +458,92 @@ export function porcentajeTC(lista: readonly DocenteResumen[]): number {
   return tc / lista.length;
 }
 
+/** Cuenta cuantos docentes de la lista tienen cada dedicacion. */
+function contarPorDedicacion(lista: readonly DocenteResumen[]): Record<Dedicacion, number> {
+  const conteo: Record<Dedicacion, number> = { TC: 0, MT: 0, TP: 0, NA: 0 };
+  for (const d of lista) conteo[claveDedicacion(d.dedicacion)]++;
+  return conteo;
+}
+
+export interface VariacionFacultadDedicacion {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly anterior: Readonly<Record<Dedicacion, number>>;
+  readonly actual: Readonly<Record<Dedicacion, number>>;
+  readonly totalAnterior: number;
+  readonly totalActual: number;
+}
+
+/**
+ * Docentes por facultad y dedicacion, en los dos grupos que se comparan.
+ *
+ * Cada docente cuenta una vez, en su facultad principal —igual criterio que
+ * `movimientoPorFacultad`—, pero aqui ademas se desglosa por dedicacion
+ * (TC/MT/TP) para la tabla «Docentes por facultad y dedicación» de la
+ * pestaña Variación de periodo.
+ */
+export function variacionPorFacultadYDedicacion(
+  actual: readonly DocenteResumen[],
+  anterior: readonly DocenteResumen[],
+): readonly VariacionFacultadDedicacion[] {
+  const mapa = new Map<
+    string,
+    { nombre: string; anterior: DocenteResumen[]; actual: DocenteResumen[] }
+  >();
+  const registra = (lista: readonly DocenteResumen[], clave: 'anterior' | 'actual') => {
+    for (const d of lista) {
+      const entrada = mapa.get(d.facultadCodigo) ?? { nombre: d.facultadNombre, anterior: [], actual: [] };
+      entrada[clave].push(d);
+      mapa.set(d.facultadCodigo, entrada);
+    }
+  };
+  registra(anterior, 'anterior');
+  registra(actual, 'actual');
+
+  return [...mapa.entries()]
+    .map(([codigo, v]) => ({
+      codigo,
+      nombre: v.nombre,
+      anterior: contarPorDedicacion(v.anterior),
+      actual: contarPorDedicacion(v.actual),
+      totalAnterior: v.anterior.length,
+      totalActual: v.actual.length,
+    }))
+    .sort((a, b) => b.totalActual - a.totalActual);
+}
+
+export interface VariacionNivel {
+  readonly nivel: string;
+  readonly anterior: number;
+  readonly actual: number;
+  /** Desglose por dedicacion, solo del grupo actual. */
+  readonly porDedicacion: Readonly<Record<Dedicacion, number>>;
+}
+
+/**
+ * Docentes por nivel, en los dos grupos que se comparan.
+ *
+ * Un docente que dicta en mas de un nivel cuenta en cada uno de ellos —
+ * `DocenteResumen.niveles` ya trae todos los suyos—, igual que el prototipo
+ * original advierte para grado/posgrado.
+ */
+export function variacionPorNivel(
+  niveles: readonly string[],
+  actual: readonly DocenteResumen[],
+  anterior: readonly DocenteResumen[],
+): readonly VariacionNivel[] {
+  return niveles.map((nivel) => {
+    const anterioresDelNivel = anterior.filter((d) => d.niveles.includes(nivel));
+    const actualesDelNivel = actual.filter((d) => d.niveles.includes(nivel));
+    return {
+      nivel,
+      anterior: anterioresDelNivel.length,
+      actual: actualesDelNivel.length,
+      porDedicacion: contarPorDedicacion(actualesDelNivel),
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tiempos parciales: histograma de Da
 // ---------------------------------------------------------------------------
@@ -495,6 +598,26 @@ export function plantaDe(lista: readonly DocenteResumen[]): PlantaDocente {
     etc += etcDe(d);
   }
   return { docentes: lista.length, tc, mt, tp: lista.length - tc - mt, etc };
+}
+
+/**
+ * Igual que `plantaDe`, pero sobre filas de `split` en vez de
+ * `DocenteResumen` — hace falta para el drill-down «facultad → sus
+ * carreras» de Organización, donde no hay un `DocenteResumen` por carrera,
+ * solo filas de `FilaSplitCarrera` (que ya traen `dedicacion` y `tot`
+ * suficientes para `claveDedicacion`/`etcDe`).
+ */
+export function plantaDeSplit(filas: readonly FilaSplitCarrera[]): PlantaDocente {
+  let tc = 0;
+  let mt = 0;
+  let etc = 0;
+  for (const s of filas) {
+    const ded = claveDedicacion(s.dedicacion);
+    if (ded === 'TC') tc++;
+    else if (ded === 'MT') mt++;
+    etc += etcDe(s);
+  }
+  return { docentes: filas.length, tc, mt, tp: filas.length - tc - mt, etc };
 }
 
 /**

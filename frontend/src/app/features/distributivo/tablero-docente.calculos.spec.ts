@@ -17,12 +17,15 @@ import {
   movimientoPorFacultad,
   pill3,
   plantaDe,
+  plantaDeSplit,
   porcentajeTC,
   ratioPill,
   tcPill,
   tcQueFaltanPara,
   topeDa,
   topeH,
+  variacionPorFacultadYDedicacion,
+  variacionPorNivel,
 } from './tablero-docente.calculos';
 
 function docente(datos: Partial<DocenteResumen> & { readonly docenteId: string }): DocenteResumen {
@@ -281,7 +284,17 @@ describe('agregarSplit', () => {
     expect(agregado.tot).toBe(51);
     // Tope de Da: 20 (TC titular) + 11 (TP) = 31, una vez por docente.
     expect(agregado.topeDaTotal).toBe(31);
-    expect(agregado.porDocente.get('1')).toEqual({ da: 12, tot: 40, g: 20 });
+    expect(agregado.porDocente.get('1')).toEqual({ da: 12, d: 40, i: 20, v: 0, g: 20, tot: 40 });
+  });
+
+  it('acumula tambien d, i y v por docente, no solo da/tot/g', () => {
+    const docentesPorId = new Map([['1', docente({ docenteId: '1' })]]);
+    const filas = [
+      filaSplit({ docenteId: '1', da: 3, d: 6, i: 1, v: 2, g: 4, tot: 16 }),
+      filaSplit({ docenteId: '1', da: 1, d: 2, i: 0, v: 1, g: 0, tot: 4 }),
+    ];
+    const agregado = agregarSplit(filas, docentesPorId);
+    expect(agregado.porDocente.get('1')).toEqual({ da: 4, d: 8, i: 1, v: 3, g: 4, tot: 20 });
   });
 });
 
@@ -349,6 +362,53 @@ describe('plantaDe y tcQueFaltanPara', () => {
     expect(tcQueFaltanPara(0.6, 10, 4)).toBe(2);
     // Ya cumple de sobra: no "sobran" TC negativos.
     expect(tcQueFaltanPara(0.5, 10, 9)).toBe(0);
+  });
+});
+
+describe('plantaDeSplit', () => {
+  it('cuenta TC, MT y TP, y suma el ETC, igual que plantaDe pero sobre filas de split', () => {
+    const filas = [
+      filaSplit({ docenteId: '1', dedicacion: 'TIEMPO COMPLETO' }),
+      filaSplit({ docenteId: '2', dedicacion: 'MEDIO TIEMPO' }),
+      filaSplit({ docenteId: '3', dedicacion: 'TIEMPO PARCIAL', tot: 20 }),
+    ];
+    expect(plantaDeSplit(filas)).toEqual({ docentes: 3, tc: 1, mt: 1, tp: 1, etc: 1 + 0.5 + 0.5 });
+  });
+});
+
+describe('variacionPorFacultadYDedicacion', () => {
+  it('desglosa por facultad y dedicacion, en ambos grupos', () => {
+    const actual = [
+      docente({ docenteId: '1', facultadCodigo: 'FCII', dedicacion: 'TIEMPO COMPLETO' }),
+      docente({ docenteId: '2', facultadCodigo: 'FCII', dedicacion: 'TIEMPO PARCIAL' }),
+    ];
+    const anterior = [docente({ docenteId: '1', facultadCodigo: 'FCII', dedicacion: 'TIEMPO COMPLETO' })];
+    const filas = variacionPorFacultadYDedicacion(actual, anterior);
+    expect(filas).toEqual([
+      {
+        codigo: 'FCII',
+        nombre: 'Ingeniería e Industrias',
+        anterior: { TC: 1, MT: 0, TP: 0, NA: 0 },
+        actual: { TC: 1, MT: 0, TP: 1, NA: 0 },
+        totalAnterior: 1,
+        totalActual: 2,
+      },
+    ]);
+  });
+});
+
+describe('variacionPorNivel', () => {
+  it('cuenta por nivel en ambos grupos, y por dedicacion solo en el actual', () => {
+    const actual = [
+      docente({ docenteId: '1', niveles: ['Grado'], dedicacion: 'TIEMPO COMPLETO' }),
+      docente({ docenteId: '2', niveles: ['Grado', 'Posgrado'], dedicacion: 'TIEMPO PARCIAL' }),
+    ];
+    const anterior = [docente({ docenteId: '1', niveles: ['Grado'] })];
+    const filas = variacionPorNivel(['Grado', 'Posgrado'], actual, anterior);
+    expect(filas).toEqual([
+      { nivel: 'Grado', anterior: 1, actual: 2, porDedicacion: { TC: 1, MT: 0, TP: 1, NA: 0 } },
+      { nivel: 'Posgrado', anterior: 0, actual: 1, porDedicacion: { TC: 0, MT: 0, TP: 1, NA: 0 } },
+    ]);
   });
 });
 
