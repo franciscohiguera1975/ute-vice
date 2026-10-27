@@ -20,7 +20,7 @@ import { RepositorioDistributivo } from '@domain/puertos';
 import { CargandoComponent } from '@shared/componentes/cargando.component';
 import { VacioComponent } from '@shared/componentes/vacio.component';
 
-import { SelectorGruposComponent } from './selector-grupos.component';
+import { SelectorPeriodosComboComponent } from './selector-periodos-combo.component';
 import {
   type AgregadoCarga,
   type Alerta,
@@ -96,7 +96,7 @@ const PESTANAS: ReadonlyArray<{ readonly id: Pestana; readonly etiqueta: string 
     NgTemplateOutlet,
     CargandoComponent,
     VacioComponent,
-    SelectorGruposComponent,
+    SelectorPeriodosComboComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tablero-docente.component.html',

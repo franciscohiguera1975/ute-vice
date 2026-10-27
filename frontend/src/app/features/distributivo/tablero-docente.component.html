@@ -27,18 +27,22 @@
   } @else {
     <!-- ------------------------------------------------ grupos de periodos -->
     <section class="tarjeta seccion no-imprimir">
-      <div class="tarjeta__cabecera">
-        <h2 class="tarjeta__titulo">Periodos que se comparan</h2>
-      </div>
-      <div class="tarjeta__cuerpo">
-        <ute-selector-grupos
+      <div class="tarjeta__cuerpo rejilla rejilla--2 periodos-combo">
+        <ute-selector-periodos-combo
           [periodos]="d.periodos"
-          [(grupoA)]="grupoB"
-          [(grupoB)]="grupoA"
-          etiquetaA="Período(s)"
-          etiquetaB="Comparar con"
-          (comparar)="cargar()"
+          [(seleccion)]="grupoB"
+          etiqueta="Período(s)"
         />
+        <ute-selector-periodos-combo
+          [periodos]="d.periodos"
+          [(seleccion)]="grupoA"
+          etiqueta="Comparar con"
+        />
+      </div>
+      <div class="periodos-combo__pie">
+        <button type="button" class="btn btn--primario btn--sm" (click)="cargar()">
+          Actualizar comparación
+        </button>
       </div>
     </section>
 
@@ -47,41 +51,53 @@
       <div class="tarjeta__cuerpo fila envolver hueco filtros">
         <label class="campo filtros__campo">
           <span class="campo__etiqueta">Facultad</span>
-          <select [value]="facultad()" (change)="facultad.set($any($event.target).value)">
-            <option value="">Todas</option>
-            @for (f of facultadesDisponibles(); track f.codigo) {
-              <option [value]="f.codigo">{{ f.nombre }}</option>
-            }
-          </select>
+          <span class="select-pill">
+            <select [value]="facultad()" (change)="facultad.set($any($event.target).value)">
+              <option value="">Todas</option>
+              @for (f of facultadesDisponibles(); track f.codigo) {
+                <option [value]="f.codigo">{{ f.nombre }}</option>
+              }
+            </select>
+            <span class="select-pill__flecha" aria-hidden="true">▾</span>
+          </span>
         </label>
 
         <label class="campo filtros__campo">
           <span class="campo__etiqueta">Nivel</span>
-          <select [value]="nivel()" (change)="nivel.set($any($event.target).value)">
-            <option value="">Todos</option>
-            @for (n of nivelesDisponibles(); track n) {
-              <option [value]="n">{{ n }}</option>
-            }
-          </select>
+          <span class="select-pill">
+            <select [value]="nivel()" (change)="nivel.set($any($event.target).value)">
+              <option value="">Todos</option>
+              @for (n of nivelesDisponibles(); track n) {
+                <option [value]="n">{{ n }}</option>
+              }
+            </select>
+            <span class="select-pill__flecha" aria-hidden="true">▾</span>
+          </span>
         </label>
 
         <label class="campo filtros__campo">
           <span class="campo__etiqueta">Dedicación</span>
-          <select [value]="dedicacion()" (change)="dedicacion.set($any($event.target).value)">
-            <option value="">Todas</option>
-            @for (ded of DEDICACIONES_FILTRABLES; track ded) {
-              <option [value]="ded">{{ ETIQUETAS_DEDICACION[ded] }}</option>
-            }
-          </select>
+          <span class="select-pill">
+            <select [value]="dedicacion()" (change)="dedicacion.set($any($event.target).value)">
+              <option value="">Todas</option>
+              @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+                <option [value]="ded">{{ ETIQUETAS_DEDICACION[ded] }}</option>
+              }
+            </select>
+            <span class="select-pill__flecha" aria-hidden="true">▾</span>
+          </span>
         </label>
 
         <label class="campo filtros__campo">
           <span class="campo__etiqueta">Titularidad</span>
-          <select [value]="titularidad()" (change)="titularidad.set($any($event.target).value)">
-            <option value="">Todas</option>
-            <option value="titular">Titulares</option>
-            <option value="no_titular">No titulares</option>
-          </select>
+          <span class="select-pill">
+            <select [value]="titularidad()" (change)="titularidad.set($any($event.target).value)">
+              <option value="">Todas</option>
+              <option value="titular">Titulares</option>
+              <option value="no_titular">No titulares</option>
+            </select>
+            <span class="select-pill__flecha" aria-hidden="true">▾</span>
+          </span>
         </label>
 
         <label class="casilla">

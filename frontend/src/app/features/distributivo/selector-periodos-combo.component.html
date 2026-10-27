@@ -1,0 +1,58 @@
+<div class="campo-combo">
+  <span class="campo-combo__etiqueta">{{ etiqueta() }}</span>
+
+  <button type="button" class="combo" [class.combo--abierto]="abierto()" (click)="alternarPanel()">
+    <span class="combo__chips">
+      @if (seleccion().length === 0) {
+        <span class="combo__vacio">Todos los periodos</span>
+      } @else {
+        <span class="combo__chip">
+          <span class="combo__chip-texto">{{ etiquetaDe(seleccion()[0]) }}</span>
+          <span
+            class="combo__quitar"
+            role="button"
+            tabindex="0"
+            (click)="quitar(seleccion()[0], $event)"
+            (keydown.enter)="quitar(seleccion()[0], $event)"
+          >
+            ×
+          </span>
+        </span>
+        @if (seleccion().length > 1) {
+          <span class="combo__mas">+{{ seleccion().length - 1 }}</span>
+        }
+      }
+    </span>
+    <span class="combo__flecha" aria-hidden="true">▾</span>
+  </button>
+
+  @if (abierto()) {
+    <div class="combo__panel" (click)="$event.stopPropagation()">
+      <div class="combo__panel-cabecera">
+        <span class="texto-xs texto-tenue">{{ seleccion().length }} elegido(s)</span>
+        @if (seleccion().length > 0) {
+          <button type="button" class="btn btn--fantasma btn--sm" (click)="limpiar($event)">
+            Limpiar
+          </button>
+        }
+      </div>
+      <ul class="combo__lista">
+        @for (p of periodos(); track p.id) {
+          <li>
+            <label class="combo__opcion">
+              <input
+                type="checkbox"
+                [checked]="estaSeleccionado(p.id)"
+                (change)="alternarPeriodo(p.id)"
+              />
+              <span class="mono">{{ p.codigo }}</span>
+              <span class="combo__opcion-nombre">{{ p.nombre }}</span>
+            </label>
+          </li>
+        } @empty {
+          <li class="texto-tenue texto-sm">No hay periodos con carga.</li>
+        }
+      </ul>
+    </div>
+  }
+</div>
