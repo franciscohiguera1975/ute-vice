@@ -1,0 +1,498 @@
+{
+  "info": {
+    "_postman_id": "b6f1a2d4-8c3e-4a1f-9d7b-5e2c1f0a9b3c",
+    "name": "UTE - Servicios de Consulta Catálogos (Banner)",
+    "description": "Manual de integración API - Servicios de Consulta Catálogos (Banner). Marzo 2026.\n\nTodos los servicios se consumen mediante POST al mismo endpoint, enviando en el body `nombreServicio` y `parametros`. Requiere el header X-Api-Key.\n\nImporta también el environment `UTE_Banner_PPRD.postman_environment.json` (en esta misma carpeta) y define el valor de la variable `apiKey` antes de ejecutar las peticiones. No compartas ni subas esa llave a repositorios públicos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://app.ute.edu.ec/BconsuWebPPRD/api/Banner/Servicios",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Catálogo de Sedes",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"SEDES_BANNER\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de sedes disponibles en el sistema. No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"SEDES_BANNER\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"SEDES_BANNER\",\n    \"total\": 4,\n    \"data\": [\n        { \"COD_SEDE\": \"CUE\", \"SEDE\": \"CAMPUS CUENCA\" },\n        { \"COD_SEDE\": \"MON\", \"SEDE\": \"RICARDO HIDALGO OTTOLENGHI\" },\n        { \"COD_SEDE\": \"STO\", \"SEDE\": \"SEDE SANTO DOMINGO\" },\n        { \"COD_SEDE\": \"UIO\", \"SEDE\": \"SEDE QUITO\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo de Unidades Académicas",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"UNIDADES_BANNER\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de unidades académicas (facultades) disponibles en el sistema. No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"UNIDADES_BANNER\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"UNIDADES_BANNER\",\n    \"total\": 12,\n    \"data\": [\n        { \"CODIGO_UNIDAD_ACADEMICA\": \"CL\", \"UNIDAD_ACADEMICA\": \"CENTRO DE EDUCACIÓN EN LÍNEA\" },\n        { \"CODIGO_UNIDAD_ACADEMICA\": \"FC\", \"UNIDAD_ACADEMICA\": \"CIENCIAS, INGENIERÍA Y CONSTRUCCIÓN\" },\n        { \"CODIGO_UNIDAD_ACADEMICA\": \"FV\", \"UNIDAD_ACADEMICA\": \"MEDICINA VETERINARIA Y AGRONOMÍA\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo de Carreras/Programas",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"CARRERAS_BANNER\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de carreras y programas disponibles en el sistema. No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"CARRERAS_BANNER\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"CARRERAS_BANNER\",\n    \"total\": 159,\n    \"data\": [\n        {\n            \"CODIGO_SEDE\": \"CUE\",\n            \"SEDE\": \"CAMPUS CUENCA\",\n            \"CODIGO_UNIDAD_ACADEMICA\": \"FG\",\n            \"UNIDAD_ACADEMICA\": \"CIENCIAS GASTRONÓMICAS Y TURISMO\",\n            \"CODIGO_CARRERA\": \"651013B01P8\",\n            \"CARRERA\": \"GASTRONOMÍA\",\n            \"MODALIDAD\": \"PRESENCIAL\"\n        },\n        {\n            \"CODIGO_SEDE\": \"CUE\",\n            \"SEDE\": \"CAMPUS CUENCA\",\n            \"CODIGO_UNIDAD_ACADEMICA\": \"FS\",\n            \"UNIDAD_ACADEMICA\": \"CIENCIAS DE LA SALUD EUGENIO ESPEJO\",\n            \"CODIGO_CARRERA\": \"650912A01P8\",\n            \"CARRERA\": \"MEDICINA\",\n            \"MODALIDAD\": \"PRESENCIAL\"\n        }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo de Períodos",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"PERIODOS_BANNER\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de períodos académicos activos o históricos relevantes. No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"PERIODOS_BANNER\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"PERIODOS_BANNER\",\n    \"total\": 3,\n    \"data\": [\n        { \"CODIGO\": \"261751\", \"PERIODO\": \"2026-1 POSGRADO\" },\n        { \"CODIGO\": \"261651\", \"PERIODO\": \"2026-1 GRADO\" },\n        { \"CODIGO\": \"261551\", \"PERIODO\": \"2026-1 TECNOLOGÍAS\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Tipo de Personal Docente (STVFSTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"TIPO_PERSONAL_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de tipos de personal docente disponibles en el sistema (catálogo Banner STVFSTP). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"TIPO_PERSONAL_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"TIPO_PERSONAL_DOCENTE\",\n    \"total\": 3,\n    \"data\": [\n        { \"CODIGO\": \"TC\", \"DESCRIPCION\": \"TIEMPO COMPLETO\" },\n        { \"CODIGO\": \"MT\", \"DESCRIPCION\": \"MEDIO TIEMPO\" },\n        { \"CODIGO\": \"TP\", \"DESCRIPCION\": \"TIEMPO PARCIAL\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Tipo No-Educativo de Docente (STVINST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"TIPOS_NO_EDUCATIVO_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de tipos no-educativos de docente disponibles en el sistema (catálogo Banner STVINST). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"TIPOS_NO_EDUCATIVO_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"TIPOS_NO_EDUCATIVO_DOCENTE\",\n    \"total\": 49,\n    \"data\": [\n        { \"CODIGO\": \"DOCB\", \"DESCRIPCION\": \"DOCENCIA PLANIFICAR CLASES\" },\n        { \"CODIGO\": \"DOCC\", \"DESCRIPCION\": \"DOCENCIA ELABORAR CONTENIDOS\" },\n        { \"CODIGO\": \"DOCD\", \"DESCRIPCION\": \"DOCENCIA ELABORAR LIBROS-TEXTO\" },\n        { \"CODIGO\": \"DOCE\", \"DESCRIPCION\": \"DOCENCIA TUTORIAS\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Código de Atributo de Docente (STVFATT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"ATRIBUTOS_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de atributos de docente disponibles en el sistema (catálogo Banner STVFATT). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"ATRIBUTOS_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"ATRIBUTOS_DOCENTE\",\n    \"total\": 89,\n    \"data\": [\n        { \"CODIGO\": \"0181\", \"DESCRIPCION\": \"PSICOPEDAGOGÍA\" },\n        { \"CODIGO\": \"0011\", \"DESCRIPCION\": \"PROGRAMAS Y CERTIFICACIONES BÁ\" },\n        { \"CODIGO\": \"0021\", \"DESCRIPCION\": \"ALFABETIZACIÓN Y ARITMÉTICA EL\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Código de Categoría de Docente (STVFCTG)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"CATEGORIA_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de categorías de docente disponibles en el sistema (catálogo Banner STVFCTG). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"CATEGORIA_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"CATEGORIA_DOCENTE\",\n    \"total\": 18,\n    \"data\": [\n        { \"CODIGO\": \"TIPRI1\", \"DESCRIPCION\": \"TITULAR PRINCIPAL 1\" },\n        { \"CODIGO\": \"TIPRI2\", \"DESCRIPCION\": \"TITULAR PRINCIPAL 2\" },\n        { \"CODIGO\": \"TIPRI3\", \"DESCRIPCION\": \"TITULAR PRINCIPAL 3\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Código de Status de Docente (STVFCST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"ESTADOS_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de estados de docente disponibles en el sistema (catálogo Banner STVFCST). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"ESTADOS_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"ESTADOS_DOCENTE\",\n    \"total\": 2,\n    \"data\": [\n        { \"CODIGO\": \"A\", \"DESCRIPCION\": \"ACTIVO\" },\n        { \"CODIGO\": \"I\", \"DESCRIPCION\": \"INACTIVO\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo Código de Reglas de Carga de Trabajo (STVWKLD)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"CARGA_TRABAJO_DOCENTE\",\n    \"parametros\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de reglas de carga de trabajo del periodo disponibles en el sistema (catálogo Banner STVWKLD). No requiere parámetros de filtro."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"CARGA_TRABAJO_DOCENTE\",\n    \"parametros\": {}\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"CARGA_TRABAJO_DOCENTE\",\n    \"total\": 6,\n    \"data\": [\n        { \"CODIGO\": \"DINV\", \"DESCRIPCION\": \"INVESTIGADOR\" },\n        { \"CODIGO\": \"DOPG\", \"DESCRIPCION\": \"DOCENTE POSGRADO\" },\n        { \"CODIGO\": \"DOGR\", \"DESCRIPCION\": \"DOCENTE GRADO\" },\n        { \"CODIGO\": \"DOGP\", \"DESCRIPCION\": \"DOCENTE GRADO-POSGRADO\" },\n        { \"CODIGO\": \"EDCO\", \"DESCRIPCION\": \"INSTRUCTOR EDUC-CONTINUA\" },\n        { \"CODIGO\": \"PAA\", \"DESCRIPCION\": \"PERSONAL DE APOYO ACADÉMICO\" }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Horarios por Periodo y/o Docente",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"HORARIOS_DOCENTE\",\n    \"parametros\": {\n        \"periodos\": [\n            \"252651\",\n            \"252751\"\n        ],\n        \"cedula\": \"1715111835\",\n        \"nrcs\": [\"1508\"]\n    }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Obtiene el listado de horarios por periodo y/o docente.\n\nParámetros:\n- cedula (String, No): cédula del docente para filtrar resultados. Si se omite o se envía null, retorna horarios sin filtrar por docente.\n- periodos (Array<String>, Sí): listado de códigos de período a consultar (ej. [\"252651\",\"252751\"]).\n- nrcs (Array<String>, No): NRCs a buscar. Puede combinarse con cédula y periodo."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"HORARIOS_DOCENTE\",\n    \"parametros\": {\n        \"periodos\": [\n            \"252651\",\n            \"252751\"\n        ],\n        \"cedula\": \"1715111835\",\n        \"nrcs\": [\"1508\"]\n    }\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"HORARIOS_DOCENTE\",\n    \"total\": 1,\n    \"data\": [\n        {\n            \"DOCENTE\": \"VICTORIA CAROLINA TUFIÑO VILLACRÉS\",\n            \"PERIODO\": \"252651\",\n            \"PARALELO\": \"3157\",\n            \"PIDM\": 819127,\n            \"CEDULA\": \"1715111835\",\n            \"BANNER_ID\": \"000131202\",\n            \"COD_ASIGNATURA\": \"PROF\",\n            \"NUM_ASIGNATURA\": \"00225\",\n            \"ASIGNATURA\": \"GESTIÓN AMBIENTAL\",\n            \"NOMBRE_PARALELO\": \"B\",\n            \"INICIO_CLASE\": \"1930\",\n            \"FIN_CLASE\": \"2128\",\n            \"FECHA_INICIO\": \"2025-09-29T00:00:00\",\n            \"FECHA_FIN\": \"2026-03-01T00:00:00\",\n            \"DOMINGO\": \"No\",\n            \"LUNES\": \"No\",\n            \"MARTES\": \"Si\",\n            \"MIERCOLES\": \"No\",\n            \"JUEVES\": \"No\",\n            \"VIERNES\": \"No\",\n            \"SABADO\": \"No\",\n            \"PRINCIPAL\": \"No\"\n        }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Nrcs por Facultad y Periodo",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"NRCS_FACULTAD\",\n    \"parametros\": {\n        \"programa\": \"651013B01P4\",\n        \"periodo\": \"252651\"\n    }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Consulta el listado de NRCs (CRN) asociados a un programa/carrera en un período académico. El resultado incluye un objeto DATA con metadatos del programa (nivel de formación, sede, facultad, carrera, modalidad) y un arreglo nrcs con el detalle de materias/cursos.\n\nParámetros:\n- programa (String, Sí): código de programa/carrera (ej. 651013B01P4).\n- periodo (String, Sí): código de período académico (ej. 252651)."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"NRCS_FACULTAD\",\n    \"parametros\": {\n        \"programa\": \"651013B01P4\",\n        \"periodo\": \"252651\"\n    }\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"NRCS_FACULTAD\",\n    \"total\": 1,\n    \"data\": [\n        {\n            \"DATA\": {\n                \"nivel_formacion\": \"01 TERCER NIVEL\",\n                \"sede\": \"SEDE QUITO\",\n                \"facultad\": \"CIENCIAS GASTRONÓMICAS Y TURISMO\",\n                \"carrera_programa\": \"GASTRONOMÍA\",\n                \"modalidad\": \"PRESENCIAL\",\n                \"codigo_programa\": \"651013B01P4\",\n                \"periodo\": \"252651\",\n                \"nrcs\": [\n                    { \"nrc\": \"1043\", \"codigo_materia\": \"BASI\", \"numero_curso\": \"00709\", \"paralelo\": \"A\", \"titulo\": \"LENGUAJE Y ESCRI. APLI. CULIN.\" },\n                    { \"nrc\": \"1044\", \"codigo_materia\": \"BASI\", \"numero_curso\": \"00003\", \"paralelo\": \"A\", \"titulo\": \"FUNDAMENTOS DEL DISEÑO\" }\n                ]\n            }\n        }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Catálogo de Cursos por Subject y Course",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "X-Api-Key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"nombreServicio\": \"CATALOGO_CURSOS_X_SUBJECT_COURSE\",\n    \"parametros\": {\n        \"course\": \"00043\",\n        \"subject_code\": \"BASI\"\n    }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] },
+        "description": "Retorna información detallada del curso filtrada por scbcrse_crse_numb (course) y SCBCRSE_SUBJ_CODE (subject_code).\n\nParámetros:\n- course (String, Sí).\n- subject_code (String, Sí)."
+      },
+      "response": [
+        {
+          "name": "200 OK - Ejemplo",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"nombreServicio\": \"CATALOGO_CURSOS_X_SUBJECT_COURSE\",\n    \"parametros\": {\n        \"course\": \"00043\",\n        \"subject_code\": \"BASI\"\n    }\n}" },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n    \"ok\": true,\n    \"servicio\": \"CATALOGO_CURSOS_X_SUBJECT_COURSE\",\n    \"total\": 1,\n    \"data\": [\n        {\n            \"course_title\": \"BIOLOGÍA CELULAR\",\n            \"course\": \"00043\",\n            \"subject_code\": \"BASI\",\n            \"subject\": \"BÁSICA\",\n            \"term\": \"171001\",\n            \"college_code\": \"FS\",\n            \"college\": \"F.C. SALUD EUGENIO ESPEJO\",\n            \"division_code\": null,\n            \"division\": null,\n            \"department_code\": null,\n            \"department\": null,\n            \"status_code\": \"A\",\n            \"status\": \"ACTIVO\",\n            \"prerequisite_check\": \"B\",\n            \"horas_credito_totales_baja\": 0.0,\n            \"horas_credito_totales_alta\": 164.9,\n            \"horas_cobro_baja\": 0.0,\n            \"horas_cobro_alta\": 164.9,\n            \"componente_docencia_baja\": 66.001,\n            \"componente_docencia_alta\": null,\n            \"componente_aplicacion_experimentacion_baja\": 5.999,\n            \"componente_aplicacion_experimentacion_alta\": null,\n            \"componente_aprendizaje_autonomo_baja\": 92.9,\n            \"componente_aprendizaje_autonomo_alta\": null,\n            \"practicas_preprofesionales_vinculacion_sociedad_baja\": 0.0,\n            \"practicas_preprofesionales_vinculacion_sociedad_alta\": null,\n            \"scbcrse_csta_code\": \"A\",\n            \"scrlevl_levl_code\": \"TG\"\n        }\n    ]\n}"
+        }
+      ]
+    }
+  ]
+}

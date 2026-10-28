@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.venv-*/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -40,8 +41,20 @@ docs/**/*.xlsx
 docs/**/*.xls
 docs/**/*.csv
 docs/**/*.zip
+# Mismo caso que el de arriba pero en .html: es un dump completo del Odoo con
+# nombres y carga real de docentes, no un documento escrito a mano.
+docs/dashboard_ejecutivo/Tablero docente UTE.html
 # Archivos de bloqueo que deja LibreOffice mientras un libro esta abierto.
 .~lock.*#
+
+# Salidas de los scripts de scraping en `python/`: tambien son datos
+# personales reales (cedula, nombres, titulos de SENESCYT), no codigo.
+python/*.csv
+
+# Los entornos de Postman cargan credenciales reales como variable "secret"
+# —ya paso con el apiKey de Banner PPRD—; las colecciones (*_collection.json)
+# son solo definiciones de endpoints y si se versionan.
+*.postman_environment.json
 
 # `frontend/public` es carpeta de assets: **todo lo que hay ahi se publica en la
 # web sin autenticacion**. Solo debe contener la marca —favicon y logotipos—, y
@@ -65,3 +78,8 @@ frontend/public/*.docx
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# ---- Claude Code ----
+# `settings.local.json` es config personal del equipo (permisos, etc.), no se
+# comparte. `launch.json` sí —son los comandos para levantar backend/frontend—.
+.claude/settings.local.json
