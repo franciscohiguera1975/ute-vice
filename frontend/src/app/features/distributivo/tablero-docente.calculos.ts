@@ -459,7 +459,7 @@ export function porcentajeTC(lista: readonly DocenteResumen[]): number {
 }
 
 /** Cuenta cuantos docentes de la lista tienen cada dedicacion. */
-function contarPorDedicacion(lista: readonly DocenteResumen[]): Record<Dedicacion, number> {
+export function contarPorDedicacion(lista: readonly DocenteResumen[]): Record<Dedicacion, number> {
   const conteo: Record<Dedicacion, number> = { TC: 0, MT: 0, TP: 0, NA: 0 };
   for (const d of lista) conteo[claveDedicacion(d.dedicacion)]++;
   return conteo;

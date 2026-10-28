@@ -1,3 +1,13 @@
+/* El original (Odoo) muestra el tablero en una columna central, no a todo el
+   ancho de la ventana; el resto de pantallas del distributivo sí aprovechan
+   el ancho completo para sus tablas, asi que el limite va aqui y no en
+   `.contenido` del layout compartido. */
+:host {
+  display: block;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
 .encabezado { margin-bottom: 1.25rem; }
 .seccion { margin-bottom: 1.25rem; }
 

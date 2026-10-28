@@ -382,6 +382,8 @@ textarea { resize: vertical; min-height: 76px; }
 .rejilla--2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .rejilla--3 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
 .rejilla--4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.rejilla--5 { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+.rejilla--6 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
 /* --------------------------------------------------------------- barra --- */
 .barra {

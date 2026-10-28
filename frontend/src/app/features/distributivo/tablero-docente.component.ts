@@ -35,6 +35,7 @@ import {
   alertasDocente,
   cantidadDeFunciones,
   claveDedicacion,
+  contarPorDedicacion,
   cumpleFiltroDocente,
   cumpleFiltroSplit,
   etcDe,
@@ -383,6 +384,13 @@ export class TableroDocenteComponent {
   protected readonly porcentajeTCActual = computed(() => porcentajeTC(this.docentesFiltrados()));
   protected readonly porcentajeTCAnterior = computed(() =>
     porcentajeTC(this.docentesAnteriorFiltrados()),
+  );
+
+  protected readonly conteoPorDedicacionActual = computed(() =>
+    contarPorDedicacion(this.docentesFiltrados()),
+  );
+  protected readonly conteoPorDedicacionAnterior = computed(() =>
+    contarPorDedicacion(this.docentesAnteriorFiltrados()),
   );
 
   protected readonly variacionFacultades = computed(() =>

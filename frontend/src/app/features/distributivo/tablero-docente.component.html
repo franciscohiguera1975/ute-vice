@@ -143,7 +143,7 @@
     @switch (pestana()) {
       <!-- ======================================================= variacion -->
       @case ('variacion') {
-        <section class="rejilla rejilla--3 seccion" aria-label="Indicadores de variación">
+        <section class="rejilla rejilla--6 seccion" aria-label="Indicadores de variación">
           <article class="metrica">
             <p class="metrica__etiqueta">Docentes</p>
             <p class="metrica__valor">{{ docentesFiltrados().length | number }}</p>
@@ -159,6 +159,24 @@
               </span>
             </p>
           </article>
+
+          @for (ded of DEDICACIONES_FILTRABLES; track ded) {
+            <article class="metrica">
+              <p class="metrica__etiqueta">{{ ETIQUETAS_DEDICACION[ded] }}</p>
+              <p class="metrica__valor">{{ conteoPorDedicacionActual()[ded] | number }}</p>
+              <p class="metrica__pie texto-xs texto-tenue">
+                {{ conteoPorDedicacionAnterior()[ded] | number }} en el periodo de comparación ·
+                <span
+                  [class.positivo]="conteoPorDedicacionActual()[ded] > conteoPorDedicacionAnterior()[ded]"
+                  [class.negativo]="conteoPorDedicacionActual()[ded] < conteoPorDedicacionAnterior()[ded]"
+                >
+                  {{ conteoPorDedicacionActual()[ded] - conteoPorDedicacionAnterior()[ded] > 0 ? '+' : '' }}{{
+                    conteoPorDedicacionActual()[ded] - conteoPorDedicacionAnterior()[ded]
+                  }}
+                </span>
+              </p>
+            </article>
+          }
 
           <article class="metrica">
             <p class="metrica__etiqueta">% tiempo completo</p>
@@ -966,7 +984,7 @@
 
       <!-- ============================================================ tp -->
       @case ('tp') {
-        <section class="rejilla rejilla--4 seccion" aria-label="Indicadores de tiempos parciales">
+        <section class="rejilla rejilla--5 seccion" aria-label="Indicadores de tiempos parciales">
           <article class="metrica">
             <p class="metrica__etiqueta">Docentes TP</p>
             <p class="metrica__valor">{{ docentesTP().length | number }}</p>
@@ -994,17 +1012,22 @@
             <p class="metrica__pie texto-xs texto-tenue">Da = 0</p>
           </article>
           <article class="metrica">
+            <p class="metrica__etiqueta">Menos de 2 h de clase</p>
+            <p class="metrica__valor">
+              <button type="button" class="metrica__boton" (click)="alternarSegmento('tp-bajominimo')">
+                {{ tpBajoMinimo().length | number }}
+              </button>
+            </p>
+            <p class="metrica__pie texto-xs texto-tenue">Bajo el mínimo · ver lista</p>
+          </article>
+          <article class="metrica">
             <p class="metrica__etiqueta">TP con 20 h o más</p>
             <p class="metrica__valor">
               <button type="button" class="metrica__boton" (click)="alternarSegmento('tp-20omas')">
                 {{ tp20oMas().length | number }}
               </button>
             </p>
-            <p class="metrica__pie texto-xs texto-tenue">
-              <button type="button" class="metrica__boton metrica__boton--inline" (click)="alternarSegmento('tp-bajominimo')">
-                {{ tpBajoMinimo().length }} con menos de 2 h de clase
-              </button>
-            </p>
+            <p class="metrica__pie texto-xs texto-tenue">TP debe tener menos de 20 h</p>
           </article>
         </section>
 
