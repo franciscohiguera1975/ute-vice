@@ -22,7 +22,6 @@ from app.domain.ports.repositorios import (
     RepositorioTokensRefresco,
     RepositorioUsuarios,
 )
-from app.domain.ports.tickets import RepositorioTickets
 from app.infrastructure.db.repositorios.auth import (
     RepositorioRolesSQL,
     RepositorioTokensSQL,
@@ -40,7 +39,6 @@ from app.infrastructure.db.repositorios.nucleo import (
     RepositorioPersonasSQL,
     RepositorioTitulosSQL,
 )
-from app.infrastructure.db.repositorios.tickets import RepositorioTicketsSQL
 
 
 class UnidadDeTrabajoSQL:
@@ -69,7 +67,6 @@ class UnidadDeTrabajoSQL:
     docentes: RepositorioDocentes
     distributivo: RepositorioDistributivo
     estudiantes: RepositorioEstudiantes
-    tickets: RepositorioTickets
 
     def __init__(self, fabrica: async_sessionmaker[AsyncSession]) -> None:
         self._fabrica = fabrica
@@ -115,7 +112,6 @@ class UnidadDeTrabajoSQL:
         self.docentes = RepositorioDocentesSQL(sesion)
         self.distributivo = RepositorioDistributivoSQL(sesion)
         self.estudiantes = RepositorioEstudiantesSQL(sesion)
-        self.tickets = RepositorioTicketsSQL(sesion)
 
     @property
     def sesion(self) -> AsyncSession:

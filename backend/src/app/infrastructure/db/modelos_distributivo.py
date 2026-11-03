@@ -177,17 +177,6 @@ class AsignaturaModel(Base, MixinCatalogo):
     __table_args__ = _indices_catalogo("cat_asignaturas")
 
 
-class CategoriaTicketModel(Base, MixinCatalogo):
-    """Categorias de los tickets de soporte tecnico (Hardware, Software, Red, ...).
-
-    Catalogo administrable como los demas, en vez de un enum fijo: el equipo de
-    soporte ajusta sus categorias sin que eso implique un cambio de codigo.
-    """
-
-    __tablename__ = "cat_categorias_ticket"
-    __table_args__ = _indices_catalogo("cat_categorias_ticket")
-
-
 class CargoDirectivoModel(Base, MixinCatalogo):
     """Cargos directivos del profesorado (Decano, Director de Carrera, ...).
 
@@ -203,7 +192,7 @@ class CargoDirectivoModel(Base, MixinCatalogo):
 
 
 #: Traduccion entre el tipo de catalogo del dominio y su tabla. Es lo que hace
-#: posible que un solo repositorio sirva a los catorce.
+#: posible que un solo repositorio sirva a los trece.
 MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.PAO: PaoModel,
     TipoCatalogo.FACULTAD: FacultadModel,
@@ -217,7 +206,6 @@ MODELOS_CATALOGO: dict[TipoCatalogo, type[Base]] = {
     TipoCatalogo.TIPO_TITULO: TipoTituloModel,
     TipoCatalogo.GENERO: GeneroModel,
     TipoCatalogo.ASIGNATURA: AsignaturaModel,
-    TipoCatalogo.CATEGORIA_TICKET: CategoriaTicketModel,
     TipoCatalogo.CARGO_DIRECTIVO: CargoDirectivoModel,
 }
 

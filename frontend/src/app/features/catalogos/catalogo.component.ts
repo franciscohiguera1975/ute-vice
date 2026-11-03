@@ -63,8 +63,8 @@ export class CatalogoComponent {
   private readonly notificaciones = inject(NotificacionesService);
   protected readonly sesion = inject(SesionStore);
   /**
-   * Cache compartida que usan los selectores de Facultad/Carrera en Personas,
-   * Tickets y Distributivo. Sin refrescarla aqui, un catalogo creado o
+   * Cache compartida que usan los selectores de Facultad/Carrera en Personas
+   * y Distributivo. Sin refrescarla aqui, un catalogo creado o
    * editado en esta pantalla no aparece en esos selectores hasta recargar
    * toda la aplicacion.
    */

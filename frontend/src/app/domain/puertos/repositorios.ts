@@ -20,19 +20,14 @@ import type {
   CambiosTitulo,
   CambiosUsuario,
   ConsultaLog,
-  DatosDetallesTicket,
   DatosJob,
   DatosPersona,
-  DatosSeguimiento,
-  DatosTicket,
   DatosTitulo,
   DatosUsuario,
-  EstadisticasTickets,
   EstadoPlanificador,
   FilaImportacion,
   FiltroLogs,
   FiltroPersonas,
-  FiltroTickets,
   FiltroTitulos,
   FormatoReporte,
   JobCobertura,
@@ -44,15 +39,11 @@ import type {
   PermisoCatalogo,
   Persona,
   PersonaDetalle,
-  Responsable,
   ResultadoConsulta,
   ResultadoImportacion,
   Rol,
   Sesion,
   Tablero,
-  SeguimientoTicket,
-  Ticket,
-  TicketDetalle,
   Titulo,
   Usuario,
 } from '../modelos';
@@ -163,24 +154,4 @@ export abstract class RepositorioAdministracion {
     cambios: { nombre?: string; descripcion?: string; permisos?: readonly string[] },
   ): Observable<Rol>;
   abstract listarPermisos(): Observable<readonly PermisoCatalogo[]>;
-}
-
-// ---------------------------------------------------------------------------
-export abstract class RepositorioTickets {
-  abstract listar(
-    filtro: FiltroTickets,
-    paginacion: ParametrosPaginacion,
-  ): Observable<Pagina<Ticket>>;
-  abstract obtener(id: string): Observable<TicketDetalle>;
-  abstract crear(datos: DatosTicket): Observable<Ticket>;
-  abstract agregarSeguimiento(
-    id: string,
-    datos: DatosSeguimiento,
-  ): Observable<SeguimientoTicket>;
-  abstract asignar(id: string, usuarioId: string | null): Observable<Ticket>;
-  abstract cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket>;
-  abstract actualizarDetalles(id: string, datos: DatosDetallesTicket): Observable<Ticket>;
-  abstract estadisticas(dias?: number): Observable<EstadisticasTickets>;
-  abstract subirImagen(archivo: File): Observable<{ url: string }>;
-  abstract responsables(): Observable<readonly Responsable[]>;
 }

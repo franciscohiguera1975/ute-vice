@@ -4,12 +4,10 @@ import type {
   AuthProvider,
   EstadoConsulta,
   EstadoJob,
-  EstadoTicket,
   EstadoTitulo,
   NivelTitulo,
   OrigenTitulo,
   Permiso,
-  PrioridadTicket,
   TipoVinculacion,
 } from './enums';
 
@@ -448,94 +446,3 @@ export interface CambiosUsuario {
   readonly carrerasIds?: readonly string[];
 }
 
-// ---------------------------------------------------------------------------
-// Tickets de soporte tecnico
-// ---------------------------------------------------------------------------
-
-export interface Ticket {
-  readonly id: string;
-  readonly titulo: string;
-  readonly descripcion: string;
-  readonly estado: EstadoTicket;
-  readonly solicitanteId: string;
-  readonly solicitanteNombre: string;
-  readonly solicitanteUnidad: string | null;
-  readonly asignadoA: string | null;
-  readonly asignadoANombre: string | null;
-  /** Cuando se pidio el soporte. Distinta de `creadoEn`: nace igual, pero es editable. */
-  readonly fechaSolicitud: string;
-  readonly prioridad: PrioridadTicket | null;
-  readonly categoriaId: string | null;
-  readonly categoriaNombre: string | null;
-  /** Vencimiento declarado a mano, sin calculo automatico de SLA. */
-  readonly fechaLimite: string | null;
-  /** `fechaLimite` ya pasada y el ticket sigue abierto. */
-  readonly vencido: boolean;
-  readonly creadoPor: string | null;
-  readonly creadoPorNombre: string | null;
-  readonly creadoEn: string;
-  readonly actualizadoEn: string;
-}
-
-export interface SeguimientoTicket {
-  readonly id: string;
-  readonly autorId: string | null;
-  readonly comentario: string;
-  readonly estadoAnterior: EstadoTicket | null;
-  readonly estadoNuevo: EstadoTicket | null;
-  readonly creadoEn: string;
-}
-
-export interface TicketDetalle {
-  readonly ticket: Ticket;
-  readonly seguimientos: readonly SeguimientoTicket[];
-}
-
-export interface FiltroTickets {
-  readonly texto?: string;
-  readonly estado?: EstadoTicket;
-  readonly solicitanteId?: string;
-  readonly asignadoA?: string;
-  readonly prioridad?: PrioridadTicket;
-  readonly categoriaId?: string;
-}
-
-export interface DatosTicket {
-  readonly titulo: string;
-  readonly descripcion: string;
-  readonly solicitanteId: string;
-  /** Cuando se pidio el soporte. Omitido, el backend toma la fecha de hoy. */
-  readonly fechaSolicitud?: string | null;
-  readonly prioridad?: PrioridadTicket | null;
-  readonly categoriaId?: string | null;
-  readonly fechaLimite?: string | null;
-}
-
-export interface DatosSeguimiento {
-  readonly comentario: string;
-  readonly estadoNuevo?: EstadoTicket | null;
-}
-
-/** Triage del caso: los tres se guardan juntos. */
-export interface DatosDetallesTicket {
-  readonly prioridad?: PrioridadTicket | null;
-  readonly categoriaId?: string | null;
-  readonly fechaLimite?: string | null;
-}
-
-/** Dashboard de soporte: propio o global, segun `Permiso.TICKETS_ADMINISTRAR`. */
-export interface EstadisticasTickets {
-  readonly total: number;
-  readonly totalAbiertos: number;
-  readonly totalVencidos: number;
-  readonly tiempoPromedioResolucionHoras: number | null;
-  readonly porEstado: readonly Conteo[];
-  readonly porPrioridad: readonly Conteo[];
-  readonly creadosPorDia: readonly PuntoSerie[];
-}
-
-/** Usuario de soporte tecnico disponible para asignar un ticket. */
-export interface Responsable {
-  readonly id: string;
-  readonly nombreCompleto: string;
-}

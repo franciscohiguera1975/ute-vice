@@ -21,19 +21,16 @@ from app.domain.entities.consulta import (
     JobCobertura,
 )
 from app.domain.entities.persona import Persona
-from app.domain.entities.ticket import SeguimientoTicket, Ticket
 from app.domain.entities.titulo import Titulo
 from app.domain.enums import (
     AuthProvider,
     EstadoConsulta,
     EstadoItemJob,
     EstadoJob,
-    EstadoTicket,
     EstadoTitulo,
     NivelTitulo,
     OrigenTitulo,
     Permiso,
-    PrioridadTicket,
     TipoCambio,
     TipoDocumento,
     TipoVinculacion,
@@ -50,7 +47,6 @@ from app.infrastructure.db.modelos import (
     TokenRefrescoModel,
     UsuarioModel,
 )
-from app.infrastructure.db.modelos_tickets import SeguimientoTicketModel, TicketModel
 
 
 def _enum(tipo: type, valor: str | None, por_defecto: Any) -> Any:
@@ -441,64 +437,3 @@ def item_a_modelo(entidad: ItemJob, modelo: ItemJobModel | None = None) -> ItemJ
     modelo.desafio_id = entidad.desafio_id
     modelo.procesado_en = entidad.procesado_en
     return modelo
-
-
-# ===========================================================================
-# Tickets
-# ===========================================================================
-
-
-def ticket_a_dominio(modelo: TicketModel) -> Ticket:
-    return Ticket(
-        id=modelo.id,
-        titulo=modelo.titulo,
-        descripcion=modelo.descripcion,
-        solicitante_id=modelo.solicitante_id,
-        estado=_enum(EstadoTicket, modelo.estado, EstadoTicket.RECIBIDO),
-        asignado_a=modelo.asignado_a,
-        fecha_solicitud=modelo.fecha_solicitud,
-        prioridad=_enum(PrioridadTicket, modelo.prioridad, None),
-        categoria_id=modelo.categoria_id,
-        fecha_limite=modelo.fecha_limite,
-        creado_por=modelo.creado_por,
-        creado_en=modelo.creado_en,
-        actualizado_en=modelo.actualizado_en,
-    )
-
-
-def ticket_a_modelo(entidad: Ticket, modelo: TicketModel | None = None) -> TicketModel:
-    modelo = modelo or TicketModel(id=entidad.id)
-    modelo.titulo = entidad.titulo
-    modelo.descripcion = entidad.descripcion
-    modelo.solicitante_id = entidad.solicitante_id
-    modelo.estado = entidad.estado.value
-    modelo.asignado_a = entidad.asignado_a
-    modelo.fecha_solicitud = entidad.fecha_solicitud
-    modelo.prioridad = entidad.prioridad.value if entidad.prioridad else None
-    modelo.categoria_id = entidad.categoria_id
-    modelo.fecha_limite = entidad.fecha_limite
-    modelo.creado_por = entidad.creado_por
-    return modelo
-
-
-def seguimiento_a_dominio(modelo: SeguimientoTicketModel) -> SeguimientoTicket:
-    return SeguimientoTicket(
-        id=modelo.id,
-        ticket_id=modelo.ticket_id,
-        autor_id=modelo.autor_id,
-        comentario=modelo.comentario,
-        estado_anterior=_enum(EstadoTicket, modelo.estado_anterior, None),
-        estado_nuevo=_enum(EstadoTicket, modelo.estado_nuevo, None),
-        creado_en=modelo.creado_en,
-    )
-
-
-def seguimiento_a_modelo(entidad: SeguimientoTicket) -> SeguimientoTicketModel:
-    return SeguimientoTicketModel(
-        id=entidad.id,
-        ticket_id=entidad.ticket_id,
-        autor_id=entidad.autor_id,
-        comentario=entidad.comentario,
-        estado_anterior=entidad.estado_anterior.value if entidad.estado_anterior else None,
-        estado_nuevo=entidad.estado_nuevo.value if entidad.estado_nuevo else None,
-    )

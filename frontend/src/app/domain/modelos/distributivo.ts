@@ -8,7 +8,7 @@ import type { Conteo } from './entidades';
 // ---------------------------------------------------------------------------
 
 /**
- * Los catorce catalogos. El valor es el segmento de URL de su API, igual que en
+ * Los trece catalogos. El valor es el segmento de URL de su API, igual que en
  * el backend: `/api/v1/catalogos/carreras`.
  */
 export const TipoCatalogo = {
@@ -24,7 +24,6 @@ export const TipoCatalogo = {
   TIPO_TITULO: 'tipos-titulo',
   GENERO: 'generos',
   ASIGNATURA: 'asignaturas',
-  CATEGORIA_TICKET: 'categorias-ticket',
   CARGO_DIRECTIVO: 'cargos-directivos',
 } as const;
 export type TipoCatalogo = (typeof TipoCatalogo)[keyof typeof TipoCatalogo];

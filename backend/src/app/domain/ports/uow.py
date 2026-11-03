@@ -26,7 +26,6 @@ from app.domain.ports.repositorios import (
     RepositorioTokensRefresco,
     RepositorioUsuarios,
 )
-from app.domain.ports.tickets import RepositorioTickets
 
 
 class UnidadDeTrabajo(Protocol):
@@ -57,9 +56,6 @@ class UnidadDeTrabajo(Protocol):
 
     # --- Matricula estudiantil ---
     estudiantes: RepositorioEstudiantes
-
-    # --- Tickets de soporte tecnico ---
-    tickets: RepositorioTickets
 
     async def __aenter__(self) -> Self: ...
 

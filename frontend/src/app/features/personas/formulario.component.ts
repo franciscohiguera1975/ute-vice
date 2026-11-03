@@ -123,8 +123,7 @@ export class FormularioPersonaComponent {
     // no como cadena vacia, que quedaria almacenada como un dato falso.
     const opcional = (texto: string): string | null => texto.trim() || null;
 
-    // `unidad` ya no se edita como texto libre: se deriva de los selectores,
-    // igual que en el alta rapida de solicitante del modulo de Tickets.
+    // `unidad` ya no se edita como texto libre: se deriva de los selectores.
     const facultad = this.catalogos.nombreDe(TipoCatalogo.FACULTAD, valores.facultadId);
     const carrera = this.catalogos.nombreDe(TipoCatalogo.CARRERA, valores.carreraId);
     const unidad = [facultad, carrera].filter(Boolean).join(' — ') || null;

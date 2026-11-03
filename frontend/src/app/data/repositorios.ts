@@ -17,19 +17,14 @@ import type {
   CambiosTitulo,
   CambiosUsuario,
   ConsultaLog,
-  DatosDetallesTicket,
   DatosJob,
   DatosPersona,
-  DatosSeguimiento,
-  DatosTicket,
   DatosTitulo,
   DatosUsuario,
-  EstadisticasTickets,
   EstadoPlanificador,
   FilaImportacion,
   FiltroLogs,
   FiltroPersonas,
-  FiltroTickets,
   FiltroTitulos,
   FormatoReporte,
   JobCobertura,
@@ -41,15 +36,11 @@ import type {
   PermisoCatalogo,
   Persona,
   PersonaDetalle,
-  Responsable,
   ResultadoConsulta,
   ResultadoImportacion,
   Rol,
   Sesion,
   Tablero,
-  SeguimientoTicket,
-  Ticket,
-  TicketDetalle,
   Titulo,
   Usuario,
 } from '@domain/modelos';
@@ -60,7 +51,6 @@ import {
   RepositorioPersonas,
   RepositorioReportes,
   RepositorioTablero,
-  RepositorioTickets,
   RepositorioTitulos,
 } from '@domain/puertos';
 
@@ -328,52 +318,6 @@ export class AdministracionHttp extends RepositorioAdministracion {
 }
 
 // ---------------------------------------------------------------------------
-@Injectable()
-export class TicketsHttp extends RepositorioTickets {
-  private readonly api = inject(ApiService);
-
-  listar(filtro: FiltroTickets, paginacion: ParametrosPaginacion): Observable<Pagina<Ticket>> {
-    return this.api.listar<Ticket>('/tickets', filtro, paginacion);
-  }
-
-  obtener(id: string): Observable<TicketDetalle> {
-    return this.api.get<TicketDetalle>(`/tickets/${id}`);
-  }
-
-  crear(datos: DatosTicket): Observable<Ticket> {
-    return this.api.post<Ticket>('/tickets', datos);
-  }
-
-  agregarSeguimiento(id: string, datos: DatosSeguimiento): Observable<SeguimientoTicket> {
-    return this.api.post<SeguimientoTicket>(`/tickets/${id}/seguimientos`, datos);
-  }
-
-  asignar(id: string, usuarioId: string | null): Observable<Ticket> {
-    return this.api.patch<Ticket>(`/tickets/${id}/asignar`, { usuarioId });
-  }
-
-  cambiarFechaSolicitud(id: string, fechaSolicitud: string): Observable<Ticket> {
-    return this.api.patch<Ticket>(`/tickets/${id}/fecha-solicitud`, { fechaSolicitud });
-  }
-
-  actualizarDetalles(id: string, datos: DatosDetallesTicket): Observable<Ticket> {
-    return this.api.patch<Ticket>(`/tickets/${id}/detalles`, datos);
-  }
-
-  estadisticas(dias?: number): Observable<EstadisticasTickets> {
-    return this.api.get<EstadisticasTickets>('/tickets/estadisticas', dias ? { dias } : {});
-  }
-
-  subirImagen(archivo: File): Observable<{ url: string }> {
-    return this.api.subir<{ url: string }>('/tickets/imagenes', archivo, {});
-  }
-
-  responsables(): Observable<readonly Responsable[]> {
-    return this.api.get<Responsable[]>('/tickets/responsables');
-  }
-}
-
-// ---------------------------------------------------------------------------
 /**
  * Enlaza cada puerto con su implementacion HTTP.
  *
@@ -388,5 +332,4 @@ export const PROVEEDORES_DATOS = [
   { provide: RepositorioTablero, useClass: TableroHttp },
   { provide: RepositorioReportes, useClass: ReportesHttp },
   { provide: RepositorioAdministracion, useClass: AdministracionHttp },
-  { provide: RepositorioTickets, useClass: TicketsHttp },
 ];
